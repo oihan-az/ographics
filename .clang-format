@@ -1,13 +1,21 @@
+BasedOnStyle: LLVM
+
+Language: Cpp
+
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
 
 ColumnLimit: 120
 
+PointerAlignment: Left
+ReferenceAlignment: Left
+
 BreakBeforeBraces: Allman
 
-PointerAlignment: Left
-
 AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLoopsOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: false
+
+SpaceBeforeParens: ControlStatements

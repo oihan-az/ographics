@@ -17,7 +17,8 @@ target_include_directories(
 target_sources(
     ographics_platform
     PRIVATE
-        src/oplatform.cpp
+        src/runtime.cpp
+        src/window.cpp
 )
 
 find_package(glfw3 CONFIG REQUIRED)
