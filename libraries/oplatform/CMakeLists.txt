@@ -19,3 +19,11 @@ target_sources(
     PRIVATE
         src/oplatform.cpp
 )
+
+find_package(glfw3 CONFIG REQUIRED)
+
+target_link_libraries(
+    ographics_platform
+    PRIVATE
+        glfw
+)

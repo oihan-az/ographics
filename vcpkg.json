@@ -1,0 +1,8 @@
+{
+    "name": "ographics",
+    "version-string": "0.1.0",
+    "description": "A modular, API-agnostic C++ graphics and GPU framework",
+    "dependencies": [
+        "glfw3"
+    ]
+}
