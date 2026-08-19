@@ -1,0 +1,6 @@
+namespace oplatform
+{
+
+    void initialize();
+
+}
