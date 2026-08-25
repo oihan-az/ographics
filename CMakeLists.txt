@@ -12,4 +12,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(libraries/oplatform)
-add_subdirectory(examples/window)
+add_subdirectory(libraries/ogfx)
+add_subdirectory(examples/instance)

@@ -15,8 +15,8 @@ namespace oplatform
 struct Window::Impl
 {
     GLFWwindow* handle = nullptr;
-    std::uint32_t width = 0;
-    std::uint32_t height = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
 };
 
 Window::Window(const WindowDesc& desc) : m_impl(std::make_unique<Impl>())
@@ -55,17 +55,9 @@ Window::~Window()
     }
 }
 
-Window::Window(Window&& other) noexcept : m_impl(std::move(other.m_impl)) {}
+Window::Window(Window&& other) noexcept = default;
 
-Window& Window::operator=(Window&& other) noexcept
-{
-    if (this != &other)
-    {
-        m_impl = std::move(other.m_impl);
-    }
-
-    return *this;
-}
+Window& Window::operator=(Window&& other) noexcept = default;
 
 void Window::poll_events()
 {
@@ -75,8 +67,8 @@ void Window::poll_events()
     int width = 0;
     int height = 0;
     glfwGetWindowSize(m_impl->handle, &width, &height);
-    m_impl->width = static_cast<std::uint32_t>(width);
-    m_impl->height = static_cast<std::uint32_t>(height);
+    m_impl->width = static_cast<uint32_t>(width);
+    m_impl->height = static_cast<uint32_t>(height);
 }
 
 bool Window::should_close() const
@@ -84,12 +76,12 @@ bool Window::should_close() const
     return glfwWindowShouldClose(m_impl->handle);
 }
 
-std::uint32_t Window::width() const
+uint32_t Window::width() const
 {
     return m_impl->width;
 }
 
-std::uint32_t Window::height() const
+uint32_t Window::height() const
 {
     return m_impl->height;
 }

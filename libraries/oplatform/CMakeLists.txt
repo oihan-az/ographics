@@ -1,21 +1,21 @@
-add_library(ographics_platform STATIC)
+add_library(oplatform STATIC)
 
-add_library(ographics::platform ALIAS ographics_platform)
+add_library(ographics::platform ALIAS oplatform)
 
 target_compile_features(
-    ographics_platform
+    oplatform
     PUBLIC
         cxx_std_20
 )
 
 target_include_directories(
-    ographics_platform
+    oplatform
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_sources(
-    ographics_platform
+    oplatform
     PRIVATE
         src/runtime.cpp
         src/window.cpp
@@ -24,7 +24,7 @@ target_sources(
 find_package(glfw3 CONFIG REQUIRED)
 
 target_link_libraries(
-    ographics_platform
+    oplatform
     PRIVATE
         glfw
 )

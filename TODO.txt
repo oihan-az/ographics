@@ -1,0 +1,8 @@
+## Instance
+Extensions based on user needs, passes to constructor as a struct of requirements
+
+## PhysicalDevice
+Choose physical device bases on requirements
+
+## Device
+Specify used device features
