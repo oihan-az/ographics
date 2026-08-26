@@ -6,6 +6,8 @@
 #ifndef OPLATFORM_RUNTIME_HPP
 #define OPLATFORM_RUNTIME_HPP
 
+#include <vector>
+
 namespace oplatform
 {
 
@@ -41,6 +43,8 @@ class Runtime
 
     Runtime(Runtime&&) = delete;
     Runtime& operator=(Runtime&&) = delete;
+
+    [[nodiscard]] std::vector<const char*> required_instance_extensions() const;
 };
 } // namespace oplatform
 

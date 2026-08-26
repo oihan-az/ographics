@@ -1,10 +1,12 @@
 #include <ogfx/physical_device.hpp>
+#include <ogfx/surface.hpp>
 
 #include <debug.hpp>
 
 #include <vulkan/vulkan.h>
 
 #include "vk_physical_device.hpp"
+#include "vk_surface.hpp"
 
 #include <cstring>
 #include <stdexcept>
@@ -13,11 +15,10 @@
 namespace ogfx
 {
 
-PhysicalDevice::PhysicalDevice(std::unique_ptr<Impl> impl)
-    : m_impl(std::make_unique<Impl>())
+PhysicalDevice::PhysicalDevice(const PhysicalDeviceDesc& desc, std::unique_ptr<Impl> impl)
+    : m_desc(desc), m_impl(std::make_unique<Impl>())
 {
     m_impl->m_physical_device = impl->m_physical_device;
-    m_impl->m_properties = impl->m_properties;
 }
 
 PhysicalDevice::~PhysicalDevice() = default;
@@ -25,7 +26,7 @@ PhysicalDevice::~PhysicalDevice() = default;
 PhysicalDevice::PhysicalDevice(PhysicalDevice&&) noexcept = default;
 PhysicalDevice& PhysicalDevice::operator=(PhysicalDevice&&) noexcept = default;
 
-const PhysicalDeviceProperties& PhysicalDevice::properties() const
+const PhysicalDeviceDesc& PhysicalDevice::desc() const
 {
     const auto format_version = [](uint32_t version)
     {
@@ -60,17 +61,17 @@ const PhysicalDeviceProperties& PhysicalDevice::properties() const
     };
 
     OGFX_LOG("Physical device:");
-    OGFX_LOG("  Name: " + m_impl->m_properties.name);
-    OGFX_LOG("  Vendor: " + vendor_name(m_impl->m_properties.vendor_id) + 
-             " (0x" + format_hex(m_impl->m_properties.vendor_id) + ")");
-    OGFX_LOG("  Device ID: 0x" + format_hex(m_impl->m_properties.device_id));
-    OGFX_LOG("  API Version: " + format_version(m_impl->m_properties.api_version));
-    OGFX_LOG("  Driver Version: " + format_version(m_impl->m_properties.driver_version));
+    OGFX_LOG("  Name: " + m_desc.name);
+    OGFX_LOG("  Vendor: " + vendor_name(m_desc.vendor_id) + 
+             " (0x" + format_hex(m_desc.vendor_id) + ")");
+    OGFX_LOG("  Device ID: 0x" + format_hex(m_desc.device_id));
+    OGFX_LOG("  API Version: " + format_version(m_desc.api_version));
+    OGFX_LOG("  Driver Version: " + format_version(m_desc.driver_version));
 
-    return m_impl->m_properties;
+    return m_desc;
 }
 
-QueueFamilyIndices PhysicalDevice::Impl::FindQueueFamilies() const
+QueueFamilyIndices PhysicalDevice::Impl::FindQueueFamilies(const Surface* surface) const
 {
     QueueFamilyIndices indices;
 
@@ -114,6 +115,19 @@ QueueFamilyIndices PhysicalDevice::Impl::FindQueueFamilies() const
             if (!indices.transfer_family.has_value() || dedicated_transfer)
             {
                 indices.transfer_family = i;
+            }
+        }
+
+        // Present
+        if (surface != nullptr)
+        {
+            VkBool32 present_support = VK_FALSE;
+            
+            vkGetPhysicalDeviceSurfaceSupportKHR(m_physical_device, i, surface->m_impl->m_surface, &present_support);
+
+            if (present_support && !indices.present_family.has_value())
+            {
+                indices.present_family = i;
             }
         }
     }

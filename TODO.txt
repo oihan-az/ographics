@@ -6,3 +6,6 @@ Choose physical device bases on requirements
 
 ## Device
 Specify used device features
+
+## Physical Device
+Check features such as swapchain

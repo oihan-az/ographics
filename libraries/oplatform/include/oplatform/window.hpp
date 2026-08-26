@@ -6,9 +6,18 @@
 #ifndef OPLATFORM_WINDOW_HPP
 #define OPLATFORM_WINDOW_HPP
 
+#include <ogfx/surface.hpp>
+
 #include <cstdint>
 #include <memory>
 #include <string>
+
+namespace ogfx
+{
+
+class Instance;
+
+} // namespace ogfx
 
 namespace oplatform
 {
@@ -57,6 +66,8 @@ class Window
     Window& operator=(Window&&) noexcept;
 
     void poll_events();
+
+    [[nodiscard]] ogfx::Surface create_surface(const ogfx::Instance& instance) const;
 
     [[nodiscard]] bool should_close() const;
     [[nodiscard]] uint32_t width() const;

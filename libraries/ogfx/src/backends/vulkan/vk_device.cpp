@@ -5,6 +5,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "vk_device.hpp"
 #include "vk_physical_device.hpp"
 
 #include <stdexcept>
@@ -14,20 +15,12 @@
 namespace ogfx
 {
 
-struct Device::Impl
-{
-    VkDevice m_device = VK_NULL_HANDLE;
-
-    VkQueue m_transfer_queue = VK_NULL_HANDLE;
-    VkQueue m_graphics_queue = VK_NULL_HANDLE;
-    VkQueue m_compute_queue = VK_NULL_HANDLE;
-};
-
-Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc) : m_impl(std::make_unique<Impl>())
+Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, const Surface* surface)
+    : m_impl(std::make_unique<Impl>())
 {
     OGFX_LOG("Creating Vulkan logical device");
 
-    ogfx::QueueFamilyIndices indices = physical_device.m_impl->FindQueueFamilies();
+    ogfx::QueueFamilyIndices indices = physical_device.m_impl->FindQueueFamilies(surface);
 
     std::set<uint32_t> uniqueQueueFamilies;
 
@@ -61,6 +54,16 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc) : 
         uniqueQueueFamilies.insert(indices.transfer_family.value());
     }
 
+    if (desc.enable_present)
+    {
+        if (!indices.present_family.has_value())
+        {
+            throw std::runtime_error("Present queue requested but not available.");
+        }
+
+        uniqueQueueFamilies.insert(indices.present_family.value());
+    }
+
     // Queues
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     float queuePriority = 1.0f;
@@ -79,13 +82,22 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc) : 
     // Device features
     VkPhysicalDeviceFeatures deviceFeatures{};
 
+    // Extensions
+    std::vector<const char*> extensions;
+
+    if (desc.enable_present)
+    {
+        extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
+
     // Device
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     createInfo.pEnabledFeatures = &deviceFeatures;
-    createInfo.enabledExtensionCount = 0;
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    createInfo.ppEnabledExtensionNames = extensions.data();
     createInfo.enabledLayerCount = 0;
 
     if (vkCreateDevice(physical_device.m_impl->m_physical_device, &createInfo, nullptr, &m_impl->m_device) != VK_SUCCESS)
@@ -97,13 +109,31 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc) : 
     OGFX_LOG("Vulkan logical device created");
 
     // Get the queues
-    vkGetDeviceQueue(m_impl->m_device, indices.transfer_family.value(), 0, &m_impl->m_transfer_queue);
-    vkGetDeviceQueue(m_impl->m_device, indices.graphics_family.value(), 0, &m_impl->m_graphics_queue);
-    vkGetDeviceQueue(m_impl->m_device, indices.compute_family.value(), 0, &m_impl->m_compute_queue);
+    {
+        if (indices.transfer_family.has_value())
+        {
+            vkGetDeviceQueue(m_impl->m_device, indices.transfer_family.value(), 0, &m_impl->m_transfer_queue);
+            OGFX_LOG("Retrieved transfer queue (family " + std::to_string(indices.transfer_family.value()) + ")");
+        }
 
-    OGFX_LOG("Retrieved transfer queue (family " + std::to_string(indices.transfer_family.value()) + ")");
-    OGFX_LOG("Retrieved graphics queue (family " + std::to_string(indices.graphics_family.value()) + ")");
-    OGFX_LOG("Retrieved compute queue (family " + std::to_string(indices.compute_family.value()) + ")");
+        if (indices.graphics_family.has_value())
+        {
+            vkGetDeviceQueue(m_impl->m_device, indices.graphics_family.value(), 0, &m_impl->m_graphics_queue);
+            OGFX_LOG("Retrieved graphics queue (family " + std::to_string(indices.graphics_family.value()) + ")");
+        }
+
+        if (indices.compute_family.has_value())
+        {
+            vkGetDeviceQueue(m_impl->m_device, indices.compute_family.value(), 0, &m_impl->m_compute_queue);
+            OGFX_LOG("Retrieved compute queue (family " + std::to_string(indices.compute_family.value()) + ")");
+        }
+
+        if (indices.present_family.has_value())
+        {
+            vkGetDeviceQueue(m_impl->m_device, indices.present_family.value(), 0, &m_impl->m_present_queue);
+            OGFX_LOG("Retrieved present queue (family " + std::to_string(indices.present_family.value()) + ")");
+        }
+    }
 }
 
 Device::~Device() 

@@ -10,12 +10,13 @@
 namespace ogfx
 {
 
+class Surface;
+
 struct PhysicalDevice::Impl
 {
     VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
-    PhysicalDeviceProperties m_properties;
 
-    QueueFamilyIndices FindQueueFamilies() const;
+    QueueFamilyIndices FindQueueFamilies(const Surface* surface = nullptr) const;
 };
 
 } // namespace ogfx

@@ -9,13 +9,19 @@
 namespace ogfx
 {
 
+class Surface;
+
 struct InstanceDesc
 {
     const char* application_name = "ogfx";
     const char* engine_name = "ogfx";
 
     bool debug = false;
+
+    std::vector<const char*> extensions;
 };
+
+using NativeInstanceHandle = void*;
 
 class Instance
 {
@@ -29,10 +35,14 @@ class Instance
     Instance(Instance&&) noexcept;
     Instance& operator=(Instance&&) noexcept;
 
+    [[nodiscard]] NativeInstanceHandle native_handle() const;
+
     [[nodiscard]] std::vector<PhysicalDevice> enumerate_physical_devices() const;
     [[nodiscard]] PhysicalDevice pick_physical_device(const std::vector<PhysicalDevice>& physicalDevice) const;
 
   private:
+    friend class Surface;
+
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };

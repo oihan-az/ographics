@@ -4,6 +4,14 @@ target_sources(
         vk_instance.cpp
         vk_physical_device.cpp
         vk_device.cpp
+        vk_surface.cpp
+        vk_swapchain.cpp
+        vk_format.cpp
+        vk_present_mode.cpp
+        vk_image.cpp
+        vk_image_view.cpp
+        vk_image_usage.cpp
+        
         
 )
 

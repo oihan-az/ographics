@@ -8,7 +8,7 @@
 namespace ogfx
 {
 
-struct PhysicalDeviceProperties
+struct PhysicalDeviceDesc
 {
     std::string name;
 
@@ -25,7 +25,7 @@ class PhysicalDevice
     struct Impl;
 
   public:
-    explicit PhysicalDevice(std::unique_ptr<Impl> impl);
+    explicit PhysicalDevice(const PhysicalDeviceDesc& desc, std::unique_ptr<Impl> impl);
     ~PhysicalDevice();
 
     PhysicalDevice(const PhysicalDevice&) = delete;
@@ -34,11 +34,14 @@ class PhysicalDevice
     PhysicalDevice(PhysicalDevice&&) noexcept;
     PhysicalDevice& operator=(PhysicalDevice&&) noexcept;
 
-    const PhysicalDeviceProperties& properties() const;
+    const PhysicalDeviceDesc& desc() const;
 
   private:
     friend class Instance;
     friend class Device;
+    friend class Swapchain;
+
+    PhysicalDeviceDesc m_desc;
 
     std::unique_ptr<Impl> m_impl;
 };

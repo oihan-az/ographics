@@ -27,33 +27,17 @@ target_sources(
     ogfx
     PRIVATE
         src/debug.cpp
+        src/format.cpp
+        src/present_mode.cpp
         
 )
 
-set(OGFX_API "VULKAN" CACHE STRING "Graphics API backend")
-
-set_property(
-    CACHE OGFX_API
-    PROPERTY STRINGS
-        VULKAN
-        D3D12
-        METAL
-)
-
-if(OGFX_API STREQUAL "VULKAN")
+if(OGRAPHICS_API  STREQUAL "VULKAN")
 
     add_subdirectory(src/backends/vulkan)
 
-elseif(OGFX_API STREQUAL "D3D12")
-
-    message(FATAL_ERROR "D3D12 backend is not implemented yet.")
-
-elseif(OGFX_API STREQUAL "METAL")
-
-    message(FATAL_ERROR "Metal backend is not implemented yet.")
-
 else()
 
-    message(FATAL_ERROR "Unsupported OGFX_API: ${OGFX_API}")
+    message(FATAL_ERROR "Unsupported OGRAPHICS_API : ${OGRAPHICS_API }")
 
 endif()

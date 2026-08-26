@@ -1,13 +1,14 @@
-add_executable(oplatform_test)
+add_executable(presentation_test)
 
 target_sources(
-    oplatform_test
+    presentation_test
     PRIVATE
         main.cpp
  )
 
 target_link_libraries(
-    oplatform_test
+    presentation_test
     PRIVATE
         ographics::oplatform
+        ographics::ogfx
 )

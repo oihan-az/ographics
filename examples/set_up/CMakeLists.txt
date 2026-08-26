@@ -1,13 +1,13 @@
-add_executable(instance_test)
+add_executable(set_up_test)
 
 target_sources(
-    instance_test
+    set_up_test
     PRIVATE
         main.cpp
  )
 
 target_link_libraries(
-    instance_test
+    set_up_test
     PRIVATE
         ographics::ogfx
 )

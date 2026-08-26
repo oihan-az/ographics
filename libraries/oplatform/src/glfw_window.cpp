@@ -5,19 +5,16 @@
 
 #include <oplatform/window.hpp>
 
+#include <debug.hpp>
+
+#include "glfw_window.hpp"
+
 #include <GLFW/glfw3.h>
 
 #include <stdexcept>
 
 namespace oplatform
 {
-
-struct Window::Impl
-{
-    GLFWwindow* handle = nullptr;
-    uint32_t width = 0;
-    uint32_t height = 0;
-};
 
 Window::Window(const WindowDesc& desc) : m_impl(std::make_unique<Impl>())
 {
@@ -31,27 +28,34 @@ Window::Window(const WindowDesc& desc) : m_impl(std::make_unique<Impl>())
         monitor = glfwGetPrimaryMonitor();
     }
 
+    OPLATFORM_LOG("Creating GLFW window");
+
     // Create the GLFW window
-    m_impl->handle = glfwCreateWindow(static_cast<int>(desc.width), static_cast<int>(desc.height), desc.title.c_str(),
+    m_impl->m_handle = glfwCreateWindow(static_cast<int>(desc.width), static_cast<int>(desc.height), desc.title.c_str(),
                                       monitor, nullptr);
 
     // Check window creation
-    if (!m_impl->handle)
+    if (!m_impl->m_handle)
     {
+        OPLATFORM_LOG_ERROR("Failed to create GLFW window");
         throw std::runtime_error("Failed to create window.");
     }
 
+    OPLATFORM_LOG("GLFW window created");
+
     // Save window data
-    m_impl->width = desc.width;
-    m_impl->height = desc.height;
+    m_impl->m_width = desc.width;
+    m_impl->m_height = desc.height;
 }
 
 Window::~Window()
 {
-    if (m_impl && m_impl->handle)
+    if (m_impl && m_impl->m_handle)
     {
         // Destroy the window
-        glfwDestroyWindow(m_impl->handle);
+        glfwDestroyWindow(m_impl->m_handle);
+
+        OPLATFORM_LOG("GLFW window destroyed");
     }
 }
 
@@ -66,24 +70,24 @@ void Window::poll_events()
     // Update the window size
     int width = 0;
     int height = 0;
-    glfwGetWindowSize(m_impl->handle, &width, &height);
-    m_impl->width = static_cast<uint32_t>(width);
-    m_impl->height = static_cast<uint32_t>(height);
+    glfwGetWindowSize(m_impl->m_handle, &width, &height);
+    m_impl->m_width = static_cast<uint32_t>(width);
+    m_impl->m_height = static_cast<uint32_t>(height);
 }
 
 bool Window::should_close() const
 {
-    return glfwWindowShouldClose(m_impl->handle);
+    return glfwWindowShouldClose(m_impl->m_handle);
 }
 
 uint32_t Window::width() const
 {
-    return m_impl->width;
+    return m_impl->m_width;
 }
 
 uint32_t Window::height() const
 {
-    return m_impl->height;
+    return m_impl->m_height;
 }
 
 } // namespace oplatform

@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "vk_instance.hpp"
 #include "vk_physical_device.hpp"
 
 #include <cstring>
@@ -12,11 +13,6 @@
 
 namespace ogfx
 {
-
-struct Instance::Impl
-{
-    VkInstance m_instance = VK_NULL_HANDLE;
-};
 
 Instance::Instance(const InstanceDesc& desc) : m_impl(std::make_unique<Impl>())
 {
@@ -34,8 +30,8 @@ Instance::Instance(const InstanceDesc& desc) : m_impl(std::make_unique<Impl>())
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
-    // Extensions (TODO: Add required platform extensions when surface creation is introduced.)
-    std::vector<const char*> extensions;
+    // Extensions
+    std::vector<const char*> extensions = desc.extensions;
 
     if (desc.debug)
     {
@@ -108,6 +104,11 @@ Instance::Instance(Instance&&) noexcept = default;
 
 Instance& Instance::operator=(Instance&&) noexcept = default;
 
+[[nodiscard]] NativeInstanceHandle Instance::native_handle() const
+{
+    return reinterpret_cast<void*>(m_impl->m_instance);
+}
+
 std::vector<PhysicalDevice> Instance::enumerate_physical_devices() const 
 {
     uint32_t deviceCount = 0;
@@ -125,20 +126,20 @@ std::vector<PhysicalDevice> Instance::enumerate_physical_devices() const
         VkPhysicalDeviceProperties properties{};
         vkGetPhysicalDeviceProperties(vk_device, &properties);
 
+        // Store the properties
+        PhysicalDeviceDesc desc;
+        desc.name = properties.deviceName;
+        desc.vendor_id = properties.vendorID;
+        desc.device_id = properties.deviceID;
+        desc.api_version = properties.apiVersion;
+        desc.driver_version = properties.driverVersion;
+
         // Create a physical device abstraction
         std::unique_ptr<PhysicalDevice::Impl> impl = std::make_unique<PhysicalDevice::Impl>();
         impl->m_physical_device = vk_device;
-        devices.emplace_back(std::move(impl));
+        devices.emplace_back(desc, std::move(impl));
 
-        // Store the properties
-        PhysicalDevice& physicalDevice = devices.back();
-        physicalDevice.m_impl->m_properties.name = properties.deviceName;
-        physicalDevice.m_impl->m_properties.vendor_id = properties.vendorID;
-        physicalDevice.m_impl->m_properties.device_id = properties.deviceID;
-        physicalDevice.m_impl->m_properties.api_version = properties.apiVersion;
-        physicalDevice.m_impl->m_properties.driver_version = properties.driverVersion;
-
-        OGFX_LOG("Physical device [" + std::to_string(devices.size() - 1) + "]: " + physicalDevice.m_impl->m_properties.name);
+        OGFX_LOG("Physical device [" + std::to_string(devices.size() - 1) + "]: " + devices.back().m_desc.name);
     }
 
     return devices;
@@ -155,13 +156,12 @@ PhysicalDevice Instance::pick_physical_device(const std::vector<PhysicalDevice>&
     // TODO: Pick based on requirements
     const PhysicalDevice& selectedDevice = physicalDevice.front();
 
-    OGFX_LOG("Selected physical device: " + selectedDevice.m_impl->m_properties.name);
+    OGFX_LOG("Selected physical device: " + selectedDevice.m_desc.name);
 
     auto impl = std::make_unique<PhysicalDevice::Impl>();
     impl->m_physical_device = selectedDevice.m_impl->m_physical_device;
-    impl->m_properties = selectedDevice.m_impl->m_properties;
 
-    return PhysicalDevice(std::move(impl));
+    return PhysicalDevice(selectedDevice.m_desc, std::move(impl));
 }
 
 } // namespace ogfx

@@ -11,6 +11,7 @@ struct QueueFamilyIndices
     std::optional<uint32_t> transfer_family;
     std::optional<uint32_t> graphics_family;
     std::optional<uint32_t> compute_family;
+    std::optional<uint32_t> present_family;
 };
 
 } // namespace ogfx
