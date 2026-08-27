@@ -6,6 +6,9 @@
 #include <ogfx/device.hpp>
 #include <ogfx/surface.hpp>
 #include <ogfx/swapchain.hpp>
+#include <ogfx/queue.hpp>
+#include <ogfx/command_pool.hpp>
+#include <ogfx/command_buffer.hpp>
 
 int main()
 {
@@ -53,6 +56,19 @@ int main()
     swapchainDesc.image_count = 3;
 
     ogfx::Swapchain swapchain(physicalDevice, device, surface, swapchainDesc);
+
+    ogfx::Queue& graphicsQueue = device.queue(ogfx::QueueType::Graphics);
+
+    ogfx::CommandPoolDesc commandPoolDesc;
+    commandPoolDesc.transient = false;
+    commandPoolDesc.resettable = true;
+
+    ogfx::CommandPool command_pool(device, graphicsQueue, commandPoolDesc);
+
+    ogfx::CommandBuffer command_buffer(command_pool);
+
+    command_buffer.begin();
+    command_buffer.end();
 
     //while (!window.should_close())
     //{

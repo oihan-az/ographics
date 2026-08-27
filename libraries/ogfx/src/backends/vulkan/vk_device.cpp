@@ -7,6 +7,7 @@
 
 #include "vk_device.hpp"
 #include "vk_physical_device.hpp"
+#include "vk_queue.hpp"
 
 #include <stdexcept>
 #include <vector>
@@ -112,25 +113,37 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
     {
         if (indices.transfer_family.has_value())
         {
-            vkGetDeviceQueue(m_impl->m_device, indices.transfer_family.value(), 0, &m_impl->m_transfer_queue);
+            Queue& queue = this->queue(QueueType::Transfer);
+            queue.m_impl->m_family_index = indices.transfer_family.value();
+
+            vkGetDeviceQueue(m_impl->m_device, queue.m_impl->m_family_index, 0, &queue.m_impl->m_queue);
             OGFX_LOG("Retrieved transfer queue (family " + std::to_string(indices.transfer_family.value()) + ")");
         }
 
         if (indices.graphics_family.has_value())
         {
-            vkGetDeviceQueue(m_impl->m_device, indices.graphics_family.value(), 0, &m_impl->m_graphics_queue);
+            Queue& queue = this->queue(QueueType::Graphics);
+            queue.m_impl->m_family_index = indices.graphics_family.value();
+
+            vkGetDeviceQueue(m_impl->m_device, queue.m_impl->m_family_index, 0, &queue.m_impl->m_queue);
             OGFX_LOG("Retrieved graphics queue (family " + std::to_string(indices.graphics_family.value()) + ")");
         }
 
         if (indices.compute_family.has_value())
         {
-            vkGetDeviceQueue(m_impl->m_device, indices.compute_family.value(), 0, &m_impl->m_compute_queue);
+            Queue& queue = this->queue(QueueType::Compute);
+            queue.m_impl->m_family_index = indices.compute_family.value();
+
+            vkGetDeviceQueue(m_impl->m_device, queue.m_impl->m_family_index, 0, &queue.m_impl->m_queue);
             OGFX_LOG("Retrieved compute queue (family " + std::to_string(indices.compute_family.value()) + ")");
         }
 
         if (indices.present_family.has_value())
         {
-            vkGetDeviceQueue(m_impl->m_device, indices.present_family.value(), 0, &m_impl->m_present_queue);
+            Queue& queue = this->queue(QueueType::Present);
+            queue.m_impl->m_family_index = indices.present_family.value();
+
+            vkGetDeviceQueue(m_impl->m_device, queue.m_impl->m_family_index, 0, &queue.m_impl->m_queue);
             OGFX_LOG("Retrieved present queue (family " + std::to_string(indices.present_family.value()) + ")");
         }
     }
@@ -148,5 +161,15 @@ Device::~Device()
 
 Device::Device(Device&&) noexcept = default;
 Device& Device::operator=(Device&&) noexcept = default;
+
+Queue& Device::queue(QueueType type)
+{
+    return m_queues[to_index(type)];
+}
+
+const Queue& Device::queue(QueueType type) const
+{
+    return m_queues[to_index(type)];
+}
 
 } // namespace ogfx

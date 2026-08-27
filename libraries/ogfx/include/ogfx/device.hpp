@@ -1,13 +1,30 @@
 #ifndef OGFX_DEVICE_HPP
 #define OGFX_DEVICE_HPP
 
+#include <ogfx/queue.hpp>
+
 #include <memory>
+#include <array>
 
 namespace ogfx
 {
 
 class PhysicalDevice;
 class Surface;
+
+enum class QueueType
+{
+    Transfer,
+    Graphics,
+    Compute,
+    Present,
+    Count
+};
+
+constexpr size_t to_index(QueueType type)
+{
+    return static_cast<size_t>(type);
+}
 
 struct DeviceDesc
 {
@@ -30,9 +47,15 @@ class Device
     Device(Device&&) noexcept;
     Device& operator=(Device&&) noexcept;
 
+    [[nodiscard]] Queue& queue(QueueType type);
+    [[nodiscard]] const Queue& queue(QueueType type) const;
+
   private:
     friend class Swapchain;
     friend class Image;
+    friend class CommandPool;
+
+    std::array<Queue, to_index(QueueType::Count)> m_queues;
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

@@ -11,6 +11,9 @@ target_sources(
         vk_image.cpp
         vk_image_view.cpp
         vk_image_usage.cpp
+        vk_queue.cpp
+        vk_command_pool.cpp
+        vk_command_buffer.cpp
         
         
 )
