@@ -47,8 +47,17 @@ class Device
     Device(Device&&) noexcept;
     Device& operator=(Device&&) noexcept;
 
-    [[nodiscard]] Queue& queue(QueueType type);
-    [[nodiscard]] const Queue& queue(QueueType type) const;
+    void wait_idle();
+
+    [[nodiscard]] Queue& queue(QueueType type)
+    {
+        return m_queues[to_index(type)];
+    }
+
+    [[nodiscard]] const Queue& queue(QueueType type) const
+    {
+        return m_queues[to_index(type)];
+    }
 
   private:
     friend class Swapchain;
@@ -56,6 +65,8 @@ class Device
     friend class CommandPool;
     friend class Semaphore;
     friend class Fence;
+    friend class RenderPass;
+    friend class Framebuffer;
 
     std::array<Queue, to_index(QueueType::Count)> m_queues;
 

@@ -157,14 +157,17 @@ Device::~Device()
 Device::Device(Device&&) noexcept = default;
 Device& Device::operator=(Device&&) noexcept = default;
 
-Queue& Device::queue(QueueType type)
+void Device::wait_idle()
 {
-    return m_queues[to_index(type)];
-}
+    OGFX_LOG("Waiting for Vulkan device to become idle");
 
-const Queue& Device::queue(QueueType type) const
-{
-    return m_queues[to_index(type)];
+    if (vkDeviceWaitIdle(m_impl->m_device) != VK_SUCCESS)
+    {
+        OGFX_LOG_ERROR("Failed to wait for Vulkan device idle");
+        throw std::runtime_error("Failed to wait for Vulkan device idle.");
+    }
+
+    OGFX_LOG("Vulkan device is idle");
 }
 
 } // namespace ogfx

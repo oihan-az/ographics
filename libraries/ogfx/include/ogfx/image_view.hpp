@@ -22,6 +22,8 @@ class ImageView
     ImageView& operator=(ImageView&&) noexcept;
 
   private:
+    friend class Framebuffer;
+
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };

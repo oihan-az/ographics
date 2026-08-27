@@ -18,6 +18,10 @@ target_sources(
         vk_pipeline_stage.cpp
         vk_fence.cpp
         vk_present_result.cpp
+        vk_render_pass.cpp
+        vk_image_state.cpp
+        vk_load_store_op.cpp
+        vk_framebuffer.cpp
         
         
 )

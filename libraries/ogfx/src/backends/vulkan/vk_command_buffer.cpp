@@ -2,6 +2,8 @@
 
 #include "vk_command_buffer.hpp"
 #include "vk_command_pool.hpp"
+#include "vk_render_pass.hpp"
+#include "vk_framebuffer.hpp"
 
 #include <stdexcept>
 
@@ -78,6 +80,48 @@ void CommandBuffer::reset()
     }
 
     OGFX_LOG("Vulkan command buffer reset");
+}
+
+void CommandBuffer::begin_render_pass(const RenderPass& render_pass, const Framebuffer& framebuffer,
+                                      const RenderPassBeginInfo& begin_info)
+{
+    OGFX_LOG("Beginning Vulkan render pass");
+
+    OGFX_LOG("  Render area: offset=(" + std::to_string(begin_info.offset_x) + ", " +
+             std::to_string(begin_info.offset_y) + "), extent=(" + std::to_string(begin_info.width) + "x" +
+             std::to_string(begin_info.height) + ")");
+
+    OGFX_LOG("  Clear color: (" + std::to_string(begin_info.clear_color.r) + ", " +
+             std::to_string(begin_info.clear_color.g) + ", " + std::to_string(begin_info.clear_color.b) + ", " +
+             std::to_string(begin_info.clear_color.a) + ")");
+
+    VkRenderPassBeginInfo vk_begin_info{};
+    vk_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    vk_begin_info.renderPass = render_pass.m_impl->m_render_pass;
+    vk_begin_info.framebuffer = framebuffer.m_impl->m_framebuffer;
+
+    vk_begin_info.renderArea.offset = {static_cast<int32_t>(begin_info.offset_x),
+                                       static_cast<int32_t>(begin_info.offset_y)};
+
+    vk_begin_info.renderArea.extent = {begin_info.width, begin_info.height};
+
+    VkClearValue clear_value{};
+    clear_value.color = {begin_info.clear_color.r, begin_info.clear_color.g, begin_info.clear_color.b,
+                         begin_info.clear_color.a};
+
+    vk_begin_info.clearValueCount = 1;
+    vk_begin_info.pClearValues = &clear_value;
+
+    vkCmdBeginRenderPass(m_impl->m_command_buffer, &vk_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    OGFX_LOG("Vulkan render pass begun");
+}
+
+void CommandBuffer::end_render_pass() 
+{
+    vkCmdEndRenderPass(m_impl->m_command_buffer);
+
+    OGFX_LOG("Vulkan render pass ended");
 }
 
 } // namespace ogfx

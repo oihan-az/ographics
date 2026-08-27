@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <stdexcept>
 
 namespace ogfx
 {
@@ -45,6 +46,31 @@ class Swapchain
     Swapchain& operator=(Swapchain&&) noexcept;
 
     uint32_t acquire_next_image(Semaphore& signal_semaphore);
+
+    [[nodiscard]] uint32_t image_count() const
+    {
+        return static_cast<uint32_t>(m_image_views.size());
+    }
+
+    [[nodiscard]] ImageView& image_view(uint32_t index)
+    {
+        if (index >= m_image_views.size())
+        {
+            throw std::out_of_range("Swapchain image view index out of range.");
+        }
+
+        return m_image_views[index];
+    }
+
+    [[nodiscard]] const ImageView& image_view(uint32_t index) const
+    {
+        if (index >= m_image_views.size())
+        {
+            throw std::out_of_range("Swapchain image view index out of range.");
+        }
+
+        return m_image_views[index];
+    }
 
   private:
 
