@@ -23,8 +23,11 @@ class CommandBuffer
 
     void begin();
     void end();
+    void reset();
 
   private:
+    friend class Queue;
+
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };

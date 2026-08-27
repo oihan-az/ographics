@@ -1,9 +1,4 @@
-#include <ogfx/surface.hpp>
-#include <ogfx/instance.hpp>
-
 #include <debug.hpp>
-
-#include <vulkan/vulkan.h>
 
 #include "vk_surface.hpp"
 #include "vk_instance.hpp"

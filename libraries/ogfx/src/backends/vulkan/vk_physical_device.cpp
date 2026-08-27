@@ -1,9 +1,4 @@
-#include <ogfx/physical_device.hpp>
-#include <ogfx/surface.hpp>
-
 #include <debug.hpp>
-
-#include <vulkan/vulkan.h>
 
 #include "vk_physical_device.hpp"
 #include "vk_surface.hpp"

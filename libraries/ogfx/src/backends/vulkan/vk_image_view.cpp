@@ -1,9 +1,4 @@
-#include <ogfx/image_view.hpp>
-#include <ogfx/image.hpp>
-
 #include <debug.hpp>
-
-#include <vulkan/vulkan.h>
 
 #include "vk_image_view.hpp"
 #include "vk_image.hpp"

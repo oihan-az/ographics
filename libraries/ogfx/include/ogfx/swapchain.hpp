@@ -17,6 +17,7 @@ namespace ogfx
 class PhysicalDevice;
 class Device;
 class Surface;
+class Semaphore;
 
 struct SwapchainDesc
 {
@@ -42,6 +43,8 @@ class Swapchain
 
     Swapchain(Swapchain&&) noexcept;
     Swapchain& operator=(Swapchain&&) noexcept;
+
+    uint32_t acquire_next_image(Semaphore& signal_semaphore);
 
   private:
 

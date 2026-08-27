@@ -2,6 +2,7 @@
 #define OGFX_IMAGE_USAGE_HPP
 
 #include <cstdint>
+#include <string>
 
 namespace ogfx
 {
@@ -26,6 +27,8 @@ constexpr bool has_flag(ImageUsage usage, ImageUsage flag)
 {
     return (static_cast<uint32_t>(usage) & static_cast<uint32_t>(flag)) != 0;
 }
+
+std::string to_string(ImageUsage usage);
 
 } // namespace ogfx
 

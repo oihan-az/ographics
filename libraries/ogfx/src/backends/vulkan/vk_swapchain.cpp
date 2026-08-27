@@ -1,11 +1,4 @@
-#include <ogfx/swapchain.hpp>
-#include <ogfx/device.hpp>
-#include <ogfx/image.hpp>
-#include <ogfx/image_view.hpp>
-
 #include <debug.hpp>
-
-#include <vulkan/vulkan.h>
 
 #include "vk_swapchain.hpp"
 #include "vk_device.hpp"
@@ -16,6 +9,7 @@
 #include "vk_image.hpp"
 #include "vk_image_view.hpp"
 #include "vk_image_usage.hpp"
+#include "vk_semaphore.hpp"
 
 #include <stdexcept>
 #include <algorithm>
@@ -245,5 +239,24 @@ Swapchain::~Swapchain()
 
 Swapchain::Swapchain(Swapchain&&) noexcept = default;
 Swapchain& Swapchain::operator=(Swapchain&&) noexcept = default;
+
+uint32_t Swapchain::acquire_next_image(Semaphore& signal_semaphore)
+{
+    uint32_t image_index = 0;
+
+    VkResult result = vkAcquireNextImageKHR(m_impl->m_device, m_impl->m_swapchain, UINT64_MAX,
+                                            signal_semaphore.m_impl->m_semaphore, VK_NULL_HANDLE, &image_index);
+
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        OGFX_LOG_ERROR("Failed to acquire Vulkan swapchain image");
+
+        throw std::runtime_error("Failed to acquire Vulkan swapchain image.");
+    }
+
+    OGFX_LOG("Acquired Vulkan swapchain image [" + std::to_string(image_index) + "]");
+
+    return image_index;
+}
 
 } // namespace ogfx

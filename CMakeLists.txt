@@ -24,4 +24,4 @@ set_property(
 
 add_subdirectory(libraries/oplatform)
 add_subdirectory(libraries/ogfx)
-add_subdirectory(examples/presentation)
+add_subdirectory(examples/commands_sync)

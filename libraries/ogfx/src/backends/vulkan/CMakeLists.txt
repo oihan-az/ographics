@@ -14,6 +14,9 @@ target_sources(
         vk_queue.cpp
         vk_command_pool.cpp
         vk_command_buffer.cpp
+        vk_semaphore.cpp
+        vk_pipeline_stage.cpp
+        vk_fence.cpp
         
         
 )

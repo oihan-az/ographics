@@ -1,9 +1,4 @@
-#include <ogfx/command_buffer.hpp>
-#include <ogfx/command_pool.hpp>
-
 #include <debug.hpp>
-
-#include <vulkan/vulkan.h>
 
 #include "vk_command_buffer.hpp"
 #include "vk_command_pool.hpp"
@@ -72,6 +67,17 @@ void CommandBuffer::end()
     }
 
     OGFX_LOG("Vulkan command buffer recording ended");
+}
+
+void CommandBuffer::reset()
+{
+    if (vkResetCommandBuffer(m_impl->m_command_buffer, 0) != VK_SUCCESS)
+    {
+        OGFX_LOG_ERROR("Failed to reset Vulkan command buffer");
+        throw std::runtime_error("Failed to reset Vulkan command buffer.");
+    }
+
+    OGFX_LOG("Vulkan command buffer reset");
 }
 
 } // namespace ogfx

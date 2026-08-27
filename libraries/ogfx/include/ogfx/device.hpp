@@ -54,6 +54,8 @@ class Device
     friend class Swapchain;
     friend class Image;
     friend class CommandPool;
+    friend class Semaphore;
+    friend class Fence;
 
     std::array<Queue, to_index(QueueType::Count)> m_queues;
 

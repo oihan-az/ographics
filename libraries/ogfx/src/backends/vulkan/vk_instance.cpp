@@ -1,8 +1,4 @@
-#include <ogfx/instance.hpp>
-
 #include <debug.hpp>
-
-#include <vulkan/vulkan.h>
 
 #include "vk_instance.hpp"
 #include "vk_physical_device.hpp"

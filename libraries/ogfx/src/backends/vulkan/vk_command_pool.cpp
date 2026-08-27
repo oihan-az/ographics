@@ -1,10 +1,4 @@
-#include <ogfx/command_pool.hpp>
-#include <ogfx/device.hpp>
-#include <ogfx/queue.hpp>
-
 #include <debug.hpp>
-
-#include <vulkan/vulkan.h>
 
 #include "vk_command_pool.hpp"
 #include "vk_device.hpp"

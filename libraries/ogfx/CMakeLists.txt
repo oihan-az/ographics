@@ -29,6 +29,8 @@ target_sources(
         src/debug.cpp
         src/format.cpp
         src/present_mode.cpp
+        src/image_usage.cpp
+        src/pipeline_stage.cpp
         
 )
 

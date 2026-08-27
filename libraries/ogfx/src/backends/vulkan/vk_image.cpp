@@ -1,9 +1,4 @@
-#include <ogfx/image.hpp>
-#include <ogfx/device.hpp>
-
 #include <debug.hpp>
-
-#include <vulkan/vulkan.h>
 
 #include "vk_image.hpp"
 #include "vk_device.hpp"
@@ -17,8 +12,19 @@ Image::Image(const Device& device, const ImageDesc& desc) : m_desc(desc), m_impl
 {
     m_impl->m_device = device.m_impl->m_device;
 
+
+    OGFX_LOG("Creating image:");
+    OGFX_LOG("  Width: " + std::to_string(m_desc.width));
+    OGFX_LOG("  Height: " + std::to_string(m_desc.height));
+    OGFX_LOG("  Mip levels: " + std::to_string(m_desc.mip_levels));
+    OGFX_LOG("  Array layers: " + std::to_string(m_desc.array_layers));
+    OGFX_LOG("  Format: " + std::string(to_string(m_desc.format)));
+    OGFX_LOG("  Usage: " + to_string(m_desc.usage));
+    OGFX_LOG("  Owned: " + std::string(m_desc.owned ? "true" : "false"));
+
     if (!m_desc.owned)
     {
+        OGFX_LOG("Using externally owned Vulkan image");
         return;
     }
 
@@ -37,7 +43,7 @@ Image::Image(const Device& device, const ImageDesc& desc) : m_desc(desc), m_impl
 
     if (vkCreateImage(m_impl->m_device, &image_info, nullptr, &m_impl->m_image) != VK_SUCCESS)
     {
-        m_impl->m_image = VK_NULL_HANDLE;
+        OGFX_LOG_ERROR("Failed to create Vulkan image");
         throw std::runtime_error("Failed to create Vulkan image");
     }
 
