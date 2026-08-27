@@ -1,5 +1,7 @@
 #include "vk_present_mode.hpp"
 
+#include <stdexcept>
+
 namespace ogfx
 {
 
@@ -34,7 +36,7 @@ PresentMode from_vk_present_mode(VkPresentModeKHR mode)
         return PresentMode::Mailbox;
 
     default:
-        return PresentMode::FIFO;
+        throw std::runtime_error("Unknown Vulkan present mode.");
     }
 }
 

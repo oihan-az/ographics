@@ -2,6 +2,7 @@
 #define OGFX_QUEUE_HPP
 
 #include <ogfx/pipeline_stage.hpp>
+#include <ogfx/present_result.hpp>
 
 #include <memory>
 #include <vector>
@@ -12,6 +13,7 @@ namespace ogfx
 class CommandBuffer;
 class Semaphore;
 class Fence;
+class Swapchain;
 
 struct SubmitWait
 {
@@ -42,6 +44,7 @@ class Queue
     Queue& operator=(Queue&&) noexcept;
 
     void submit(const SubmitDesc& desc);
+    PresentResult present(const Swapchain& swapchain, uint32_t image_index, const Semaphore& wait_semaphore);
 
     [[nodiscard]] bool valid() const;
 

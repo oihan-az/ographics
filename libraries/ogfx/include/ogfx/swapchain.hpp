@@ -48,6 +48,8 @@ class Swapchain
 
   private:
 
+    friend class Queue;
+
     std::vector<Image> m_images;
     std::vector<ImageView> m_image_views;
 

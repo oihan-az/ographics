@@ -65,35 +65,38 @@ int main()
     commandPoolDesc.transient = false;
     commandPoolDesc.resettable = true;
 
-    ogfx::CommandPool command_pool(device, graphicsQueue, commandPoolDesc);
+    ogfx::CommandPool commandPool(device, graphicsQueue, commandPoolDesc);
 
-    ogfx::CommandBuffer command_buffer(command_pool);
+    ogfx::CommandBuffer commandBuffer(commandPool);
 
-    ogfx::Semaphore image_available(device);
-    ogfx::Semaphore render_finished(device);
+    ogfx::Semaphore imageAvailable(device);
+    ogfx::Semaphore renderFinished(device);
 
-    const uint32_t image_index = swapchain.acquire_next_image(image_available);
+    const uint32_t image_index = swapchain.acquire_next_image(imageAvailable);
 
     ogfx::Fence in_flight(device, true);
 
-    command_buffer.reset();
-    command_buffer.begin();
-    command_buffer.end();
+    commandBuffer.reset();
+    commandBuffer.begin();
+    commandBuffer.end();
 
     // Wait for the fence before using the command buffer.
     in_flight.wait();
     in_flight.reset();
 
-    ogfx::SubmitDesc submit_desc;
-    submit_desc.command_buffers.push_back(&command_buffer);
-    submit_desc.wait_semaphores.push_back({&image_available, ogfx::PipelineStage::ColorAttachmentOutput});
-    submit_desc.signal_semaphores.push_back(&render_finished);
-    submit_desc.fence = &in_flight;
+    ogfx::SubmitDesc submitDesc;
+    submitDesc.command_buffers.push_back(&commandBuffer);
+    submitDesc.wait_semaphores.push_back({&imageAvailable, ogfx::PipelineStage::ColorAttachmentOutput});
+    submitDesc.signal_semaphores.push_back(&renderFinished);
+    submitDesc.fence = &in_flight;
 
-    graphicsQueue.submit(submit_desc);
+    graphicsQueue.submit(submitDesc);
 
     // Wait until the GPU has completed the submission.
     in_flight.wait();
+
+    ogfx::Queue& presentQueue = device.queue(ogfx::QueueType::Present);
+    ogfx::PresentResult presentResult = presentQueue.present(swapchain, image_index, renderFinished);
 
     //while (!window.should_close())
     //{

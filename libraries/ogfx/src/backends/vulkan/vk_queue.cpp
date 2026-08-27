@@ -5,6 +5,8 @@
 #include "vk_semaphore.hpp"
 #include "vk_fence.hpp"
 #include "vk_pipeline_stage.hpp"
+#include "vk_swapchain.hpp"
+#include "vk_present_result.hpp"
 
 #include <vector>
 
@@ -102,6 +104,34 @@ void Queue::submit(const SubmitDesc& desc)
     }
 
     OGFX_LOG("Vulkan queue submission completed");
+}
+
+PresentResult Queue::present(const Swapchain& swapchain, uint32_t image_index, const Semaphore& wait_semaphore)
+{
+    OGFX_LOG("Presenting swapchain image [" + std::to_string(image_index) + "] on Vulkan queue (family " +
+             std::to_string(m_impl->m_family_index) + ")");
+
+    OGFX_LOG("  Waiting on render semaphore");
+
+    VkPresentInfoKHR present_info{};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    VkSemaphore vk_wait_semaphore = wait_semaphore.m_impl->m_semaphore;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = &vk_wait_semaphore;
+
+    VkSwapchainKHR vk_swapchain = swapchain.m_impl->m_swapchain;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &vk_swapchain;
+
+    present_info.pImageIndices = &image_index;
+
+    const VkResult vk_result = vkQueuePresentKHR(m_impl->m_queue, &present_info);
+
+    const PresentResult result = from_vk_present_result(vk_result);
+    OGFX_LOG("Presentation result: " + std::string(to_string(result)));
+
+    return result;
 }
 
 bool Queue::valid() const
