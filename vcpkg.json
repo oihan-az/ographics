@@ -4,6 +4,10 @@
     "description": "A modular, API-agnostic C++ graphics and GPU framework",
     "dependencies": [
         "glfw3",
-        "vulkan"
+        "vulkan",
+        {
+          "name": "directx-dxc",
+          "host": true
+        }
     ]
 }

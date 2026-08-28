@@ -11,16 +11,26 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Graphics API backend
 set(OGRAPHICS_API "VULKAN" CACHE STRING "Graphics API backend")
 
 set_property(
-    CACHE OGFX_API
+    CACHE OGRAPHICS_API
     PROPERTY STRINGS
         VULKAN
         D3D12
-        OPENGL
         METAL
 )
+
+message(STATUS "Graphics API: ${OGRAPHICS_API}")
+
+# Assets
+set(OGRAPHICS_ASSETS_DIR
+    "${CMAKE_SOURCE_DIR}/assets"
+)
+
+# Shader compiler
+include(cmake/Shaders.cmake)
 
 add_subdirectory(libraries/oplatform)
 add_subdirectory(libraries/ogfx)

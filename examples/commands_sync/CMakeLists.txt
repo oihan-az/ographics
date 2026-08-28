@@ -12,3 +12,8 @@ target_link_libraries(
         ographics::oplatform
         ographics::ogfx
 )
+
+add_dependencies(
+    commands_sync_test
+    ogfx_shaders
+)
