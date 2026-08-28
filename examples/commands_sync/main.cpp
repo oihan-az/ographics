@@ -13,6 +13,41 @@
 #include <ogfx/fence.hpp>
 #include <ogfx/render_pass.hpp>
 #include <ogfx/framebuffer.hpp>
+#include <ogfx/shader.hpp>
+
+#include <fstream>
+#include <filesystem>
+#include <stdexcept>
+#include <vector>
+
+std::vector<uint8_t> load_shader(const std::filesystem::path& path)
+{
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
+
+    if (!file)
+    {
+        throw std::runtime_error("Failed to open shader: " + path.string());
+    }
+
+    const std::streamsize size = file.tellg();
+
+    if (size <= 0)
+    {
+        throw std::runtime_error("Shader is empty: " + path.string());
+    }
+
+    std::vector<uint8_t> bytecode(static_cast<size_t>(size));
+
+    file.seekg(0);
+    file.read(reinterpret_cast<char*>(bytecode.data()), size);
+
+    if (!file)
+    {
+        throw std::runtime_error("Failed to read shader: " + path.string());
+    }
+
+    return bytecode;
+}
 
 int main()
 {
@@ -51,6 +86,27 @@ int main()
     deviceDesc.enable_present = true;
 
     ogfx::Device device(physicalDevice, deviceDesc, &surface);
+
+
+    const std::filesystem::path shader_dir = "shaders/";
+    const std::filesystem::path vertex_shader_path = shader_dir / ("triangle.vert." OGRAPHICS_SHADER_FORMAT);
+    const std::filesystem::path fragment_shader_path = shader_dir / ("triangle.frag." OGRAPHICS_SHADER_FORMAT);
+
+    const std::vector<uint8_t> vertex_bytecode = load_shader(vertex_shader_path);
+    const std::vector<uint8_t> fragment_bytecode = load_shader(fragment_shader_path);
+
+    ogfx::ShaderDesc vertex_shader_desc;
+    vertex_shader_desc.stage = ogfx::ShaderStage::Vertex;
+    vertex_shader_desc.bytecode = vertex_bytecode;
+
+    ogfx::ShaderDesc fragment_shader_desc;
+    fragment_shader_desc.stage = ogfx::ShaderStage::Fragment;
+    fragment_shader_desc.bytecode = fragment_bytecode;
+
+    ogfx::Shader vertex_shader(device, vertex_shader_desc);
+    ogfx::Shader fragment_shader(device, fragment_shader_desc);
+
+
 
     ogfx::SwapchainDesc swapchainDesc;
     swapchainDesc.width = window.width();

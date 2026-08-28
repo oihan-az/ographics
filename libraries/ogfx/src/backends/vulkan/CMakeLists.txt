@@ -22,6 +22,7 @@ target_sources(
         vk_image_state.cpp
         vk_load_store_op.cpp
         vk_framebuffer.cpp
+        vk_shader.cpp
         
         
 )

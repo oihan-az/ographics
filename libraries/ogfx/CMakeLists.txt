@@ -34,6 +34,7 @@ target_sources(
         src/present_result.cpp
         src/image_state.cpp
         src/load_store_op.cpp
+        src/shader_stage.cpp
         
 )
 

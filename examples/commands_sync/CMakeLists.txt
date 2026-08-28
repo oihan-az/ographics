@@ -13,7 +13,10 @@ target_link_libraries(
         ographics::ogfx
 )
 
-add_dependencies(
+include(
+    "${CMAKE_SOURCE_DIR}/cmake/Shaders.cmake"
+)
+
+ogfx_compile_shaders(
     commands_sync_test
-    ogfx_shaders
 )

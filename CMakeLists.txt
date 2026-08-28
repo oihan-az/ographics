@@ -24,14 +24,6 @@ set_property(
 
 message(STATUS "Graphics API: ${OGRAPHICS_API}")
 
-# Assets
-set(OGRAPHICS_ASSETS_DIR
-    "${CMAKE_SOURCE_DIR}/assets"
-)
-
-# Shader compiler
-include(cmake/Shaders.cmake)
-
 add_subdirectory(libraries/oplatform)
 add_subdirectory(libraries/ogfx)
 add_subdirectory(examples/commands_sync)

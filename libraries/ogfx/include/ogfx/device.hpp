@@ -67,6 +67,7 @@ class Device
     friend class Fence;
     friend class RenderPass;
     friend class Framebuffer;
+    friend class Shader;
 
     std::array<Queue, to_index(QueueType::Count)> m_queues;
 
