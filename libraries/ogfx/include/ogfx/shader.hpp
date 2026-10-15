@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace ogfx
 {
@@ -15,6 +16,7 @@ class Device;
 struct ShaderDesc
 {
     ShaderStage stage = ShaderStage::Vertex;
+    std::string entry_point;
     std::vector<uint8_t> bytecode;
 };
 
@@ -31,8 +33,10 @@ class Shader
     Shader& operator=(Shader&&) noexcept;
 
   private:
+    friend class GraphicsPipeline;
 
     ShaderStage m_stage;
+    std::string m_entry_point;
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

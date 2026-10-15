@@ -68,6 +68,7 @@ class Device
     friend class RenderPass;
     friend class Framebuffer;
     friend class Shader;
+    friend class GraphicsPipeline;
 
     std::array<Queue, to_index(QueueType::Count)> m_queues;
 

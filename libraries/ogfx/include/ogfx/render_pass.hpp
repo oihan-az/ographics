@@ -44,6 +44,7 @@ class RenderPass
   private:
     friend class Framebuffer;
     friend class CommandBuffer;
+    friend class GraphicsPipeline;
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

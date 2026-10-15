@@ -8,7 +8,6 @@
 namespace ogfx
 {
 
-
 struct Fence::Impl
 {
     VkFence m_fence = VK_NULL_HANDLE;

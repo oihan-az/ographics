@@ -23,6 +23,13 @@ target_sources(
         vk_load_store_op.cpp
         vk_framebuffer.cpp
         vk_shader.cpp
+        vk_shader_stage.cpp
+        vk_input_assembly.cpp
+        vk_rasterization.cpp
+        vk_multisample.cpp
+        vk_color_blend.cpp
+        vk_viewport.cpp
+        vk_graphics_pipeline.cpp
         
         
 )

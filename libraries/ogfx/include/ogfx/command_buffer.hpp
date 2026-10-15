@@ -9,6 +9,7 @@ namespace ogfx
 class CommandPool;
 class RenderPass;
 class Framebuffer;
+class GraphicsPipeline;
 
 struct ClearColor
 {
@@ -27,6 +28,14 @@ struct RenderPassBeginInfo
     uint32_t height = 0;
 
     ClearColor clear_color{};
+};
+
+struct DrawInfo
+{
+    uint32_t vertex_count = 0;
+    uint32_t instance_count = 1;
+    uint32_t first_vertex = 0;
+    uint32_t first_instance = 0;
 };
 
 class CommandBuffer
@@ -49,6 +58,10 @@ class CommandBuffer
     void begin_render_pass(const RenderPass& render_pass, const Framebuffer& framebuffer,
                            const RenderPassBeginInfo& begin_info);
     void end_render_pass();
+
+    void bind_graphics_pipeline(const GraphicsPipeline& pipeline);
+
+    void draw(const DrawInfo& draw_info);
 
   private:
     friend class Queue;

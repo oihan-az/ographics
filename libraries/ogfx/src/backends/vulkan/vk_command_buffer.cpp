@@ -4,6 +4,7 @@
 #include "vk_command_pool.hpp"
 #include "vk_render_pass.hpp"
 #include "vk_framebuffer.hpp"
+#include "vk_graphics_pipeline.hpp"
 
 #include <stdexcept>
 
@@ -87,8 +88,8 @@ void CommandBuffer::begin_render_pass(const RenderPass& render_pass, const Frame
 {
     OGFX_LOG("Beginning Vulkan render pass");
 
-    OGFX_LOG("  Render area: offset=(" + std::to_string(begin_info.offset_x) + ", " +
-             std::to_string(begin_info.offset_y) + "), extent=(" + std::to_string(begin_info.width) + "x" +
+    OGFX_LOG("  Render area: offset (" + std::to_string(begin_info.offset_x) + ", " +
+             std::to_string(begin_info.offset_y) + "), extent (" + std::to_string(begin_info.width) + "x" +
              std::to_string(begin_info.height) + ")");
 
     OGFX_LOG("  Clear color: (" + std::to_string(begin_info.clear_color.r) + ", " +
@@ -122,6 +123,27 @@ void CommandBuffer::end_render_pass()
     vkCmdEndRenderPass(m_impl->m_command_buffer);
 
     OGFX_LOG("Vulkan render pass ended");
+}
+
+void CommandBuffer::bind_graphics_pipeline(const GraphicsPipeline& pipeline) 
+{
+    OGFX_LOG("Binding Vulkan graphics pipeline");
+
+    vkCmdBindPipeline(m_impl->m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.m_impl->m_pipeline);
+
+    OGFX_LOG("Vulkan graphics pipeline bound");
+}
+
+void CommandBuffer::draw(const DrawInfo& draw_info) 
+{
+    OGFX_LOG("Drawimg: vertex_count " + std::to_string(draw_info.vertex_count) +
+             ", instance_count " + std::to_string(draw_info.instance_count) + ", first_vertex " +
+             std::to_string(draw_info.first_vertex) + ", first_instance " + std::to_string(draw_info.first_instance));
+
+    vkCmdDraw(m_impl->m_command_buffer, 
+              draw_info.vertex_count, draw_info.instance_count, draw_info.first_vertex, draw_info.first_instance);
+
+    OGFX_LOG("Vulkan draw command recorded");
 }
 
 } // namespace ogfx

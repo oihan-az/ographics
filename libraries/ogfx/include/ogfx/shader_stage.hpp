@@ -6,6 +6,7 @@ namespace ogfx
 
 enum class ShaderStage
 {
+    Undefined,
     Vertex,
     Fragment,
     Compute

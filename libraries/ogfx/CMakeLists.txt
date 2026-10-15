@@ -35,6 +35,11 @@ target_sources(
         src/image_state.cpp
         src/load_store_op.cpp
         src/shader_stage.cpp
+        src/vertex_input.cpp
+        src/input_assembly.cpp
+        src/rasterization.cpp
+        src/multisample.cpp
+        src/color_blend.cpp
         
 )
 

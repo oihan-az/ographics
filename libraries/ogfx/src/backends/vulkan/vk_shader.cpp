@@ -6,7 +6,8 @@
 namespace ogfx
 {
 
-Shader::Shader(const Device& device, const ShaderDesc& desc) : m_stage(desc.stage), m_impl(std::make_unique<Impl>())
+Shader::Shader(const Device& device, const ShaderDesc& desc)
+    : m_stage(desc.stage), m_entry_point(desc.entry_point), m_impl(std::make_unique<Impl>())
 {
     m_impl->m_device = device.m_impl->m_device;
 

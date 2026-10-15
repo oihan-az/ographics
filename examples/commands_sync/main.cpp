@@ -14,6 +14,7 @@
 #include <ogfx/render_pass.hpp>
 #include <ogfx/framebuffer.hpp>
 #include <ogfx/shader.hpp>
+#include <ogfx/graphics_pipeline.hpp>
 
 #include <fstream>
 #include <filesystem>
@@ -97,10 +98,12 @@ int main()
 
     ogfx::ShaderDesc vertex_shader_desc;
     vertex_shader_desc.stage = ogfx::ShaderStage::Vertex;
+    vertex_shader_desc.entry_point = "VSMain";
     vertex_shader_desc.bytecode = vertex_bytecode;
 
     ogfx::ShaderDesc fragment_shader_desc;
     fragment_shader_desc.stage = ogfx::ShaderStage::Fragment;
+    fragment_shader_desc.entry_point = "PSMain";
     fragment_shader_desc.bytecode = fragment_bytecode;
 
     ogfx::Shader vertex_shader(device, vertex_shader_desc);
@@ -153,6 +156,63 @@ int main()
 
 
 
+
+    // Graphics pipeline
+    ogfx::GraphicsPipelineDesc graphicsPipelineDesc;
+
+    graphicsPipelineDesc.render_pass = &renderPass;
+    graphicsPipelineDesc.subpass = 0;
+
+    // Shaders
+    graphicsPipelineDesc.shaders = { &vertex_shader, &fragment_shader };
+
+    // Vertex input
+    graphicsPipelineDesc.vertex_input = {};
+
+    // Input assembly
+    graphicsPipelineDesc.input_assembly.topology = ogfx::PrimitiveTopology::TriangleList;
+    graphicsPipelineDesc.input_assembly.primitive_restart_enable = false;
+
+    // Viewport
+    graphicsPipelineDesc.viewport.dynamic_viewport = false;
+    graphicsPipelineDesc.viewport.dynamic_scissor = false;
+
+    ogfx::Viewport viewport;
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(swapchainDesc.width);
+    viewport.height = static_cast<float>(swapchainDesc.height);
+    viewport.min_depth = 0.0f;
+    viewport.max_depth = 1.0f;
+    graphicsPipelineDesc.viewport.viewports = {viewport};
+
+    ogfx::Scissor scissor;
+    scissor.x = 0;
+    scissor.y = 0;
+    scissor.width = swapchainDesc.width;
+    scissor.height = swapchainDesc.height;
+    graphicsPipelineDesc.viewport.scissors = {scissor};
+
+    // Rasterization
+    graphicsPipelineDesc.rasterization.polygon_mode = ogfx::PolygonMode::Fill;
+    graphicsPipelineDesc.rasterization.cull_mode = ogfx::CullMode::None;
+    graphicsPipelineDesc.rasterization.front_face = ogfx::FrontFace::CounterClockwise;
+
+    // Multisampling
+    graphicsPipelineDesc.multisampling.rasterization_samples = ogfx::SampleCount::Count1;
+
+    // Color blending
+    ogfx::ColorBlendAttachmentDesc colorBlendAttachment;
+    colorBlendAttachment.blend_enable = false;
+    colorBlendAttachment.write_mask = ogfx::ColorComponent::All;
+
+    graphicsPipelineDesc.color_blend.attachments = {colorBlendAttachment};
+
+    ogfx::GraphicsPipeline graphicsPipeline(device, graphicsPipelineDesc);
+
+
+
+
     // Command pool
     ogfx::Queue& graphicsQueue = device.queue(ogfx::QueueType::Graphics);
 
@@ -183,6 +243,11 @@ int main()
     render_pass_begin_info.clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
 
     commandBuffer.begin_render_pass(renderPass, framebuffers[imageIndex], render_pass_begin_info);
+
+    commandBuffer.bind_graphics_pipeline(graphicsPipeline);
+    ogfx::DrawInfo draw_info;
+    draw_info.vertex_count = 3;
+    commandBuffer.draw(draw_info);
 
     commandBuffer.end_render_pass();
 
