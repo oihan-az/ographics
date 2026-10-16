@@ -27,21 +27,6 @@ target_sources(
     ogfx
     PRIVATE
         src/debug.cpp
-        src/format.cpp
-        src/present_mode.cpp
-        src/image_usage.cpp
-        src/pipeline_stage.cpp
-        src/present_result.cpp
-        src/image_state.cpp
-        src/load_store_op.cpp
-        src/shader_stage.cpp
-        src/vertex_input.cpp
-        src/input_assembly.cpp
-        src/rasterization.cpp
-        src/multisample.cpp
-        src/color_blend.cpp
-        src/buffer_usage.cpp
-        src/memory_property.cpp
         
 )
 

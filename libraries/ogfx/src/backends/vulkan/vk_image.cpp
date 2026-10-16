@@ -1,4 +1,5 @@
 #include <debug.hpp>
+#include <ogfx/enum_string.hpp>
 
 #include "vk_image.hpp"
 #include "vk_device.hpp"
@@ -18,8 +19,8 @@ Image::Image(const Device& device, const ImageDesc& desc) : m_desc(desc), m_impl
     OGFX_LOG("  Height: " + std::to_string(m_desc.height));
     OGFX_LOG("  Mip levels: " + std::to_string(m_desc.mip_levels));
     OGFX_LOG("  Array layers: " + std::to_string(m_desc.array_layers));
-    OGFX_LOG("  Format: " + std::string(to_string(m_desc.format)));
-    OGFX_LOG("  Usage: " + to_string(m_desc.usage));
+    OGFX_LOG("  Format: " + to_string_enum(m_desc.format));
+    OGFX_LOG("  Usage: " + to_string_bitmask(m_desc.usage));
     OGFX_LOG("  Owned: " + std::string(m_desc.owned ? "true" : "false"));
 
     if (!m_desc.owned)

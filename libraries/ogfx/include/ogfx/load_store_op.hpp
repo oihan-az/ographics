@@ -17,9 +17,6 @@ enum class StoreOp
     DontCare
 };
 
-const char* to_string(LoadOp op);
-const char* to_string(StoreOp op);
-
 } // namespace ogfx
 
 #endif // OGFX_LOAD_STORE_OP_HPP

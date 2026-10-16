@@ -16,8 +16,6 @@ enum class ImageState
     Present
 };
 
-const char* to_string(ImageState state);
-
 } // namespace ogfx
 
 #endif // OGFX_IMAGE_STATE_HPP

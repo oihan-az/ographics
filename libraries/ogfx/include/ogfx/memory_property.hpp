@@ -1,37 +1,21 @@
 #ifndef OGFX_MEMORY_PROPERTY_HPP
 #define OGFX_MEMORY_PROPERTY_HPP
 
+#include <ogfx/enum_flags.hpp>
+
 #include <cstdint>
 #include <string>
 
 namespace ogfx
 {
 
-enum class MemoryProperty : uint32_t
-{
+OGFX_BITMASK_ENUM(MemoryProperty, uint32_t,
     None = 0,
-    DeviceLocal = 1 << 0,
-    HostVisible = 1 << 1,
-    HostCoherent = 1 << 2,
-    HostCached = 1 << 3
-};
-
-constexpr MemoryProperty operator|(MemoryProperty lhs, MemoryProperty rhs)
-{
-    return static_cast<MemoryProperty>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
-}
-
-constexpr MemoryProperty operator&(MemoryProperty lhs, MemoryProperty rhs)
-{
-    return static_cast<MemoryProperty>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
-}
-
-constexpr bool has_flag(MemoryProperty value, MemoryProperty flag)
-{
-    return (value & flag) == flag;
-}
-
-std::string to_string(MemoryProperty property);
+    DeviceLocal = 1u << 0,
+    HostVisible = 1u << 1,
+    HostCoherent = 1u << 2,
+    HostCached = 1u << 3
+);
 
 } // namespace ogfx
 

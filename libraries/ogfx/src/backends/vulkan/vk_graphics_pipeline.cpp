@@ -1,4 +1,5 @@
 #include <debug.hpp>
+#include <ogfx/enum_string.hpp>
 
 #include "vk_graphics_pipeline.hpp"
 #include "vk_device.hpp"
@@ -80,7 +81,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
 
         shader_stages.push_back(stage_info);
 
-        OGFX_LOG("Added " + std::string(to_string(shader->m_stage)) + " shader stage, entry point: '" +
+        OGFX_LOG("Added " + to_string_enum(shader->m_stage) + " shader stage, entry point: '" +
                  shader->m_entry_point + "'");
     }
 
@@ -125,7 +126,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
         OGFX_LOG("Vertex binding " + std::to_string(i) +
                  ": binding " + std::to_string(binding.binding) +
                  ", stride " + std::to_string(binding.stride) +
-                 ", input rate " + std::string(to_string(binding.input_rate)));
+                 ", input rate " + to_string_enum(binding.input_rate));
 
         VkVertexInputBindingDescription vk_binding{};
         vk_binding.binding = binding.binding;
@@ -155,7 +156,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
         OGFX_LOG("Vertex attribute " + std::to_string(i) +
                  ": location " + std::to_string(attribute.location) +
                  ", binding " + std::to_string(attribute.binding) +
-                 ", format " + std::string(to_string(attribute.format)) +
+                 ", format " + to_string_enum(attribute.format) +
                  ", offset " + std::to_string(attribute.offset));
 
         VkVertexInputAttributeDescription vk_attribute{};
@@ -176,7 +177,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
 
     // Input assembly.
     OGFX_LOG("Creating input assembly state: topology " +
-             std::string(to_string(desc.input_assembly.topology)) +
+             std::string(to_string_enum(desc.input_assembly.topology)) +
              ", primitive restart " +
              std::string(desc.input_assembly.primitive_restart_enable ? "true" : "false"));
 
@@ -192,9 +193,9 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     input_assembly.primitiveRestartEnable = desc.input_assembly.primitive_restart_enable ? VK_TRUE : VK_FALSE;
 
     // Rasterization
-    OGFX_LOG("Creating rasterization state: polygon mode " + std::string(to_string(desc.rasterization.polygon_mode)) +
-             ", cull mode " + std::string(to_string(desc.rasterization.cull_mode)) +
-             ", front face " + std::string(to_string(desc.rasterization.front_face)));
+    OGFX_LOG("Creating rasterization state: polygon mode " + to_string_enum(desc.rasterization.polygon_mode) +
+             ", cull mode " + to_string_enum(desc.rasterization.cull_mode) +
+             ", front face " + to_string_enum(desc.rasterization.front_face));
 
     VkPipelineRasterizationStateCreateInfo rasterization{};
     rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -214,7 +215,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     rasterization.lineWidth = desc.rasterization.line_width;
 
     // Multisample
-    OGFX_LOG("Creating multisampling state: samples " + std::string(to_string(desc.multisampling.rasterization_samples)) +
+    OGFX_LOG("Creating multisampling state: samples " + to_string_enum(desc.multisampling.rasterization_samples) +
              ", sample shading " + std::string(desc.multisampling.sample_shading_enable ? "true" : "false") +
              ", min sample shading " + std::to_string(desc.multisampling.min_sample_shading) +
              ", alpha to coverage " + std::string(desc.multisampling.alpha_to_coverage_enable ? "true" : "false") +
@@ -244,9 +245,9 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
 
         OGFX_LOG("Color blend attachment " + std::to_string(i) +
                  ": blend " + std::string(attachment.blend_enable ? "true" : "false") +
-                 ", color op " + std::string(to_string(attachment.color_op)) +
-                 ", alpha op " + std::string(to_string(attachment.alpha_op)) +
-                 ", write mask " + std::string(to_string(attachment.write_mask)));
+                 ", color op " + to_string_enum(attachment.color_op) +
+                 ", alpha op " + to_string_enum(attachment.alpha_op) +
+                 ", write mask " + to_string_bitmask(attachment.write_mask));
 
         VkPipelineColorBlendAttachmentState vk_attachment{};
         vk_attachment.blendEnable = attachment.blend_enable ? VK_TRUE : VK_FALSE;

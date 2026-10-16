@@ -18,8 +18,6 @@ enum class SampleCount : uint32_t
     Count64 = 64
 };
 
-const char* to_string(SampleCount count);
-
 struct MultisampleStateDesc
 {
     SampleCount rasterization_samples = SampleCount::Count1;

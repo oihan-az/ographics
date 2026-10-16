@@ -12,8 +12,6 @@ enum class ShaderStage
     Compute
 };
 
-const char* to_string(ShaderStage stage);
-
 } // namespace ogfx
 
 #endif // OGFX_SHADER_STAGE_HPP

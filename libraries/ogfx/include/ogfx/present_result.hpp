@@ -11,8 +11,6 @@ enum class PresentResult
     OutOfDate
 };
 
-const char* to_string(PresentResult result);
-
 } // namespace ogfx
 
 #endif // OGFX_PRESENT_RESULT_HPP

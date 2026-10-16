@@ -11,8 +11,6 @@ enum class PresentMode
     Mailbox,
 };
 
-const char* to_string(PresentMode mode);
-
 } // namespace ogfx
 
 #endif // OGFX_PRESENT_MODE_HPP

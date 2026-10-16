@@ -15,8 +15,6 @@ enum class VertexInputRate
     Instance
 };
 
-const char* to_string(VertexInputRate rate);
-
 struct VertexBindingDesc
 {
     uint32_t binding = 0;

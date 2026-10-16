@@ -1,4 +1,5 @@
 #include <debug.hpp>
+#include <ogfx/enum_string.hpp>
 
 #include "vk_render_pass.hpp"
 #include "vk_device.hpp"
@@ -24,11 +25,11 @@ RenderPass::RenderPass(const Device& device, const RenderPassDesc& desc) : m_imp
     {
         const RenderPassAttachmentDesc& attachment = desc.attachments[i];
 
-        OGFX_LOG("Attachment " + std::to_string(i) + ": format=" + std::string(to_string(attachment.format)) +
-                 ", load_op=" + std::string(to_string(attachment.load_op)) +
-                 ", store_op=" + std::string(to_string(attachment.store_op)) +
-                 ", initial_state=" + std::string(to_string(attachment.initial_state)) +
-                 ", final_state=" + std::string(to_string(attachment.final_state)));
+        OGFX_LOG("Attachment " + std::to_string(i) + ": format " + to_string_enum(attachment.format) +
+                 ", load_op " + to_string_enum(attachment.load_op) +
+                 ", store_op " + to_string_enum(attachment.store_op) +
+                 ", initial_state " + to_string_enum(attachment.initial_state) +
+                 ", final_state " + to_string_enum(attachment.final_state));
 
         VkAttachmentDescription vk_attachment{};
         vk_attachment.format = to_vk_format(attachment.format);

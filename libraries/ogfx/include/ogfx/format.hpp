@@ -29,8 +29,6 @@ enum class Format
     D32_FLOAT_S8_UINT,
 };
 
-const char* to_string(Format format);
-
 } // namespace ogfx
 
 #endif // OGFX_FORMAT_HPP

@@ -12,8 +12,6 @@ enum class PolygonMode
     Point
 };
 
-const char* to_string(PolygonMode mode);
-
 enum class CullMode
 {
     Undefined,
@@ -23,16 +21,12 @@ enum class CullMode
     FrontAndBack
 };
 
-const char* to_string(CullMode mode);
-
 enum class FrontFace
 {
     Undefined,
     CounterClockwise,
     Clockwise
 };
-
-const char* to_string(FrontFace face);
 
 struct RasterizationStateDesc
 {

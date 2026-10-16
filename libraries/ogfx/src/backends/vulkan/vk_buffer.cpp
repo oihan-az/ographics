@@ -1,4 +1,5 @@
 #include <debug.hpp>
+#include <ogfx/enum_string.hpp>
 
 #include "vk_buffer.hpp"
 #include "vk_buffer_usage.hpp"
@@ -33,8 +34,8 @@ Buffer& Buffer::operator=(Buffer&&) noexcept = default;
 void Buffer::create_buffer()
 {
     OGFX_LOG("Creating buffer: size " + std::to_string(m_desc.size) + 
-             ", usage " + to_string(m_desc.usage) +
-             ", memory properties " + to_string(m_desc.memory_properties));
+             ", usage " + to_string_bitmask(m_desc.usage) +
+             ", memory properties " + to_string_bitmask(m_desc.memory_properties));
 
     // Destroy any existing resources before recreating the buffer
     destroy_buffer();
@@ -105,7 +106,7 @@ void Buffer::allocate_memory()
 
     if (memory_type_index == physical_memory_properties.memoryTypeCount)
     {
-        OGFX_LOG("Failed to find compatible Vulkan memory type. Requested: " + to_string(m_desc.memory_properties));
+        OGFX_LOG("Failed to find compatible Vulkan memory type. Requested: " + to_string_bitmask(m_desc.memory_properties));
         return;
     }
 

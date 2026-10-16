@@ -1,4 +1,5 @@
 #include <debug.hpp>
+#include <ogfx/enum_string.hpp>
 
 #include "vk_swapchain.hpp"
 #include "vk_device.hpp"
@@ -67,8 +68,8 @@ VkSurfaceFormatKHR choose_surface_format(const std::vector<VkSurfaceFormatKHR>& 
 
         if (format.format == requested && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
         {
-            OGFX_LOG("Surface format: requested " + std::string(to_string(requested_format)) + ", selected " +
-                     std::string(to_string(available_format)));
+            OGFX_LOG("Surface format: requested " + to_string_enum(requested_format) + ", selected " +
+                     to_string_enum(available_format));
 
             return format;
         }
@@ -78,8 +79,8 @@ VkSurfaceFormatKHR choose_surface_format(const std::vector<VkSurfaceFormatKHR>& 
     const VkFormat available = available_surface_format.format;
     const Format available_format = from_vk_format(available);
 
-    OGFX_LOG("Surface format: requested " + std::string(to_string(requested_format)) + ", selected fallback " +
-             std::string(to_string(available_format)));
+    OGFX_LOG("Surface format: requested " + to_string_enum(requested_format) + ", selected fallback " +
+             to_string_enum(available_format));
 
     return available_surface_format;
 }
@@ -94,8 +95,8 @@ VkPresentModeKHR choose_present_mode(const std::vector<VkPresentModeKHR>& modes,
 
         if (mode == requested)
         {
-            OGFX_LOG("Present mode: requested " + std::string(to_string(requested_mode)) + ", selected mode " +
-                     std::string(to_string(available_mode)));
+            OGFX_LOG("Present mode: requested " + to_string_enum(requested_mode) + ", selected mode " +
+                     to_string_enum(available_mode));
 
             return mode;
         }
@@ -104,8 +105,8 @@ VkPresentModeKHR choose_present_mode(const std::vector<VkPresentModeKHR>& modes,
     VkPresentModeKHR available = VK_PRESENT_MODE_FIFO_KHR;
     const PresentMode available_mode = from_vk_present_mode(available);
 
-    OGFX_LOG("Present mode: requested " + std::string(to_string(requested_mode)) + ", selected fallback " +
-             std::string(to_string(available_mode)));
+    OGFX_LOG("Present mode: requested " + to_string_enum(requested_mode) + ", selected fallback " +
+             to_string_enum(available_mode));
 
     return available;
 }

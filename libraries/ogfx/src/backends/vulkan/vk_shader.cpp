@@ -1,4 +1,5 @@
 #include <debug.hpp>
+#include <ogfx/enum_string.hpp>
 
 #include "vk_shader.hpp"
 #include "vk_device.hpp"
@@ -11,7 +12,7 @@ Shader::Shader(const Device& device, const ShaderDesc& desc)
 {
     m_impl->m_device = device.m_impl->m_device;
 
-    OGFX_LOG(std::string("Creating Vulkan ") + to_string(desc.stage) + " shader");
+    OGFX_LOG("Creating Vulkan " + to_string_enum(desc.stage) + " shader");
 
     if (desc.bytecode.empty())
     {
@@ -32,12 +33,12 @@ Shader::Shader(const Device& device, const ShaderDesc& desc)
 
     if (vkCreateShaderModule(m_impl->m_device, &create_info, nullptr, &m_impl->m_shader_module) != VK_SUCCESS)
     {
-        OGFX_LOG_ERROR(std::string("Failed to create Vulkan ") + to_string(desc.stage) + " shader");
+        OGFX_LOG_ERROR(std::string("Failed to create Vulkan ") + to_string_enum(desc.stage) + " shader");
 
         throw std::runtime_error("Failed to create Vulkan shader.");
     }
 
-    OGFX_LOG(std::string("Vulkan ") + to_string(desc.stage) + " shader created");
+    OGFX_LOG("Vulkan " + to_string_enum(desc.stage) + " shader created");
 }
 
 Shader::~Shader()
@@ -46,7 +47,7 @@ Shader::~Shader()
     {
         vkDestroyShaderModule(m_impl->m_device, m_impl->m_shader_module, nullptr);
 
-        OGFX_LOG(std::string("Vulkan ") + to_string(m_stage) + " shader destroyed");
+        OGFX_LOG("Vulkan " + to_string_enum(m_stage) + " shader destroyed");
     }
 }
 

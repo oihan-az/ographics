@@ -20,8 +20,6 @@ enum class PrimitiveTopology
     PatchList
 };
 
-const char* to_string(PrimitiveTopology topology);
-
 struct InputAssemblyStateDesc
 {
     PrimitiveTopology topology = PrimitiveTopology::TriangleList;

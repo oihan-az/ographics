@@ -1,6 +1,8 @@
 #ifndef OGFX_COLOR_BLEND_HPP
 #define OGFX_COLOR_BLEND_HPP
 
+#include <ogfx/enum_flags.hpp>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -32,8 +34,6 @@ enum class BlendFactor
     OneMinusSource1Alpha
 };
 
-const char* to_string(BlendFactor factor);
-
 enum class BlendOp
 {
     Undefined,
@@ -44,29 +44,14 @@ enum class BlendOp
     Max
 };
 
-const char* to_string(BlendOp op);
-
-enum class ColorComponent : uint32_t
-{
+OGFX_BITMASK_ENUM(ColorComponent, uint32_t,
     None = 0,
-    Red = 1 << 0,
-    Green = 1 << 1,
-    Blue = 1 << 2,
-    Alpha = 1 << 3,
+    Red = 1u << 0,
+    Green = 1u << 1,
+    Blue = 1u << 2,
+    Alpha = 1u << 3,
     All = Red | Green | Blue | Alpha
-};
-
-constexpr ColorComponent operator|(ColorComponent lhs, ColorComponent rhs)
-{
-    return static_cast<ColorComponent>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
-}
-
-constexpr bool has_flag(ColorComponent value, ColorComponent flag)
-{
-    return (static_cast<uint32_t>(value) & static_cast<uint32_t>(flag)) == static_cast<uint32_t>(flag);
-}
-
-std::string to_string(ColorComponent component);
+);
 
 struct ColorBlendAttachmentDesc
 {

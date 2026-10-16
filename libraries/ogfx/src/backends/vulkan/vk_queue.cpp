@@ -1,4 +1,5 @@
 #include <debug.hpp>
+#include <ogfx/enum_string.hpp>
 
 #include "vk_queue.hpp"
 #include "vk_command_buffer.hpp"
@@ -50,7 +51,7 @@ void Queue::submit(const SubmitDesc& desc)
 
         wait_stages.push_back(to_vk_pipeline_stage(wait.stage));
 
-        OGFX_LOG("  Wait semaphore [" + std::to_string(i) + "] at stages: " + to_string(wait.stage));
+        OGFX_LOG("  Wait semaphore [" + std::to_string(i) + "] at stages: " + to_string_bitmask(wait.stage));
     }
 
     OGFX_LOG("Signaling " + std::to_string(desc.signal_semaphores.size()) + " semaphore(s)");
@@ -129,7 +130,7 @@ PresentResult Queue::present(const Swapchain& swapchain, uint32_t image_index, c
     const VkResult vk_result = vkQueuePresentKHR(m_impl->m_queue, &present_info);
 
     const PresentResult result = from_vk_present_result(vk_result);
-    OGFX_LOG("Presentation result: " + std::string(to_string(result)));
+    OGFX_LOG("Presentation result: " + to_string_enum(result));
 
     return result;
 }
