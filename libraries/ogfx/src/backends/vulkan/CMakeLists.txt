@@ -30,6 +30,9 @@ target_sources(
         vk_color_blend.cpp
         vk_viewport.cpp
         vk_graphics_pipeline.cpp
+        vk_buffer_usage.cpp
+        vk_memory_property.cpp
+        vk_buffer.cpp
         
         
 )

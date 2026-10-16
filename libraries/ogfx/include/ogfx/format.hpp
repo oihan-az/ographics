@@ -18,7 +18,9 @@ enum class Format
 
     RG16_FLOAT,
     RGBA16_FLOAT,
+
     RG32_FLOAT,
+    RGB32_FLOAT,
     RGBA32_FLOAT,
 
     D16_UNORM,

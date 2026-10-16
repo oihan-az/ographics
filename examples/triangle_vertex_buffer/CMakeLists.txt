@@ -1,13 +1,13 @@
-add_executable(commands_sync_test)
+add_executable(triangle_vertex_buffer)
 
 target_sources(
-    commands_sync_test
+    triangle_vertex_buffer
     PRIVATE
         main.cpp
  )
 
 target_link_libraries(
-    commands_sync_test
+    triangle_vertex_buffer
     PRIVATE
         ographics::oplatform
         ographics::ogfx
@@ -18,5 +18,5 @@ include(
 )
 
 ogfx_compile_shaders(
-    commands_sync_test
+    triangle_vertex_buffer
 )

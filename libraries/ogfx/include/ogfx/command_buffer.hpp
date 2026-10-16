@@ -10,6 +10,7 @@ class CommandPool;
 class RenderPass;
 class Framebuffer;
 class GraphicsPipeline;
+class Buffer;
 
 struct ClearColor
 {
@@ -38,6 +39,13 @@ struct DrawInfo
     uint32_t first_instance = 0;
 };
 
+struct VertexBufferBindInfo
+{
+    const Buffer* buffer = nullptr;
+    uint32_t binding = 0;
+    uint64_t offset = 0;
+};
+
 class CommandBuffer
 {
   public:
@@ -62,6 +70,8 @@ class CommandBuffer
     void bind_graphics_pipeline(const GraphicsPipeline& pipeline);
 
     void draw(const DrawInfo& draw_info);
+
+    void bind_vertex_buffer(const VertexBufferBindInfo& info);
 
   private:
     friend class Queue;

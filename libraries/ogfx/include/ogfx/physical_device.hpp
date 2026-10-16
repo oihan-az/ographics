@@ -40,6 +40,7 @@ class PhysicalDevice
     friend class Instance;
     friend class Device;
     friend class Swapchain;
+    friend class Buffer;
 
     PhysicalDeviceDesc m_desc;
 

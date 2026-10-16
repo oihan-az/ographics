@@ -5,6 +5,7 @@
 #include "vk_render_pass.hpp"
 #include "vk_framebuffer.hpp"
 #include "vk_graphics_pipeline.hpp"
+#include "vk_buffer.hpp"
 
 #include <stdexcept>
 
@@ -136,14 +137,27 @@ void CommandBuffer::bind_graphics_pipeline(const GraphicsPipeline& pipeline)
 
 void CommandBuffer::draw(const DrawInfo& draw_info) 
 {
-    OGFX_LOG("Drawimg: vertex_count " + std::to_string(draw_info.vertex_count) +
+    OGFX_LOG("Drawing: vertex_count " + std::to_string(draw_info.vertex_count) +
              ", instance_count " + std::to_string(draw_info.instance_count) + ", first_vertex " +
              std::to_string(draw_info.first_vertex) + ", first_instance " + std::to_string(draw_info.first_instance));
 
     vkCmdDraw(m_impl->m_command_buffer, 
               draw_info.vertex_count, draw_info.instance_count, draw_info.first_vertex, draw_info.first_instance);
 
-    OGFX_LOG("Vulkan draw command recorded");
+    OGFX_LOG("Vulkan vertices drawn");
+}
+
+void CommandBuffer::bind_vertex_buffer(const VertexBufferBindInfo& info) 
+{
+    OGFX_LOG("Binding vertex buffer: binding " + std::to_string(info.binding) + ", offset " +
+             std::to_string(info.offset));
+
+    VkBuffer vertex_buffer = info.buffer->m_impl->m_buffer;
+    VkDeviceSize buffer_offset = static_cast<VkDeviceSize>(info.offset);
+
+    vkCmdBindVertexBuffers(m_impl->m_command_buffer, info.binding, 1, &vertex_buffer, &buffer_offset);
+
+    OGFX_LOG("Vulkan vertex buffer bound");
 }
 
 } // namespace ogfx

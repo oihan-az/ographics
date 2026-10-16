@@ -40,6 +40,8 @@ target_sources(
         src/rasterization.cpp
         src/multisample.cpp
         src/color_blend.cpp
+        src/buffer_usage.cpp
+        src/memory_property.cpp
         
 )
 
