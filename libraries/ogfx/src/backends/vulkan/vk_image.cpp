@@ -3,16 +3,18 @@
 
 #include "vk_image.hpp"
 #include "vk_device.hpp"
+#include "vk_physical_device.hpp"
 #include "vk_format.hpp"
 #include "vk_image_usage.hpp"
 
 namespace ogfx
 {
 
-Image::Image(const Device& device, const ImageDesc& desc) : m_desc(desc), m_impl(std::make_unique<Impl>())
+Image::Image(const PhysicalDevice& physical_device, const Device& device, const ImageDesc& desc)
+    : m_desc(desc), m_impl(std::make_unique<Impl>())
 {
     m_impl->m_device = device.m_impl->m_device;
-
+    m_impl->m_physical_device = physical_device.m_impl->m_physical_device;
 
     OGFX_LOG("Creating image:");
     OGFX_LOG("  Width: " + std::to_string(m_desc.width));
@@ -53,30 +55,118 @@ Image::Image(const Device& device, const ImageDesc& desc) : m_desc(desc), m_impl
 
 Image::~Image() 
 {
-    if (m_desc.owned && m_impl && m_impl->m_image != VK_NULL_HANDLE)
+    if (m_desc.owned && m_impl)
     {
-        vkDestroyImage(m_impl->m_device, m_impl->m_image, nullptr);
+        free_memory();
 
-        OGFX_LOG("Vulkan image destroyed");
+        if (m_impl->m_image != VK_NULL_HANDLE)
+        {
+            vkDestroyImage(m_impl->m_device, m_impl->m_image, nullptr);
+            OGFX_LOG("Vulkan image destroyed");
+        }
     }
 }
 
 Image::Image(Image&&) noexcept = default;
 Image& Image::operator=(Image&&) noexcept = default;
 
-uint32_t Image::width() const
+void Image::allocate_memory()
 {
-    return m_desc.width;
+    if (!m_impl || m_impl->m_image == VK_NULL_HANDLE)
+    {
+        OGFX_LOG("Cannot allocate memory: image is not initialized");
+        return;
+    }
+
+    if (!m_desc.owned)
+    {
+        OGFX_LOG("Cannot allocate memory for an externally owned image");
+        return;
+    }
+
+    free_memory();
+
+    VkMemoryRequirements memory_requirements{};
+    vkGetImageMemoryRequirements(m_impl->m_device, m_impl->m_image, &memory_requirements);
+
+    VkPhysicalDeviceMemoryProperties physical_memory_properties{};
+    vkGetPhysicalDeviceMemoryProperties(m_impl->m_physical_device, &physical_memory_properties);
+
+    const VkMemoryPropertyFlags requested_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+    uint32_t memory_type_index = physical_memory_properties.memoryTypeCount;
+
+    for (uint32_t i = 0; i < physical_memory_properties.memoryTypeCount; ++i)
+    {
+        const bool type_supported = (memory_requirements.memoryTypeBits & (1u << i)) != 0;
+
+        const VkMemoryPropertyFlags available_properties = physical_memory_properties.memoryTypes[i].propertyFlags;
+
+        const bool properties_match = (available_properties & requested_properties) == requested_properties;
+
+        if (type_supported && properties_match)
+        {
+            memory_type_index = i;
+            break;
+        }
+    }
+
+    if (memory_type_index == physical_memory_properties.memoryTypeCount)
+    {
+        OGFX_LOG("Failed to find compatible Vulkan image memory type");
+        return;
+    }
+
+    VkMemoryAllocateInfo allocation_info{};
+    allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocation_info.allocationSize = memory_requirements.size;
+    allocation_info.memoryTypeIndex = memory_type_index;
+
+    if (vkAllocateMemory(m_impl->m_device, &allocation_info, nullptr, &m_impl->m_memory) != VK_SUCCESS)
+    {
+        m_impl->m_memory = VK_NULL_HANDLE;
+        OGFX_LOG("Failed to allocate Vulkan image memory");
+        return;
+    }
+
+    OGFX_LOG("Vulkan image memory allocated:");
+    OGFX_LOG("  Size: " + std::to_string(static_cast<uint64_t>(memory_requirements.size)));
 }
 
-uint32_t Image::height() const
+void Image::free_memory()
 {
-    return m_desc.height;
+    if (!m_impl || m_impl->m_memory == VK_NULL_HANDLE)
+    {
+        return;
+    }
+
+    vkFreeMemory(m_impl->m_device, m_impl->m_memory, nullptr);
+    m_impl->m_memory = VK_NULL_HANDLE;
+
+    OGFX_LOG("Vulkan image memory freed");
 }
 
-Format Image::format() const
+void Image::bind_memory()
 {
-    return m_desc.format;
+    if (!m_impl || m_impl->m_image == VK_NULL_HANDLE || m_impl->m_memory == VK_NULL_HANDLE)
+    {
+        OGFX_LOG("Cannot bind Vulkan image memory: image or allocation is missing");
+        return;
+    }
+
+    if (!m_desc.owned)
+    {
+        OGFX_LOG("Cannot bind memory for an externally owned image");
+        return;
+    }
+
+    if (vkBindImageMemory(m_impl->m_device, m_impl->m_image, m_impl->m_memory, 0) != VK_SUCCESS)
+    {
+        OGFX_LOG("Failed to bind Vulkan image memory");
+        return;
+    }
+
+    OGFX_LOG("Vulkan image memory bound");
 }
 
 } // namespace ogfx

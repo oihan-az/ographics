@@ -10,7 +10,14 @@
 namespace ogfx
 {
 
+class PhysicalDevice;
 class Device;
+
+struct ImageWriteInfo
+{
+    const void* data = nullptr;
+    uint64_t size = 0;
+};
 
 struct ImageDesc
 {
@@ -30,7 +37,7 @@ struct ImageDesc
 class Image
 {
   public:
-    Image(const Device& device, const ImageDesc& desc);
+    Image(const PhysicalDevice& physical_device, const Device& device, const ImageDesc& desc);
     ~Image();
 
     Image(const Image&) = delete;
@@ -39,13 +46,18 @@ class Image
     Image(Image&&) noexcept;
     Image& operator=(Image&&) noexcept;
 
-    [[nodiscard]] uint32_t width() const;
-    [[nodiscard]] uint32_t height() const;
-    [[nodiscard]] Format format() const;
+    void allocate_memory();
+    void free_memory();
+    void bind_memory();
+
+    [[nodiscard]] uint32_t width() const { return m_desc.width; }
+    [[nodiscard]] uint32_t height() const { return m_desc.height; }
+    [[nodiscard]] Format format() const { return m_desc.format; }
 
   private:
     friend class Swapchain;
     friend class ImageView;
+    friend class CommandBuffer;
 
     ImageDesc m_desc;
 

@@ -209,7 +209,7 @@ Swapchain::Swapchain(const PhysicalDevice& physical_device, const Device& device
             desc.usage = from_vk_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
             desc.owned = false; // The VkImage is owned by the swapchain.
 
-            Image image(device, desc);
+            Image image(physical_device, device, desc);
             image.m_impl->m_image = vk_image;
             image.m_impl->m_device = device.m_impl->m_device;
 
@@ -221,7 +221,10 @@ Swapchain::Swapchain(const PhysicalDevice& physical_device, const Device& device
     {
         for (Image& image : m_images)
         {
-            ImageView image_view(image);
+            ImageViewDesc desc;
+            desc.image = &image;
+
+            ImageView image_view(desc);
             m_image_views.emplace_back(std::move(image_view));
         }
     }

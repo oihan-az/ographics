@@ -41,6 +41,7 @@ class PhysicalDevice
     friend class Device;
     friend class Swapchain;
     friend class Buffer;
+    friend class Image;
 
     PhysicalDeviceDesc m_desc;
 

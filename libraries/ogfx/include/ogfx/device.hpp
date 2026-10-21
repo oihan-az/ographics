@@ -73,6 +73,7 @@ class Device
     friend class ResourceSetLayout;
     friend class ResourceAllocator;
     friend class PipelineLayout;
+    friend class Sampler;
 
     std::array<Queue, to_index(QueueType::Count)> m_queues;
 

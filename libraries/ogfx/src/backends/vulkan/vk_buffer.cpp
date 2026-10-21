@@ -80,7 +80,6 @@ void Buffer::allocate_memory()
         return;
     }
 
-    // Free memory before allocating
     free_memory();
 
     VkMemoryRequirements memory_requirements{};

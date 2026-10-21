@@ -1,6 +1,8 @@
 #ifndef OGFX_COMMAND_BUFFER_HPP
 #define OGFX_COMMAND_BUFFER_HPP
 
+#include <ogfx/image_state.hpp>
+
 #include <memory>
 
 namespace ogfx
@@ -13,6 +15,7 @@ class GraphicsPipeline;
 class Buffer;
 class ResourceSet;
 class PipelineLayout;
+class Image;
 
 struct ClearColor
 {
@@ -55,6 +58,43 @@ struct ResourceSetBindInfo
     uint32_t set_index = 0;
 };
 
+struct ImageTransitionInfo
+{
+    const Image* image = nullptr;
+
+    ImageState old_state = ImageState::Undefined;
+    ImageState new_state = ImageState::Undefined;
+
+    uint32_t base_mip_level = 0;
+    uint32_t mip_level_count = 1;
+
+    uint32_t base_array_layer = 0;
+    uint32_t array_layer_count = 1;
+};
+
+struct BufferToImageCopyInfo
+{
+    const Buffer* buffer = nullptr;
+    const Image* image = nullptr;
+
+    uint64_t buffer_offset = 0;
+    uint32_t buffer_row_length = 0;
+    uint32_t buffer_image_height = 0;
+
+    uint32_t mip_level = 0;
+    uint32_t base_array_layer = 0;
+    uint32_t array_layer_count = 1;
+
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t depth = 1;
+};
+
+struct GenerateMipmapsInfo
+{
+    const Image* image = nullptr;
+};
+
 class CommandBuffer
 {
   public:
@@ -83,6 +123,11 @@ class CommandBuffer
     void bind_vertex_buffer(const VertexBufferBindInfo& info);
 
     void bind_resource_set(const ResourceSetBindInfo& info);
+
+    void transition_image(const ImageTransitionInfo& info);
+    void copy_buffer_to_image(const BufferToImageCopyInfo& info);
+
+    void generate_mipmaps(const GenerateMipmapsInfo& info);
 
   private:
     friend class Queue;

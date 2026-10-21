@@ -1,6 +1,8 @@
 #ifndef OGFX_RESOURCE_SET_HPP
 #define OGFX_RESOURCE_SET_HPP
 
+#include <ogfx/image_state.hpp>
+
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -12,6 +14,8 @@ class Device;
 class ResourceSetLayout;
 class ResourceAllocator;
 class Buffer;
+class ImageView;
+class Sampler;
 
 struct BufferBinding
 {
@@ -21,14 +25,29 @@ struct BufferBinding
     uint64_t size = 0;
 };
 
-struct ResourceSetDesc
+struct ImageBinding
 {
-    const ResourceSetLayout* layout = nullptr;
+    uint32_t binding = 0;
+    const ImageView* image_view = nullptr;
+    ImageState image_state = ImageState::ShaderRead;
+};
+
+struct SamplerBinding
+{
+    uint32_t binding = 0;
+    const Sampler* sampler = nullptr;
 };
 
 struct ResourceSetWriteInfo
 {
-    std::vector<BufferBinding> buffers;
+    std::vector<BufferBinding> buffers{};
+    std::vector<ImageBinding> textures{};
+    std::vector<SamplerBinding> samplers{};
+};
+
+struct ResourceSetDesc
+{
+    const ResourceSetLayout* layout = nullptr;
 };
 
 class ResourceSet

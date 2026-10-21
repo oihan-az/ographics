@@ -11,8 +11,10 @@ namespace ogfx
 
 struct Image::Impl
 {
-    VkImage m_image = VK_NULL_HANDLE;
     VkDevice m_device = VK_NULL_HANDLE;
+    VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
+    VkImage m_image = VK_NULL_HANDLE;
+    VkDeviceMemory m_memory = VK_NULL_HANDLE;
 };
 
 } // namespace ogfx

@@ -8,6 +8,9 @@
 namespace ogfx
 {
 
+VkImageViewType to_vk_image_view_type(ImageViewType type);
+ImageViewType from_vk_image_view_type(VkImageViewType type);
+
 struct ImageView::Impl
 {
     VkImageView m_image_view = VK_NULL_HANDLE;
