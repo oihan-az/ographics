@@ -20,11 +20,14 @@ namespace ogfx
 class Device;
 class RenderPass;
 class Shader;
+class PipelineLayout;
 
 struct GraphicsPipelineDesc
 {
     const RenderPass* render_pass = nullptr;
     uint32_t subpass = 0;
+
+    const PipelineLayout* layout = nullptr;
 
     // Programmable stages
     std::vector<const Shader*> shaders;

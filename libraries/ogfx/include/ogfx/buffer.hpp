@@ -47,9 +47,10 @@ class Buffer
 
   private:
     friend class CommandBuffer;
+    friend class ResourceSet;
 
-    void create_buffer();
-    void destroy_buffer();
+    void create();
+    void destroy();
 
     BufferDesc m_desc{};
 

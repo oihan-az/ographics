@@ -6,6 +6,8 @@
 #include "vk_framebuffer.hpp"
 #include "vk_graphics_pipeline.hpp"
 #include "vk_buffer.hpp"
+#include "vk_resource_set.hpp"
+#include "vk_pipeline_layout.hpp"
 
 #include <stdexcept>
 
@@ -89,13 +91,15 @@ void CommandBuffer::begin_render_pass(const RenderPass& render_pass, const Frame
 {
     OGFX_LOG("Beginning Vulkan render pass");
 
-    OGFX_LOG("  Render area: offset (" + std::to_string(begin_info.offset_x) + ", " +
-             std::to_string(begin_info.offset_y) + "), extent (" + std::to_string(begin_info.width) + "x" +
-             std::to_string(begin_info.height) + ")");
+    OGFX_LOG("  Render area:");
+    OGFX_LOG("    Offset: (" + std::to_string(begin_info.offset_x) + ", " + std::to_string(begin_info.offset_y) + ")");
+    OGFX_LOG("    Extent: " + std::to_string(begin_info.width) + "x" + std::to_string(begin_info.height));
 
-    OGFX_LOG("  Clear color: (" + std::to_string(begin_info.clear_color.r) + ", " +
-             std::to_string(begin_info.clear_color.g) + ", " + std::to_string(begin_info.clear_color.b) + ", " +
-             std::to_string(begin_info.clear_color.a) + ")");
+    OGFX_LOG("  Clear color:");
+    OGFX_LOG("    R: " + std::to_string(begin_info.clear_color.r));
+    OGFX_LOG("    G: " + std::to_string(begin_info.clear_color.g));
+    OGFX_LOG("    B: " + std::to_string(begin_info.clear_color.b));
+    OGFX_LOG("    A: " + std::to_string(begin_info.clear_color.a));
 
     VkRenderPassBeginInfo vk_begin_info{};
     vk_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -137,9 +141,11 @@ void CommandBuffer::bind_graphics_pipeline(const GraphicsPipeline& pipeline)
 
 void CommandBuffer::draw(const DrawInfo& draw_info) 
 {
-    OGFX_LOG("Drawing: vertex_count " + std::to_string(draw_info.vertex_count) +
-             ", instance_count " + std::to_string(draw_info.instance_count) + ", first_vertex " +
-             std::to_string(draw_info.first_vertex) + ", first_instance " + std::to_string(draw_info.first_instance));
+    OGFX_LOG("Drawing:");
+    OGFX_LOG("  Vertex count: " + std::to_string(draw_info.vertex_count));
+    OGFX_LOG("  Instance count: " + std::to_string(draw_info.instance_count));
+    OGFX_LOG("  First vertex: " + std::to_string(draw_info.first_vertex));
+    OGFX_LOG("  First instance: " + std::to_string(draw_info.first_instance));
 
     vkCmdDraw(m_impl->m_command_buffer, 
               draw_info.vertex_count, draw_info.instance_count, draw_info.first_vertex, draw_info.first_instance);
@@ -149,8 +155,9 @@ void CommandBuffer::draw(const DrawInfo& draw_info)
 
 void CommandBuffer::bind_vertex_buffer(const VertexBufferBindInfo& info) 
 {
-    OGFX_LOG("Binding vertex buffer: binding " + std::to_string(info.binding) + ", offset " +
-             std::to_string(info.offset));
+    OGFX_LOG("Binding vertex buffer:");
+    OGFX_LOG("  Binding: " + std::to_string(info.binding));
+    OGFX_LOG("  Offset: " + std::to_string(info.offset));
 
     VkBuffer vertex_buffer = info.buffer->m_impl->m_buffer;
     VkDeviceSize buffer_offset = static_cast<VkDeviceSize>(info.offset);
@@ -158,6 +165,18 @@ void CommandBuffer::bind_vertex_buffer(const VertexBufferBindInfo& info)
     vkCmdBindVertexBuffers(m_impl->m_command_buffer, info.binding, 1, &vertex_buffer, &buffer_offset);
 
     OGFX_LOG("Vulkan vertex buffer bound");
+}
+
+void CommandBuffer::bind_resource_set(const ResourceSetBindInfo& info) 
+{
+    OGFX_LOG("Binding resource set at index " + std::to_string(info.set_index));
+
+    const VkDescriptorSet descriptor_set = info.resource_set->m_impl->m_descriptor_set;
+
+    vkCmdBindDescriptorSets(m_impl->m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            info.layout->m_impl->m_pipeline_layout, info.set_index, 1, &descriptor_set, 0, nullptr);
+
+    OGFX_LOG("CommandBuffer: resource set bound");
 }
 
 } // namespace ogfx

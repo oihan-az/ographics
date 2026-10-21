@@ -11,7 +11,6 @@ namespace ogfx
 struct GraphicsPipeline::Impl
 {
     VkPipeline m_pipeline = VK_NULL_HANDLE;
-    VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
     VkDevice m_device = VK_NULL_HANDLE;
 };
 

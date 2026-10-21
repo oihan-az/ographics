@@ -70,6 +70,9 @@ class Device
     friend class Shader;
     friend class GraphicsPipeline;
     friend class Buffer;
+    friend class ResourceSetLayout;
+    friend class ResourceAllocator;
+    friend class PipelineLayout;
 
     std::array<Queue, to_index(QueueType::Count)> m_queues;
 

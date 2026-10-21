@@ -38,4 +38,48 @@ ShaderStage from_vk_shader_stage(VkShaderStageFlagBits stage)
     }
 }
 
+VkShaderStageFlags to_vk_shader_stage_flags(ShaderStageFlags stages)
+{
+    VkShaderStageFlags flags = 0;
+
+    if (has_flag(stages, ShaderStageFlags::Vertex))
+    {
+        flags |= VK_SHADER_STAGE_VERTEX_BIT;
+    }
+
+    if (has_flag(stages, ShaderStageFlags::Fragment))
+    {
+        flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    }
+
+    if (has_flag(stages, ShaderStageFlags::Compute))
+    {
+        flags |= VK_SHADER_STAGE_COMPUTE_BIT;
+    }
+
+    return flags;
+}
+
+ShaderStageFlags from_vk_shader_stage_flags(VkShaderStageFlags stages)
+{
+    ShaderStageFlags flags = ShaderStageFlags::None;
+
+    if ((stages & VK_SHADER_STAGE_VERTEX_BIT) != 0)
+    {
+        flags |= ShaderStageFlags::Vertex;
+    }
+
+    if ((stages & VK_SHADER_STAGE_FRAGMENT_BIT) != 0)
+    {
+        flags |= ShaderStageFlags::Fragment;
+    }
+
+    if ((stages & VK_SHADER_STAGE_COMPUTE_BIT) != 0)
+    {
+        flags |= ShaderStageFlags::Compute;
+    }
+
+    return flags;
+}
+
 } // namespace ogfx

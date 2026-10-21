@@ -4,6 +4,7 @@
 #include "vk_graphics_pipeline.hpp"
 #include "vk_device.hpp"
 #include "vk_render_pass.hpp"
+#include "vk_pipeline_layout.hpp"
 #include "vk_shader.hpp"
 #include "vk_shader_stage.hpp"
 #include "vk_format.hpp"
@@ -30,10 +31,15 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
 
     if (desc.shaders.empty())
     {
+        throw std::invalid_argument("Graphics pipeline requires a layout.");
+    }
+
+    if (desc.shaders.empty())
+    {
         throw std::invalid_argument("Graphics pipeline requires shader stages.");
     }
 
-    OGFX_LOG("Creating Vulkan graphics pipeline with " + std::to_string(desc.shaders.size()) + " shader stage(s)");
+    OGFX_LOG("Creating graphics pipeline with " + std::to_string(desc.shaders.size()) + " shader stage(s)");
 
 
     // Collect the Vulkan shader stages.
@@ -95,26 +101,10 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
         throw std::invalid_argument("Graphics pipeline requires a fragment shader.");
     }
 
-    // Create the pipeline layout.
-    // Descriptor-set layouts and push constants will be added when
-    // their API-independent descriptions are implemented.
-    VkPipelineLayoutCreateInfo layout_info{};
-    layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-    if (vkCreatePipelineLayout(m_impl->m_device, &layout_info, nullptr, &m_impl->m_pipeline_layout) != VK_SUCCESS)
-    {
-        OGFX_LOG_ERROR("Failed to create Vulkan pipeline layout");
-        throw std::runtime_error("Failed to create Vulkan pipeline layout.");
-    }
-
-    OGFX_LOG("Vulkan pipeline layout created");
-
     // Vertex input
-    OGFX_LOG("Creating vertex input state with " +
-             std::to_string(desc.vertex_input.bindings.size()) +
-             " binding(s) and " +
-             std::to_string(desc.vertex_input.attributes.size()) +
-             " attribute(s)");
+    OGFX_LOG("Creating vertex input state:");
+    OGFX_LOG("  Binding count: " + std::to_string(desc.vertex_input.bindings.size()));
+    OGFX_LOG("  Attribute count: " + std::to_string(desc.vertex_input.attributes.size()));
 
     std::vector<VkVertexInputBindingDescription> vertex_bindings;
     vertex_bindings.reserve(desc.vertex_input.bindings.size());
@@ -123,10 +113,10 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     {
         const VertexBindingDesc& binding = desc.vertex_input.bindings[i];
 
-        OGFX_LOG("Vertex binding " + std::to_string(i) +
-                 ": binding " + std::to_string(binding.binding) +
-                 ", stride " + std::to_string(binding.stride) +
-                 ", input rate " + to_string_enum(binding.input_rate));
+        OGFX_LOG("  Vertex binding " + std::to_string(i) + ":");
+        OGFX_LOG("    Binding: " + std::to_string(binding.binding));
+        OGFX_LOG("    Stride: " + std::to_string(binding.stride));
+        OGFX_LOG("    Input rate: " + to_string_enum(binding.input_rate));
 
         VkVertexInputBindingDescription vk_binding{};
         vk_binding.binding = binding.binding;
@@ -153,11 +143,11 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     {
         const VertexAttributeDesc& attribute = desc.vertex_input.attributes[i];
 
-        OGFX_LOG("Vertex attribute " + std::to_string(i) +
-                 ": location " + std::to_string(attribute.location) +
-                 ", binding " + std::to_string(attribute.binding) +
-                 ", format " + to_string_enum(attribute.format) +
-                 ", offset " + std::to_string(attribute.offset));
+        OGFX_LOG("  Vertex attribute " + std::to_string(i) + ":");
+        OGFX_LOG("    Location: " + std::to_string(attribute.location));
+        OGFX_LOG("    Binding: " + std::to_string(attribute.binding));
+        OGFX_LOG("    Format: " + to_string_enum(attribute.format));
+        OGFX_LOG("    Offset: " + std::to_string(attribute.offset));
 
         VkVertexInputAttributeDescription vk_attribute{};
         vk_attribute.location = attribute.location;
@@ -176,10 +166,9 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     vertex_input.pVertexAttributeDescriptions = vertex_attributes.empty() ? nullptr : vertex_attributes.data();
 
     // Input assembly.
-    OGFX_LOG("Creating input assembly state: topology " +
-             std::string(to_string_enum(desc.input_assembly.topology)) +
-             ", primitive restart " +
-             std::string(desc.input_assembly.primitive_restart_enable ? "true" : "false"));
+    OGFX_LOG("Creating input assembly state:");
+    OGFX_LOG("  Topology: " + to_string_enum(desc.input_assembly.topology));
+    OGFX_LOG("  Primitive restart: " + std::string(desc.input_assembly.primitive_restart_enable ? "true" : "false"));
 
     if (desc.input_assembly.topology == PrimitiveTopology::Undefined)
     {
@@ -193,9 +182,10 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     input_assembly.primitiveRestartEnable = desc.input_assembly.primitive_restart_enable ? VK_TRUE : VK_FALSE;
 
     // Rasterization
-    OGFX_LOG("Creating rasterization state: polygon mode " + to_string_enum(desc.rasterization.polygon_mode) +
-             ", cull mode " + to_string_enum(desc.rasterization.cull_mode) +
-             ", front face " + to_string_enum(desc.rasterization.front_face));
+    OGFX_LOG("Creating rasterization state:");
+    OGFX_LOG("  Polygon mode: " + to_string_enum(desc.rasterization.polygon_mode));
+    OGFX_LOG("  Cull mode: " + to_string_enum(desc.rasterization.cull_mode));
+    OGFX_LOG("  Front face: " + to_string_enum(desc.rasterization.front_face));
 
     VkPipelineRasterizationStateCreateInfo rasterization{};
     rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -215,11 +205,12 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     rasterization.lineWidth = desc.rasterization.line_width;
 
     // Multisample
-    OGFX_LOG("Creating multisampling state: samples " + to_string_enum(desc.multisampling.rasterization_samples) +
-             ", sample shading " + std::string(desc.multisampling.sample_shading_enable ? "true" : "false") +
-             ", min sample shading " + std::to_string(desc.multisampling.min_sample_shading) +
-             ", alpha to coverage " + std::string(desc.multisampling.alpha_to_coverage_enable ? "true" : "false") +
-             ", alpha to one " + std::string(desc.multisampling.alpha_to_one_enable ? "true" : "false"));
+    OGFX_LOG("Creating multisampling state:");
+    OGFX_LOG("  Rasterization samples: " + to_string_enum(desc.multisampling.rasterization_samples));
+    OGFX_LOG("  Sample shading: " + std::string(desc.multisampling.sample_shading_enable ? "true" : "false"));
+    OGFX_LOG("  Min sample shading: " + std::to_string(desc.multisampling.min_sample_shading));
+    OGFX_LOG("  Alpha to coverage: " + std::string(desc.multisampling.alpha_to_coverage_enable ? "true" : "false"));
+    OGFX_LOG("  Alpha to one: " + std::string(desc.multisampling.alpha_to_one_enable ? "true" : "false"));
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -232,9 +223,8 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     multisampling.alphaToOneEnable = desc.multisampling.alpha_to_one_enable ? VK_TRUE : VK_FALSE;
 
     // Color blend
-    OGFX_LOG("Creating color blend state with " + 
-             std::to_string(desc.color_blend.attachments.size()) +
-             " attachment(s)");
+    OGFX_LOG("Creating color blend state:");
+    OGFX_LOG("  Attachment count: " + std::to_string(desc.color_blend.attachments.size()));
 
     std::vector<VkPipelineColorBlendAttachmentState> blend_attachments;
     blend_attachments.reserve(desc.color_blend.attachments.size());
@@ -243,11 +233,11 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     {
         const ColorBlendAttachmentDesc& attachment = desc.color_blend.attachments[i];
 
-        OGFX_LOG("Color blend attachment " + std::to_string(i) +
-                 ": blend " + std::string(attachment.blend_enable ? "true" : "false") +
-                 ", color op " + to_string_enum(attachment.color_op) +
-                 ", alpha op " + to_string_enum(attachment.alpha_op) +
-                 ", write mask " + to_string_bitmask(attachment.write_mask));
+        OGFX_LOG("  Color blend attachment " + std::to_string(i) + ":");
+        OGFX_LOG("    Blend enabled: " + std::string(attachment.blend_enable ? "true" : "false"));
+        OGFX_LOG("    Color op: " + to_string_enum(attachment.color_op));
+        OGFX_LOG("    Alpha op: " + to_string_enum(attachment.alpha_op));
+        OGFX_LOG("    Write mask: " + to_string_bitmask(attachment.write_mask));
 
         VkPipelineColorBlendAttachmentState vk_attachment{};
         vk_attachment.blendEnable = attachment.blend_enable ? VK_TRUE : VK_FALSE;
@@ -275,8 +265,9 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     }
 
     // Viewport and scissor state
-    OGFX_LOG("Creating viewport state: dynamic viewport " + std::string(desc.viewport.dynamic_viewport ? "true" : "false") +
-             ", dynamic scissor " + std::string(desc.viewport.dynamic_scissor ? "true" : "false"));
+    OGFX_LOG("Creating viewport state:");
+    OGFX_LOG("  Dynamic viewport: " + std::string(desc.viewport.dynamic_viewport ? "true" : "false"));
+    OGFX_LOG("  Dynamic scissor: " + std::string(desc.viewport.dynamic_scissor ? "true" : "false"));
 
     std::vector<VkViewport> viewports;
     if (!desc.viewport.dynamic_viewport)
@@ -316,8 +307,9 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
     dynamic_state.pDynamicStates = dynamic_states.empty() ? nullptr : dynamic_states.data();
 
-    OGFX_LOG("Viewport state created with " + std::to_string(viewport_state.viewportCount) + " viewport(s) and " +
-             std::to_string(viewport_state.scissorCount) + " scissor(s)");
+    OGFX_LOG("Viewport state created:");
+    OGFX_LOG("  Viewport count: " + std::to_string(viewport_state.viewportCount));
+    OGFX_LOG("  Scissor count: " + std::to_string(viewport_state.scissorCount));
 
     VkGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -330,23 +322,18 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     pipeline_info.pMultisampleState = &multisampling;
     pipeline_info.pColorBlendState = &color_blend;
     pipeline_info.pDynamicState = dynamic_states.empty() ? nullptr : &dynamic_state;
-    pipeline_info.layout = m_impl->m_pipeline_layout;
+    pipeline_info.layout = desc.layout->m_impl->m_pipeline_layout;
     pipeline_info.renderPass = desc.render_pass->m_impl->m_render_pass;
     pipeline_info.subpass = desc.subpass;
 
     if (vkCreateGraphicsPipelines(m_impl->m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_impl->m_pipeline) !=
         VK_SUCCESS)
     {
-        OGFX_LOG_ERROR("Failed to create Vulkan graphics pipeline");
-
-        vkDestroyPipelineLayout(m_impl->m_device, m_impl->m_pipeline_layout, nullptr);
-
-        m_impl->m_pipeline_layout = VK_NULL_HANDLE;
-
-        throw std::runtime_error("Failed to create Vulkan graphics pipeline.");
+        OGFX_LOG_ERROR("Failed to create graphics pipeline");
+        throw std::runtime_error("Failed to create graphics pipeline.");
     }
 
-    OGFX_LOG("Vulkan graphics pipeline created");
+    OGFX_LOG("Graphics pipeline created");
 }
 
 GraphicsPipeline::~GraphicsPipeline()
@@ -362,16 +349,7 @@ GraphicsPipeline::~GraphicsPipeline()
 
         m_impl->m_pipeline = VK_NULL_HANDLE;
 
-        OGFX_LOG("Vulkan graphics pipeline destroyed");
-    }
-
-    if (m_impl->m_pipeline_layout != VK_NULL_HANDLE)
-    {
-        vkDestroyPipelineLayout(m_impl->m_device, m_impl->m_pipeline_layout, nullptr);
-
-        m_impl->m_pipeline_layout = VK_NULL_HANDLE;
-
-        OGFX_LOG("Vulkan pipeline layout destroyed");
+        OGFX_LOG("Graphics pipeline destroyed");
     }
 }
 

@@ -25,11 +25,12 @@ RenderPass::RenderPass(const Device& device, const RenderPassDesc& desc) : m_imp
     {
         const RenderPassAttachmentDesc& attachment = desc.attachments[i];
 
-        OGFX_LOG("Attachment " + std::to_string(i) + ": format " + to_string_enum(attachment.format) +
-                 ", load_op " + to_string_enum(attachment.load_op) +
-                 ", store_op " + to_string_enum(attachment.store_op) +
-                 ", initial_state " + to_string_enum(attachment.initial_state) +
-                 ", final_state " + to_string_enum(attachment.final_state));
+        OGFX_LOG("Attachment " + std::to_string(i) + ":");
+        OGFX_LOG("  Format: " + to_string_enum(attachment.format));
+        OGFX_LOG("  Load op: " + to_string_enum(attachment.load_op));
+        OGFX_LOG("  Store op: " + to_string_enum(attachment.store_op));
+        OGFX_LOG("  Initial state: " + to_string_enum(attachment.initial_state));
+        OGFX_LOG("  Final state: " + to_string_enum(attachment.final_state));
 
         VkAttachmentDescription vk_attachment{};
         vk_attachment.format = to_vk_format(attachment.format);

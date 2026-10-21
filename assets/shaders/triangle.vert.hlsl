@@ -1,4 +1,3 @@
-
 struct VSInput
 {
     uint vertex_id : SV_VertexID;

@@ -18,12 +18,12 @@ Buffer::Buffer(const PhysicalDevice& physical_device, const Device& device, cons
     m_impl->m_device = device.m_impl->m_device;
     m_impl->m_physical_device = physical_device.m_impl->m_physical_device;
 
-    create_buffer();
+    create();
 }
 
 Buffer::~Buffer()
 {
-    destroy_buffer();
+    destroy();
     free_memory();
 }
 
@@ -31,14 +31,15 @@ Buffer::Buffer(Buffer&&) noexcept = default;
 
 Buffer& Buffer::operator=(Buffer&&) noexcept = default;
 
-void Buffer::create_buffer()
+void Buffer::create()
 {
-    OGFX_LOG("Creating buffer: size " + std::to_string(m_desc.size) + 
-             ", usage " + to_string_bitmask(m_desc.usage) +
-             ", memory properties " + to_string_bitmask(m_desc.memory_properties));
+    OGFX_LOG("Creating buffer:");
+    OGFX_LOG("  Size: " + std::to_string(m_desc.size));
+    OGFX_LOG("  Usage: " + to_string_bitmask(m_desc.usage));
+    OGFX_LOG("  Memory properties: " + to_string_bitmask(m_desc.memory_properties));
 
     // Destroy any existing resources before recreating the buffer
-    destroy_buffer();
+    destroy();
     free_memory();
 
     VkBufferCreateInfo buffer_info{};
@@ -57,7 +58,7 @@ void Buffer::create_buffer()
     OGFX_LOG("Vulkan buffer created");
 }
 
-void Buffer::destroy_buffer()
+void Buffer::destroy()
 {
     if (!m_impl || m_impl->m_buffer == VK_NULL_HANDLE)
     {
@@ -78,6 +79,9 @@ void Buffer::allocate_memory()
         OGFX_LOG("Cannot allocate memory: buffer is not initialized");
         return;
     }
+
+    // Free memory before allocating
+    free_memory();
 
     VkMemoryRequirements memory_requirements{};
     vkGetBufferMemoryRequirements(m_impl->m_device, m_impl->m_buffer, &memory_requirements);
@@ -118,14 +122,14 @@ void Buffer::allocate_memory()
     if (vkAllocateMemory(m_impl->m_device, &allocation_info, nullptr, &m_impl->m_memory) != VK_SUCCESS)
     {
         m_impl->m_memory = VK_NULL_HANDLE;
-        OGFX_LOG("Failed to allocate Vulkan buffer memory.");
+        OGFX_LOG("Failed to allocate buffer memory.");
         return;
     }
 
     m_impl->m_memory_property_flags = physical_memory_properties.memoryTypes[memory_type_index].propertyFlags;
 
-    OGFX_LOG("Vulkan buffer memory allocated: size " +
-             std::to_string(static_cast<uint64_t>(memory_requirements.size)));
+    OGFX_LOG("Buffer memory allocated:");
+    OGFX_LOG("  Size: " + std::to_string(static_cast<uint64_t>(memory_requirements.size)));
 }
 
 void Buffer::free_memory()
@@ -140,7 +144,7 @@ void Buffer::free_memory()
     m_impl->m_memory = VK_NULL_HANDLE;
     m_impl->m_memory_property_flags = 0;
 
-    OGFX_LOG("Vulkan buffer memory freed");
+    OGFX_LOG("Buffer memory freed");
 }
 
 void Buffer::bind_memory()
@@ -220,7 +224,9 @@ void Buffer::write(const BufferWriteInfo& info)
 
     vkUnmapMemory(m_impl->m_device, m_impl->m_memory);
 
-    OGFX_LOG("Wrote buffer data: size " + std::to_string(info.size) + ", offset " + std::to_string(info.offset));
+    OGFX_LOG("Wrote buffer data:");
+    OGFX_LOG("  Size: " + std::to_string(info.size));
+    OGFX_LOG("  Offset: " + std::to_string(info.offset));
 }
 
 } // namespace ogfx

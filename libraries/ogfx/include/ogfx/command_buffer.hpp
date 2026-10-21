@@ -11,6 +11,8 @@ class RenderPass;
 class Framebuffer;
 class GraphicsPipeline;
 class Buffer;
+class ResourceSet;
+class PipelineLayout;
 
 struct ClearColor
 {
@@ -46,6 +48,13 @@ struct VertexBufferBindInfo
     uint64_t offset = 0;
 };
 
+struct ResourceSetBindInfo
+{
+    const PipelineLayout* layout = nullptr;
+    const ResourceSet* resource_set = nullptr;
+    uint32_t set_index = 0;
+};
+
 class CommandBuffer
 {
   public:
@@ -72,6 +81,8 @@ class CommandBuffer
     void draw(const DrawInfo& draw_info);
 
     void bind_vertex_buffer(const VertexBufferBindInfo& info);
+
+    void bind_resource_set(const ResourceSetBindInfo& info);
 
   private:
     friend class Queue;

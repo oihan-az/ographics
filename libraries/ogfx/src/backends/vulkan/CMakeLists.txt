@@ -33,7 +33,11 @@ target_sources(
         vk_buffer_usage.cpp
         vk_memory_property.cpp
         vk_buffer.cpp
-        
+        vk_resource_type.cpp
+        "vk_resource_set_layout.cpp"
+        vk_resource_set.cpp
+        vk_resource_allocator.cpp
+        vk_pipeline_layout.cpp
         
 )
 
