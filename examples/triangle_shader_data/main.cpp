@@ -15,6 +15,7 @@
 #include <ogfx/framebuffer.hpp>
 #include <ogfx/shader.hpp>
 #include <ogfx/graphics_pipeline.hpp>
+#include <ogfx/pipeline_layout.hpp>
 
 #include <fstream>
 #include <filesystem>
@@ -87,6 +88,14 @@ int main()
     deviceDesc.enable_present = true;
 
     ogfx::Device device(physicalDevice, deviceDesc, &surface);
+
+
+
+
+    ogfx::PipelineLayoutDesc pipeline_layout_desc{};
+    ogfx::PipelineLayout pipeline_layout(device, pipeline_layout_desc);
+
+
 
 
     const std::filesystem::path shader_dir = "shaders/";
@@ -162,6 +171,8 @@ int main()
 
     graphicsPipelineDesc.render_pass = &renderPass;
     graphicsPipelineDesc.subpass = 0;
+
+    graphicsPipelineDesc.layout = &pipeline_layout;
 
     // Shaders
     graphicsPipelineDesc.shaders = { &vertex_shader, &fragment_shader };

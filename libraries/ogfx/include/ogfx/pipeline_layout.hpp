@@ -1,6 +1,8 @@
 #ifndef OGFX_PIPELINE_LAYOUT_HPP
 #define OGFX_PIPELINE_LAYOUT_HPP
 
+#include <ogfx/inline_constant_range.hpp>
+
 #include <memory>
 #include <vector>
 
@@ -12,7 +14,8 @@ class ResourceSetLayout;
 
 struct PipelineLayoutDesc
 {
-    std::vector<const ResourceSetLayout*> set_layouts;
+    std::vector<const ResourceSetLayout*> set_layouts{};
+    std::vector<InlineConstantRange> inline_constant_ranges{};
 };
 
 class PipelineLayout

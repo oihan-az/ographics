@@ -1,13 +1,13 @@
-add_executable(triangle_textured)
+add_executable(triangle_data_buffer)
 
 target_sources(
-    triangle_textured
+    triangle_data_buffer
     PRIVATE
         main.cpp
  )
 
 target_link_libraries(
-    triangle_textured
+    triangle_data_buffer
     PRIVATE
         ographics::oplatform
         ographics::ogfx
@@ -18,5 +18,5 @@ include(
 )
 
 ogfx_compile_shaders(
-    triangle_textured
+    triangle_data_buffer
 )

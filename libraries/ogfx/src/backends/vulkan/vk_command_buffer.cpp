@@ -12,6 +12,7 @@
 #include "vk_image.hpp"
 #include "vk_image_state.hpp"
 #include "vk_format.hpp"
+#include "vk_shader_stage.hpp"
 
 #include <stdexcept>
 
@@ -127,14 +128,14 @@ void CommandBuffer::begin_render_pass(const RenderPass& render_pass, const Frame
     OGFX_LOG("Vulkan render pass begun");
 }
 
-void CommandBuffer::end_render_pass() 
+void CommandBuffer::end_render_pass()
 {
     vkCmdEndRenderPass(m_impl->m_command_buffer);
 
     OGFX_LOG("Vulkan render pass ended");
 }
 
-void CommandBuffer::bind_graphics_pipeline(const GraphicsPipeline& pipeline) 
+void CommandBuffer::bind_graphics_pipeline(const GraphicsPipeline& pipeline)
 {
     OGFX_LOG("Binding Vulkan graphics pipeline");
 
@@ -143,7 +144,7 @@ void CommandBuffer::bind_graphics_pipeline(const GraphicsPipeline& pipeline)
     OGFX_LOG("Vulkan graphics pipeline bound");
 }
 
-void CommandBuffer::draw(const DrawInfo& draw_info) 
+void CommandBuffer::draw(const DrawInfo& draw_info)
 {
     OGFX_LOG("Drawing:");
     OGFX_LOG("  Vertex count: " + std::to_string(draw_info.vertex_count));
@@ -151,13 +152,13 @@ void CommandBuffer::draw(const DrawInfo& draw_info)
     OGFX_LOG("  First vertex: " + std::to_string(draw_info.first_vertex));
     OGFX_LOG("  First instance: " + std::to_string(draw_info.first_instance));
 
-    vkCmdDraw(m_impl->m_command_buffer, 
-              draw_info.vertex_count, draw_info.instance_count, draw_info.first_vertex, draw_info.first_instance);
+    vkCmdDraw(m_impl->m_command_buffer, draw_info.vertex_count, draw_info.instance_count, draw_info.first_vertex,
+              draw_info.first_instance);
 
     OGFX_LOG("Vertices drawn");
 }
 
-void CommandBuffer::bind_vertex_buffer(const VertexBufferBindInfo& info) 
+void CommandBuffer::bind_vertex_buffer(const VertexBufferBindInfo& info)
 {
     OGFX_LOG("Binding vertex buffer:");
     OGFX_LOG("  Binding: " + std::to_string(info.binding));
@@ -171,7 +172,7 @@ void CommandBuffer::bind_vertex_buffer(const VertexBufferBindInfo& info)
     OGFX_LOG("Vertex buffer bound");
 }
 
-void CommandBuffer::bind_resource_set(const ResourceSetBindInfo& info) 
+void CommandBuffer::bind_resource_set(const ResourceSetBindInfo& info)
 {
     OGFX_LOG("Binding resource set at index " + std::to_string(info.set_index));
 
@@ -181,6 +182,19 @@ void CommandBuffer::bind_resource_set(const ResourceSetBindInfo& info)
                             info.layout->m_impl->m_pipeline_layout, info.set_index, 1, &descriptor_set, 0, nullptr);
 
     OGFX_LOG("Resource set bound");
+}
+
+void CommandBuffer::set_inline_constants(const InlineConstantsInfo& info) 
+{
+    OGFX_LOG("Setting inline constants:");
+    OGFX_LOG("  Stages: " + to_string_bitmask(info.stages));
+    OGFX_LOG("  Offset: " + std::to_string(info.offset));
+    OGFX_LOG("  Size: " + std::to_string(info.size));
+
+    vkCmdPushConstants(m_impl->m_command_buffer, info.layout->m_impl->m_pipeline_layout,
+                       to_vk_shader_stage_flags(info.stages), info.offset, info.size, info.data);
+
+    OGFX_LOG("Inline constants set");
 }
 
 void CommandBuffer::transition_image(const ImageTransitionInfo& info) 

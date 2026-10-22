@@ -1,13 +1,13 @@
-add_executable(triangle_resources)
+add_executable(quad_textured)
 
 target_sources(
-    triangle_resources
+    quad_textured
     PRIVATE
         main.cpp
  )
 
 target_link_libraries(
-    triangle_resources
+    quad_textured
     PRIVATE
         ographics::oplatform
         ographics::ogfx
@@ -18,5 +18,5 @@ include(
 )
 
 ogfx_compile_shaders(
-    triangle_resources
+    quad_textured
 )

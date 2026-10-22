@@ -2,6 +2,7 @@
 #define OGFX_COMMAND_BUFFER_HPP
 
 #include <ogfx/image_state.hpp>
+#include <ogfx/shader_stage.hpp>
 
 #include <memory>
 
@@ -56,6 +57,15 @@ struct ResourceSetBindInfo
     const PipelineLayout* layout = nullptr;
     const ResourceSet* resource_set = nullptr;
     uint32_t set_index = 0;
+};
+
+struct InlineConstantsInfo
+{
+    const PipelineLayout* layout = nullptr;
+    ShaderStageFlags stages = ShaderStageFlags::None;
+    uint32_t offset = 0;
+    uint32_t size = 0;
+    const void* data = nullptr;
 };
 
 struct ImageTransitionInfo
@@ -123,6 +133,7 @@ class CommandBuffer
     void bind_vertex_buffer(const VertexBufferBindInfo& info);
 
     void bind_resource_set(const ResourceSetBindInfo& info);
+    void set_inline_constants(const InlineConstantsInfo& info);
 
     void transition_image(const ImageTransitionInfo& info);
     void copy_buffer_to_image(const BufferToImageCopyInfo& info);

@@ -344,8 +344,8 @@ int main()
 
 
     const std::filesystem::path shader_dir = "shaders/";
-    const std::filesystem::path vertex_shader_path = shader_dir / ("triangle_texture.vert." OGRAPHICS_SHADER_FORMAT);
-    const std::filesystem::path fragment_shader_path = shader_dir / ("triangle_texture.frag." OGRAPHICS_SHADER_FORMAT);
+    const std::filesystem::path vertex_shader_path = shader_dir / ("textured.vert." OGRAPHICS_SHADER_FORMAT);
+    const std::filesystem::path fragment_shader_path = shader_dir / ("textured.frag." OGRAPHICS_SHADER_FORMAT);
 
     const std::vector<uint8_t> vertex_bytecode = load_shader(vertex_shader_path);
     const std::vector<uint8_t> fragment_bytecode = load_shader(fragment_shader_path);

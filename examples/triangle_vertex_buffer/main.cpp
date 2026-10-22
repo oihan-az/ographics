@@ -16,6 +16,7 @@
 #include <ogfx/shader.hpp>
 #include <ogfx/graphics_pipeline.hpp>
 #include <ogfx/buffer.hpp>
+#include <ogfx/pipeline_layout.hpp>
 
 #include <fstream>
 #include <filesystem>
@@ -106,6 +107,12 @@ int main()
 
 
 
+    ogfx::PipelineLayoutDesc pipeline_layout_desc{};
+    ogfx::PipelineLayout pipeline_layout(device, pipeline_layout_desc);
+
+
+
+
     ogfx::BufferDesc vertex_buffer_desc;
     vertex_buffer_desc.size = sizeof(Vertex) * vertices.size();
     vertex_buffer_desc.usage = ogfx::BufferUsage::Vertex;
@@ -126,7 +133,7 @@ int main()
 
 
     const std::filesystem::path shader_dir = "shaders/";
-    const std::filesystem::path vertex_shader_path = shader_dir / ("triangle_vertex_buffer.vert." OGRAPHICS_SHADER_FORMAT);
+    const std::filesystem::path vertex_shader_path = shader_dir / ("vertex_buffer.vert." OGRAPHICS_SHADER_FORMAT);
     const std::filesystem::path fragment_shader_path = shader_dir / ("triangle.frag." OGRAPHICS_SHADER_FORMAT);
 
     const std::vector<uint8_t> vertex_bytecode = load_shader(vertex_shader_path);
@@ -198,6 +205,8 @@ int main()
 
     graphicsPipelineDesc.render_pass = &renderPass;
     graphicsPipelineDesc.subpass = 0;
+
+    graphicsPipelineDesc.layout = &pipeline_layout;
 
     // Shaders
     graphicsPipelineDesc.shaders = { &vertex_shader, &fragment_shader };
