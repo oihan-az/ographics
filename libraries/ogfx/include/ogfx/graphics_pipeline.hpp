@@ -12,7 +12,6 @@
 #include <ogfx/viewport.hpp>
 
 #include <memory>
-#include <vector>
 
 namespace ogfx
 {
@@ -30,7 +29,8 @@ struct GraphicsPipelineDesc
     const PipelineLayout* layout = nullptr;
 
     // Programmable stages
-    std::vector<const Shader*> shaders;
+    const Shader* vertex_shader = nullptr;
+    const Shader* fragment_shader = nullptr;
 
     // Fixed function pipeline state
     VertexInputStateDesc vertex_input;

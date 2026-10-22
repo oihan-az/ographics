@@ -209,7 +209,8 @@ int main()
     graphicsPipelineDesc.layout = &pipeline_layout;
 
     // Shaders
-    graphicsPipelineDesc.shaders = { &vertex_shader, &fragment_shader };
+    graphicsPipelineDesc.vertex_shader = &vertex_shader;
+    graphicsPipelineDesc.fragment_shader = &fragment_shader;
 
     // Vertex input
     {

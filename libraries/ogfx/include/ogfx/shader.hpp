@@ -34,6 +34,7 @@ class Shader
 
   private:
     friend class GraphicsPipeline;
+    friend class ComputePipeline;
 
     ShaderStage m_stage;
     std::string m_entry_point;

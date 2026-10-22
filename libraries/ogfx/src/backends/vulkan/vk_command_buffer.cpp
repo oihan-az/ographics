@@ -6,6 +6,7 @@
 #include "vk_render_pass.hpp"
 #include "vk_framebuffer.hpp"
 #include "vk_graphics_pipeline.hpp"
+#include "vk_compute_pipeline.hpp"
 #include "vk_buffer.hpp"
 #include "vk_resource_set.hpp"
 #include "vk_pipeline_layout.hpp"
@@ -13,6 +14,7 @@
 #include "vk_image_state.hpp"
 #include "vk_format.hpp"
 #include "vk_shader_stage.hpp"
+#include "vk_pipeline_type.hpp"
 
 #include <stdexcept>
 
@@ -137,11 +139,11 @@ void CommandBuffer::end_render_pass()
 
 void CommandBuffer::bind_graphics_pipeline(const GraphicsPipeline& pipeline)
 {
-    OGFX_LOG("Binding Vulkan graphics pipeline");
+    OGFX_LOG("Binding graphics pipeline");
 
     vkCmdBindPipeline(m_impl->m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.m_impl->m_pipeline);
 
-    OGFX_LOG("Vulkan graphics pipeline bound");
+    OGFX_LOG("Graphics pipeline bound");
 }
 
 void CommandBuffer::draw(const DrawInfo& draw_info)
@@ -156,6 +158,28 @@ void CommandBuffer::draw(const DrawInfo& draw_info)
               draw_info.first_instance);
 
     OGFX_LOG("Vertices drawn");
+}
+
+void CommandBuffer::bind_compute_pipeline(const ComputePipeline& pipeline)
+{
+    OGFX_LOG("Binding compute pipeline");
+
+    vkCmdBindPipeline(m_impl->m_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.m_impl->m_pipeline);
+
+    OGFX_LOG("Compute pipeline bound");
+}
+
+void CommandBuffer::dispatch(const DispatchInfo& dispatch_info)
+{
+    OGFX_LOG("Dispatching compute shader:");
+    OGFX_LOG("  Group count X: " + std::to_string(dispatch_info.group_count_x));
+    OGFX_LOG("  Group count Y: " + std::to_string(dispatch_info.group_count_y));
+    OGFX_LOG("  Group count Z: " + std::to_string(dispatch_info.group_count_z));
+
+    vkCmdDispatch(m_impl->m_command_buffer, dispatch_info.group_count_x, dispatch_info.group_count_y,
+                  dispatch_info.group_count_z);
+
+    OGFX_LOG("Compute shader dispatched");
 }
 
 void CommandBuffer::bind_vertex_buffer(const VertexBufferBindInfo& info)
@@ -174,11 +198,14 @@ void CommandBuffer::bind_vertex_buffer(const VertexBufferBindInfo& info)
 
 void CommandBuffer::bind_resource_set(const ResourceSetBindInfo& info)
 {
-    OGFX_LOG("Binding resource set at index " + std::to_string(info.set_index));
+    OGFX_LOG("Binding resource set:");
+    OGFX_LOG("  Set index: " + std::to_string(info.set_index));
+    OGFX_LOG("  Pipeline bind point: " + to_string_enum(info.pipeline_type));
 
     const VkDescriptorSet descriptor_set = info.resource_set->m_impl->m_descriptor_set;
+    const VkPipelineBindPoint bind_point = to_vk_pipeline_type(info.pipeline_type);
 
-    vkCmdBindDescriptorSets(m_impl->m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vkCmdBindDescriptorSets(m_impl->m_command_buffer, bind_point,
                             info.layout->m_impl->m_pipeline_layout, info.set_index, 1, &descriptor_set, 0, nullptr);
 
     OGFX_LOG("Resource set bound");

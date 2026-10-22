@@ -29,77 +29,69 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
         throw std::invalid_argument("Graphics pipeline requires a render pass.");
     }
 
-    if (desc.shaders.empty())
-    {
-        throw std::invalid_argument("Graphics pipeline requires a layout.");
-    }
-
-    if (desc.shaders.empty())
-    {
-        throw std::invalid_argument("Graphics pipeline requires shader stages.");
-    }
-
-    OGFX_LOG("Creating graphics pipeline with " + std::to_string(desc.shaders.size()) + " shader stage(s)");
-
-
     // Collect the Vulkan shader stages.
     std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
-    shader_stages.reserve(desc.shaders.size());
+    shader_stages.reserve(2);
 
-    bool has_vertex_shader = false;
-    bool has_fragment_shader = false;
-
-    for (const Shader* shader : desc.shaders)
+    if (desc.vertex_shader != nullptr)
     {
-        if (shader == nullptr || !shader->m_impl)
+        if (!desc.vertex_shader->m_impl)
         {
-            throw std::invalid_argument("Graphics pipeline contains an invalid shader.");
+            OGFX_LOG_ERROR("Graphics pipeline contains an invalid vertex shader");
+            throw std::invalid_argument("Graphics pipeline contains an invalid vertex shader.");
         }
 
-        if (shader->m_stage == ShaderStage::Vertex)
+        if (desc.vertex_shader->m_stage != ShaderStage::Vertex)
         {
-            if (has_vertex_shader)
-            {
-                throw std::invalid_argument("Graphics pipeline contains multiple vertex shaders.");
-            }
-
-            has_vertex_shader = true;
-        }
-        else if (shader->m_stage == ShaderStage::Fragment)
-        {
-            if (has_fragment_shader)
-            {
-                throw std::invalid_argument("Graphics pipeline contains multiple fragment shaders.");
-            }
-
-            has_fragment_shader = true;
-        }
-        else if (shader->m_stage == ShaderStage::Compute)
-        {
-            throw std::invalid_argument("Compute shaders cannot be used in a graphics pipeline.");
+            OGFX_LOG_ERROR("Graphics pipeline vertex shader has an invalid stage: " +
+                           to_string_enum(desc.vertex_shader->m_stage));
+            throw std::invalid_argument("Graphics pipeline vertex shader must use the vertex stage.");
         }
 
         VkPipelineShaderStageCreateInfo stage_info{};
         stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        stage_info.stage = to_vk_shader_stage(shader->m_stage);
-        stage_info.module = shader->m_impl->m_shader_module;
-        stage_info.pName = shader->m_entry_point.c_str();
+        stage_info.stage = to_vk_shader_stage(desc.vertex_shader->m_stage);
+        stage_info.module = desc.vertex_shader->m_impl->m_shader_module;
+        stage_info.pName = desc.vertex_shader->m_entry_point.c_str();
 
         shader_stages.push_back(stage_info);
 
-        OGFX_LOG("Added " + to_string_enum(shader->m_stage) + " shader stage, entry point: '" +
-                 shader->m_entry_point + "'");
+        OGFX_LOG("Added vertex shader stage, entry point: '" + desc.vertex_shader->m_entry_point + "'");
     }
 
-    if (!has_vertex_shader)
+    if (desc.fragment_shader != nullptr)
     {
+        if (!desc.fragment_shader->m_impl)
+        {
+            OGFX_LOG_ERROR("Graphics pipeline contains an invalid fragment shader");
+            throw std::invalid_argument("Graphics pipeline contains an invalid fragment shader.");
+        }
+
+        if (desc.fragment_shader->m_stage != ShaderStage::Fragment)
+        {
+            OGFX_LOG_ERROR("Graphics pipeline fragment shader has an invalid stage: " +
+                           to_string_enum(desc.fragment_shader->m_stage));
+            throw std::invalid_argument("Graphics pipeline fragment shader must use the fragment stage.");
+        }
+
+        VkPipelineShaderStageCreateInfo stage_info{};
+        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stage_info.stage = to_vk_shader_stage(desc.fragment_shader->m_stage);
+        stage_info.module = desc.fragment_shader->m_impl->m_shader_module;
+        stage_info.pName = desc.fragment_shader->m_entry_point.c_str();
+
+        shader_stages.push_back(stage_info);
+
+        OGFX_LOG("Added fragment shader stage, entry point: '" + desc.fragment_shader->m_entry_point + "'");
+    }
+
+    if (desc.vertex_shader == nullptr)
+    {
+        OGFX_LOG_ERROR("Graphics pipeline requires a vertex shader");
         throw std::invalid_argument("Graphics pipeline requires a vertex shader.");
     }
 
-    if (!has_fragment_shader)
-    {
-        throw std::invalid_argument("Graphics pipeline requires a fragment shader.");
-    }
+    OGFX_LOG("Creating graphics pipeline with " + std::to_string(shader_stages.size()) + " shader stage(s)");
 
     // Vertex input
     OGFX_LOG("Creating vertex input state:");

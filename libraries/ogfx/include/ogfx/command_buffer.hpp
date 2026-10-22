@@ -3,6 +3,7 @@
 
 #include <ogfx/image_state.hpp>
 #include <ogfx/shader_stage.hpp>
+#include <ogfx/pipeline_type.hpp>
 
 #include <memory>
 
@@ -13,6 +14,7 @@ class CommandPool;
 class RenderPass;
 class Framebuffer;
 class GraphicsPipeline;
+class ComputePipeline;
 class Buffer;
 class ResourceSet;
 class PipelineLayout;
@@ -45,6 +47,13 @@ struct DrawInfo
     uint32_t first_instance = 0;
 };
 
+struct DispatchInfo
+{
+    uint32_t group_count_x = 1;
+    uint32_t group_count_y = 1;
+    uint32_t group_count_z = 1;
+};
+
 struct VertexBufferBindInfo
 {
     const Buffer* buffer = nullptr;
@@ -57,6 +66,7 @@ struct ResourceSetBindInfo
     const PipelineLayout* layout = nullptr;
     const ResourceSet* resource_set = nullptr;
     uint32_t set_index = 0;
+    PipelineType pipeline_type = PipelineType::Graphics;
 };
 
 struct InlineConstantsInfo
@@ -129,6 +139,10 @@ class CommandBuffer
     void bind_graphics_pipeline(const GraphicsPipeline& pipeline);
 
     void draw(const DrawInfo& draw_info);
+
+    void bind_compute_pipeline(const ComputePipeline& pipeline);
+
+    void dispatch(const DispatchInfo& dispatch_info);
 
     void bind_vertex_buffer(const VertexBufferBindInfo& info);
 

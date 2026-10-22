@@ -77,31 +77,6 @@ std::vector<uint8_t> load_shader(const std::filesystem::path& path)
     return bytecode;
 }
 
-struct Mat4
-{
-    std::array<float, 16> elements{};
-
-    Mat4 operator*(const Mat4& other) const
-    {
-        Mat4 result{};
-    
-        for (uint32_t col = 0; col < 4; ++col)
-        {
-            for (uint32_t row = 0; row < 4; ++row)
-            {
-                for (uint32_t k = 0; k < 4; ++k)
-                {
-                    result.elements[col * 4 + row] +=
-                        elements[k * 4 + row] *
-                        other.elements[col * 4 + k];
-                }
-            }
-        }
-    
-        return result;
-    }
-};
-
 struct Constants
 {
     float time = 0.0f;
@@ -261,7 +236,8 @@ int main()
     graphicsPipelineDesc.layout = &pipeline_layout;
 
     // Shaders
-    graphicsPipelineDesc.shaders = { &vertex_shader, &fragment_shader };
+    graphicsPipelineDesc.vertex_shader = &vertex_shader;
+    graphicsPipelineDesc.fragment_shader = &fragment_shader;
 
     // Vertex input
     {

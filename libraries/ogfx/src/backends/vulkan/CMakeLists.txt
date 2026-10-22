@@ -39,6 +39,8 @@ target_sources(
         vk_resource_allocator.cpp
         vk_pipeline_layout.cpp
         vk_sampler.cpp
+        vk_compute_pipeline.cpp
+        vk_pipeline_type.cpp
         
 )
 

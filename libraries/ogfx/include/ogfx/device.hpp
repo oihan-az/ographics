@@ -69,6 +69,7 @@ class Device
     friend class Framebuffer;
     friend class Shader;
     friend class GraphicsPipeline;
+    friend class ComputePipeline;
     friend class Buffer;
     friend class ResourceSetLayout;
     friend class ResourceAllocator;
