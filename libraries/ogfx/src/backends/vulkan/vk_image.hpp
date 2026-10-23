@@ -9,6 +9,10 @@
 namespace ogfx
 {
 
+VkImageType to_vk_image_type(ImageType type);
+ImageType from_vk_image_type(VkImageType type);
+VkImageCreateFlags to_vk_image_create_flags(ImageType type);
+
 struct Image::Impl
 {
     VkDevice m_device = VK_NULL_HANDLE;

@@ -13,6 +13,15 @@ namespace ogfx
 class PhysicalDevice;
 class Device;
 
+enum class ImageType
+{
+    Undefined,
+    Image1D,
+    Image2D,
+    Image3D,
+    Cube
+};
+
 struct ImageWriteInfo
 {
     const void* data = nullptr;
@@ -21,6 +30,8 @@ struct ImageWriteInfo
 
 struct ImageDesc
 {
+    ImageType type = ImageType::Image2D;
+
     uint32_t width = 0;
     uint32_t height = 0;
 

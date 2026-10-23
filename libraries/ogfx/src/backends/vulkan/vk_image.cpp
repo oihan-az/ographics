@@ -10,6 +10,60 @@
 namespace ogfx
 {
 
+VkImageType to_vk_image_type(ImageType type)
+{
+    switch (type)
+    {
+    case ImageType::Image1D:
+        return VK_IMAGE_TYPE_1D;
+
+    case ImageType::Image2D:
+    case ImageType::Cube:
+        return VK_IMAGE_TYPE_2D;
+
+    case ImageType::Image3D:
+        return VK_IMAGE_TYPE_3D;
+
+    case ImageType::Undefined:
+    default:
+        return VK_IMAGE_TYPE_MAX_ENUM;
+    }
+}
+
+ImageType from_vk_image_type(VkImageType type)
+{
+    switch (type)
+    {
+    case VK_IMAGE_TYPE_1D:
+        return ImageType::Image1D;
+
+    case VK_IMAGE_TYPE_2D:
+        return ImageType::Image2D;
+
+    case VK_IMAGE_TYPE_3D:
+        return ImageType::Image3D;
+
+    default:
+        return ImageType::Undefined;
+    }
+}
+
+VkImageCreateFlags to_vk_image_create_flags(ImageType type)
+{
+    switch (type)
+    {
+    case ImageType::Cube:
+        return VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+    case ImageType::Undefined:
+    case ImageType::Image1D:
+    case ImageType::Image2D:
+    case ImageType::Image3D:
+    default:
+        return 0;
+    }
+}
+
 Image::Image(const PhysicalDevice& physical_device, const Device& device, const ImageDesc& desc)
     : m_desc(desc), m_impl(std::make_unique<Impl>())
 {
@@ -17,6 +71,7 @@ Image::Image(const PhysicalDevice& physical_device, const Device& device, const 
     m_impl->m_physical_device = physical_device.m_impl->m_physical_device;
 
     OGFX_LOG("Creating image:");
+    OGFX_LOG("  Type: " + to_string_enum(m_desc.type));
     OGFX_LOG("  Width: " + std::to_string(m_desc.width));
     OGFX_LOG("  Height: " + std::to_string(m_desc.height));
     OGFX_LOG("  Mip levels: " + std::to_string(m_desc.mip_levels));
@@ -33,7 +88,8 @@ Image::Image(const PhysicalDevice& physical_device, const Device& device, const 
 
     VkImageCreateInfo image_info{};
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.imageType = VK_IMAGE_TYPE_2D;
+    image_info.imageType = to_vk_image_type(m_desc.type);
+    image_info.flags = to_vk_image_create_flags(m_desc.type);
     image_info.format = to_vk_format(m_desc.format);
     image_info.extent = {m_desc.width, m_desc.height, 1};
     image_info.mipLevels = m_desc.mip_levels;
