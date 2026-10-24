@@ -4,6 +4,9 @@
 #include <ogfx/image_state.hpp>
 #include <ogfx/shader_stage.hpp>
 #include <ogfx/pipeline_type.hpp>
+#include <ogfx/index_type.hpp>
+#include <ogfx/pipeline_stage.hpp>
+#include <ogfx/access_flags.hpp>
 
 #include <memory>
 
@@ -47,6 +50,23 @@ struct DrawInfo
     uint32_t first_instance = 0;
 };
 
+struct DrawIndexedInfo
+{
+    uint32_t index_count = 0;
+    uint32_t instance_count = 1;
+    uint32_t first_index = 0;
+    int32_t vertex_offset = 0;
+    uint32_t first_instance = 0;
+};
+
+struct DrawIndexedIndirectInfo
+{
+    const Buffer* buffer = nullptr;
+    uint64_t offset = 0;
+    uint32_t draw_count = 1;
+    uint32_t stride = 0;
+};
+
 struct DispatchInfo
 {
     uint32_t group_count_x = 1;
@@ -59,6 +79,13 @@ struct VertexBufferBindInfo
     const Buffer* buffer = nullptr;
     uint32_t binding = 0;
     uint64_t offset = 0;
+};
+
+struct IndexBufferBindInfo
+{
+    const Buffer* buffer = nullptr;
+    uint64_t offset = 0;
+    IndexType index_type = IndexType::UInt32;
 };
 
 struct ResourceSetBindInfo
@@ -115,6 +142,40 @@ struct GenerateMipmapsInfo
     const Image* image = nullptr;
 };
 
+struct MemoryBarrierInfo
+{
+    PipelineStage src_stages = PipelineStage::None;
+    PipelineStage dst_stages = PipelineStage::None;
+
+    AccessFlags src_access = AccessFlags::None;
+    AccessFlags dst_access = AccessFlags::None;
+};
+
+struct BufferBarrierInfo
+{
+    const Buffer* buffer = nullptr;
+
+    uint64_t offset = 0;
+    uint64_t size = 0;
+
+    MemoryBarrierInfo memory_barrier_info;
+};
+
+struct ImageBarrierInfo
+{
+    const Image* image = nullptr;
+
+    ImageState old_state = ImageState::Undefined;
+    ImageState new_state = ImageState::Undefined;
+
+    uint32_t base_mip_level = 0;
+    uint32_t mip_level_count = 1;
+    uint32_t base_array_layer = 0;
+    uint32_t array_layer_count = 1;
+
+    MemoryBarrierInfo memory_barrier_info;
+};
+
 class CommandBuffer
 {
   public:
@@ -138,13 +199,16 @@ class CommandBuffer
 
     void bind_graphics_pipeline(const GraphicsPipeline& pipeline);
 
+    void bind_vertex_buffer(const VertexBufferBindInfo& info);
+    void bind_index_buffer(const IndexBufferBindInfo& info);
+
     void draw(const DrawInfo& draw_info);
+    void draw_indexed(const DrawIndexedInfo& draw_info);
+    void draw_indexed_indirect(const DrawIndexedIndirectInfo& draw_info);
 
     void bind_compute_pipeline(const ComputePipeline& pipeline);
 
     void dispatch(const DispatchInfo& dispatch_info);
-
-    void bind_vertex_buffer(const VertexBufferBindInfo& info);
 
     void bind_resource_set(const ResourceSetBindInfo& info);
     void set_inline_constants(const InlineConstantsInfo& info);
@@ -153,6 +217,9 @@ class CommandBuffer
     void copy_buffer_to_image(const BufferToImageCopyInfo& info);
 
     void generate_mipmaps(const GenerateMipmapsInfo& info);
+
+    void buffer_barrier(const BufferBarrierInfo& info);
+    void image_barrier(const ImageBarrierInfo& info);
 
   private:
     friend class Queue;

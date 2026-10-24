@@ -25,6 +25,9 @@ VkBufferUsageFlags to_vk_buffer_usage(BufferUsage usage)
     if (has_flag(usage, BufferUsage::TransferDst))
         flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
+        if (has_flag(usage, BufferUsage::Indirect))
+        flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+
     return flags;
 }
 
@@ -49,6 +52,9 @@ BufferUsage from_vk_buffer_usage(VkBufferUsageFlags usage)
 
     if (usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT)
         result = result | BufferUsage::TransferDst;
+
+    if (usage & VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT)
+        result = result | BufferUsage::Indirect;
 
     return result;
 }

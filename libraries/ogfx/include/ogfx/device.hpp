@@ -1,6 +1,7 @@
 #ifndef OGFX_DEVICE_HPP
 #define OGFX_DEVICE_HPP
 
+#include <ogfx/enum_flags.hpp>
 #include <ogfx/queue.hpp>
 
 #include <memory>
@@ -26,12 +27,25 @@ constexpr size_t to_index(QueueType type)
     return static_cast<size_t>(type);
 }
 
+OGFX_BITMASK_ENUM(DeviceQueue, uint32_t,
+    None     = 0,
+    Transfer = 1 << 0,
+    Graphics = 1 << 1,
+    Compute  = 1 << 2,
+    Present  = 1 << 3
+);
+
+OGFX_BITMASK_ENUM(DeviceFeature, uint32_t,
+    None                   = 0,
+    MultiDrawIndirect       = 1 << 0,
+    DrawIndirectFirstInstance = 1 << 1,
+    SamplerAnisotropy       = 1 << 2
+);
+
 struct DeviceDesc
 {
-    bool enable_transfer = true;
-    bool enable_graphics = true;
-    bool enable_compute = true;
-    bool enable_present = true;
+    DeviceQueue queues = DeviceQueue::Transfer | DeviceQueue::Graphics | DeviceQueue::Compute | DeviceQueue::Present;
+    DeviceFeature features = DeviceFeature::None;
 };
 
 class Device

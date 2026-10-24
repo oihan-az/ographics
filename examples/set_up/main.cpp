@@ -16,9 +16,6 @@ int main()
     physicalDevice.properties();
 
     ogfx::DeviceDesc deviceDesc;
-    deviceDesc.enable_transfer = true;
-    deviceDesc.enable_graphics = true;
-    deviceDesc.enable_compute = true;
 
     ogfx::Device device(physicalDevice, deviceDesc);
 

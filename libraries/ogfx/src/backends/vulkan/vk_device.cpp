@@ -20,7 +20,12 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
 
     std::set<uint32_t> uniqueQueueFamilies;
 
-    if (desc.enable_graphics)
+    const bool request_graphics = ogfx::has_flag(desc.queues, ogfx::DeviceQueue::Graphics);
+    const bool request_compute = ogfx::has_flag(desc.queues, ogfx::DeviceQueue::Compute);
+    const bool request_transfer = ogfx::has_flag(desc.queues, ogfx::DeviceQueue::Transfer);
+    const bool request_present = ogfx::has_flag(desc.queues, ogfx::DeviceQueue::Present);
+
+    if (request_graphics)
     {
         if (!indices.graphics_family.has_value())
         {
@@ -30,7 +35,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
         uniqueQueueFamilies.insert(indices.graphics_family.value());
     }
 
-    if (desc.enable_compute)
+    if (request_compute)
     {
         if (!indices.compute_family.has_value())
         {
@@ -40,7 +45,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
         uniqueQueueFamilies.insert(indices.compute_family.value());
     }
 
-    if (desc.enable_transfer)
+    if (request_transfer)
     {
         if (!indices.transfer_family.has_value())
         {
@@ -50,7 +55,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
         uniqueQueueFamilies.insert(indices.transfer_family.value());
     }
 
-    if (desc.enable_present)
+    if (request_present)
     {
         if (!indices.present_family.has_value())
         {
@@ -76,12 +81,37 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
     }
 
     // Device features
-    VkPhysicalDeviceFeatures deviceFeatures{};
+    VkPhysicalDeviceFeatures supported_features{};
+    vkGetPhysicalDeviceFeatures(physical_device.m_impl->m_physical_device, &supported_features);
+
+    const bool request_multi_draw_indirect = ogfx::has_flag(desc.features, ogfx::DeviceFeature::MultiDrawIndirect);
+    const bool request_draw_indirect_first_instance = ogfx::has_flag(desc.features, ogfx::DeviceFeature::DrawIndirectFirstInstance);
+    const bool request_sampler_anisotropy = ogfx::has_flag(desc.features, ogfx::DeviceFeature::SamplerAnisotropy);
+
+    if (request_multi_draw_indirect && !supported_features.multiDrawIndirect)
+    {
+        throw std::runtime_error("Multi draw indirect is not supported.");
+    }
+
+    if (request_draw_indirect_first_instance && !supported_features.drawIndirectFirstInstance)
+    {
+        throw std::runtime_error("Draw indirect first instance is not supported.");
+    }
+
+    if (request_sampler_anisotropy && !supported_features.samplerAnisotropy)
+    {
+        throw std::runtime_error("Sampler Anisotropy is not supported.");
+    }
+
+    VkPhysicalDeviceFeatures device_features{};
+    device_features.multiDrawIndirect = request_multi_draw_indirect ? VK_TRUE : VK_FALSE;
+    device_features.drawIndirectFirstInstance = request_draw_indirect_first_instance ? VK_TRUE : VK_FALSE;
+    device_features.samplerAnisotropy = request_sampler_anisotropy ? VK_TRUE : VK_FALSE;
 
     // Extensions
     std::vector<const char*> extensions;
 
-    if (desc.enable_present)
+    if (request_present)
     {
         extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
@@ -91,7 +121,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    createInfo.pEnabledFeatures = &deviceFeatures;
+    createInfo.pEnabledFeatures = &device_features;
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
     createInfo.enabledLayerCount = 0;

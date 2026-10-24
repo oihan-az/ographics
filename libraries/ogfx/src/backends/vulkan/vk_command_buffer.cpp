@@ -15,6 +15,9 @@
 #include "vk_format.hpp"
 #include "vk_shader_stage.hpp"
 #include "vk_pipeline_type.hpp"
+#include "vk_index_type.hpp"
+#include "vk_access_flags.hpp"
+#include "vk_pipeline_stage.hpp"
 
 #include <stdexcept>
 
@@ -157,7 +160,37 @@ void CommandBuffer::draw(const DrawInfo& draw_info)
     vkCmdDraw(m_impl->m_command_buffer, draw_info.vertex_count, draw_info.instance_count, draw_info.first_vertex,
               draw_info.first_instance);
 
-    OGFX_LOG("Vertices drawn");
+    OGFX_LOG("Draw recorded");
+}
+
+void CommandBuffer::draw_indexed(const DrawIndexedInfo& draw_info)
+{
+    OGFX_LOG("Drawing indexed:");
+    OGFX_LOG("  Index count: " + std::to_string(draw_info.index_count));
+    OGFX_LOG("  Instance count: " + std::to_string(draw_info.instance_count));
+    OGFX_LOG("  First index: " + std::to_string(draw_info.first_index));
+    OGFX_LOG("  Vertex offset: " + std::to_string(draw_info.vertex_offset));
+    OGFX_LOG("  First instance: " + std::to_string(draw_info.first_instance));
+
+    vkCmdDrawIndexed(m_impl->m_command_buffer, draw_info.index_count, draw_info.instance_count, draw_info.first_index,
+                     draw_info.vertex_offset, draw_info.first_instance);
+
+    OGFX_LOG("Indexed draw recorded");
+}
+
+void CommandBuffer::draw_indexed_indirect(const DrawIndexedIndirectInfo& draw_info)
+{
+    OGFX_LOG("Drawing indexed indirect:");
+    OGFX_LOG("  Offset: " + std::to_string(draw_info.offset));
+    OGFX_LOG("  Draw count: " + std::to_string(draw_info.draw_count));
+    OGFX_LOG("  Stride: " + std::to_string(draw_info.stride));
+
+    VkBuffer buffer = draw_info.buffer->m_impl->m_buffer;
+    VkDeviceSize offset = static_cast<VkDeviceSize>(draw_info.offset);
+
+    vkCmdDrawIndexedIndirect(m_impl->m_command_buffer, buffer, offset, draw_info.draw_count, draw_info.stride);
+
+    OGFX_LOG("Indexed indirect draw recorded");
 }
 
 void CommandBuffer::bind_compute_pipeline(const ComputePipeline& pipeline)
@@ -196,6 +229,21 @@ void CommandBuffer::bind_vertex_buffer(const VertexBufferBindInfo& info)
     OGFX_LOG("Vertex buffer bound");
 }
 
+void CommandBuffer::bind_index_buffer(const IndexBufferBindInfo& info)
+{
+    OGFX_LOG("Binding index buffer:");
+    OGFX_LOG("  Offset: " + std::to_string(info.offset));
+    OGFX_LOG("  Index type: " + to_string_enum(info.index_type));
+
+    VkBuffer index_buffer = info.buffer->m_impl->m_buffer;
+    VkDeviceSize buffer_offset = static_cast<VkDeviceSize>(info.offset);
+    VkIndexType index_type = to_vk_index_type(info.index_type);
+
+    vkCmdBindIndexBuffer(m_impl->m_command_buffer, index_buffer, buffer_offset, index_type);
+
+    OGFX_LOG("Index buffer bound");
+}
+
 void CommandBuffer::bind_resource_set(const ResourceSetBindInfo& info)
 {
     OGFX_LOG("Binding resource set:");
@@ -224,112 +272,151 @@ void CommandBuffer::set_inline_constants(const InlineConstantsInfo& info)
     OGFX_LOG("Inline constants set");
 }
 
+struct ImageStateSyncInfo
+{
+    PipelineStage stages = PipelineStage::AllCommands;
+    AccessFlags access = AccessFlags::MemoryRead | AccessFlags::MemoryWrite;
+};
+
+ImageStateSyncInfo get_image_state_src_info(ImageState state)
+{
+    switch (state)
+    {
+    case ImageState::Undefined:
+        return {
+            PipelineStage::TopOfPipe,
+            AccessFlags::None
+        };
+
+    case ImageState::Common:
+        return {
+            PipelineStage::AllCommands,
+            AccessFlags::MemoryRead | AccessFlags::MemoryWrite
+        };
+
+    case ImageState::RenderTarget:
+        return {
+            PipelineStage::ColorAttachmentOutput,
+            AccessFlags::ColorAttachmentRead | AccessFlags::ColorAttachmentWrite
+        };
+
+    case ImageState::DepthStencil:
+        return {
+            PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests,
+            AccessFlags::DepthStencilAttachmentRead | AccessFlags::DepthStencilAttachmentWrite
+        };
+
+    case ImageState::ShaderRead:
+        return {
+            PipelineStage::VertexShader | PipelineStage::FragmentShader | PipelineStage::ComputeShader,
+            AccessFlags::ShaderRead
+        };
+
+    case ImageState::TransferSrc:
+        return {
+            PipelineStage::Transfer,
+            AccessFlags::TransferRead
+        };
+
+    case ImageState::TransferDst:
+        return {
+            PipelineStage::Transfer,
+            AccessFlags::TransferWrite
+        };
+
+    case ImageState::Present:
+        return {
+            PipelineStage::AllCommands,
+            AccessFlags::MemoryRead
+        };
+    }
+
+    return {};
+}
+
+ImageStateSyncInfo get_image_state_dst_info(ImageState state)
+{
+    switch (state)
+    {
+    case ImageState::Undefined:
+        return {
+            PipelineStage::TopOfPipe,
+            AccessFlags::None
+        };
+
+    case ImageState::Common:
+        return {
+            PipelineStage::AllCommands,
+            AccessFlags::MemoryRead | AccessFlags::MemoryWrite
+        };
+
+    case ImageState::RenderTarget:
+        return {
+            PipelineStage::ColorAttachmentOutput,
+            AccessFlags::ColorAttachmentRead | AccessFlags::ColorAttachmentWrite
+        };
+
+    case ImageState::DepthStencil:
+        return {
+            PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests,
+            AccessFlags::DepthStencilAttachmentRead | AccessFlags::DepthStencilAttachmentWrite
+        };
+
+    case ImageState::ShaderRead:
+        return {
+            PipelineStage::VertexShader | PipelineStage::FragmentShader | PipelineStage::ComputeShader,
+            AccessFlags::ShaderRead
+        };
+
+    case ImageState::TransferSrc:
+        return {
+            PipelineStage::Transfer,
+            AccessFlags::TransferRead
+        };
+
+    case ImageState::TransferDst:
+        return {
+            PipelineStage::Transfer,
+            AccessFlags::TransferWrite
+        };
+
+    case ImageState::Present:
+        return {
+            PipelineStage::BottomOfPipe,
+            AccessFlags::None
+        };
+    }
+
+    return {};
+}
+
 void CommandBuffer::transition_image(const ImageTransitionInfo& info) 
 {
-    if (!m_impl || !info.image)
+    if (info.new_state == ImageState::Undefined)
     {
-        OGFX_LOG_ERROR("Cannot transition image: invalid transition info");
+        OGFX_LOG_ERROR("Cannot transition image to Undefined state");
         return;
     }
 
-    const VkImageLayout old_layout = to_vk_image_state(info.old_state);
-    const VkImageLayout new_layout = to_vk_image_state(info.new_state);
-
-    VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    VkAccessFlags src_access = 0;
-    VkAccessFlags dst_access = 0;
-
-    switch (info.old_state)
-    {
-    case ImageState::Undefined:
-        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        src_access = 0;
-        break;
-
-    case ImageState::TransferDst:
-        src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        src_access = VK_ACCESS_TRANSFER_WRITE_BIT;
-        break;
-
-    case ImageState::TransferSrc:
-        src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        src_access = VK_ACCESS_TRANSFER_READ_BIT;
-        break;
-
-    case ImageState::ShaderRead:
-        src_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        src_access = VK_ACCESS_SHADER_READ_BIT;
-        break;
-
-    case ImageState::RenderTarget:
-        src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        break;
-
-    default:
-        src_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        src_access = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-        break;
-    }
-
-    switch (info.new_state)
-    {
-    case ImageState::TransferDst:
-        dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        dst_access = VK_ACCESS_TRANSFER_WRITE_BIT;
-        break;
-
-    case ImageState::TransferSrc:
-        dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        dst_access = VK_ACCESS_TRANSFER_READ_BIT;
-        break;
-
-    case ImageState::ShaderRead:
-        dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        dst_access = VK_ACCESS_SHADER_READ_BIT;
-        break;
-
-    case ImageState::RenderTarget:
-        dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dst_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        break;
-
-    case ImageState::Present:
-        dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        dst_access = 0;
-        break;
-
-    default:
-        dst_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        dst_access = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-        break;
-    }
-
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.srcAccessMask = src_access;
-    barrier.dstAccessMask = dst_access;
-    barrier.oldLayout = old_layout;
-    barrier.newLayout = new_layout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = info.image->m_impl->m_image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = info.base_mip_level;
-    barrier.subresourceRange.levelCount = info.mip_level_count;
-    barrier.subresourceRange.baseArrayLayer = info.base_array_layer;
-    barrier.subresourceRange.layerCount = info.array_layer_count;
-
-    vkCmdPipelineBarrier(m_impl->m_command_buffer, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
     OGFX_LOG("Image transition:");
-    OGFX_LOG("  Old state: " + to_string_enum(info.old_state));
-    OGFX_LOG("  New state: " + to_string_enum(info.new_state));
-    OGFX_LOG("  Base mip level: " + std::to_string(info.base_mip_level));
-    OGFX_LOG("  Mip level count: " + std::to_string(info.mip_level_count));
-    OGFX_LOG("  Base array layer: " + std::to_string(info.base_array_layer));
-    OGFX_LOG("  Array layer count: " + std::to_string(info.array_layer_count));
+
+    const ImageStateSyncInfo src = get_image_state_src_info(info.old_state);
+    const ImageStateSyncInfo dst = get_image_state_dst_info(info.new_state);
+
+    ImageBarrierInfo barrier_info{};
+    barrier_info.image = info.image;
+    barrier_info.old_state = info.old_state;
+    barrier_info.new_state = info.new_state;
+    barrier_info.memory_barrier_info.src_stages = src.stages;
+    barrier_info.memory_barrier_info.dst_stages = dst.stages;
+    barrier_info.memory_barrier_info.src_access = src.access;
+    barrier_info.memory_barrier_info.dst_access = dst.access;
+    barrier_info.base_mip_level = info.base_mip_level;
+    barrier_info.mip_level_count = info.mip_level_count;
+    barrier_info.base_array_layer = info.base_array_layer;
+    barrier_info.array_layer_count = info.array_layer_count;
+
+    image_barrier(barrier_info);
 }
 
 void CommandBuffer::copy_buffer_to_image(const BufferToImageCopyInfo& info)
@@ -502,6 +589,70 @@ void CommandBuffer::generate_mipmaps(const GenerateMipmapsInfo& info)
     transition_image(source_levels_transition);
 
     OGFX_LOG("Mipmap generation recorded");
+}
+
+void CommandBuffer::buffer_barrier(const BufferBarrierInfo& info)
+{
+    OGFX_LOG("Recording buffer barrier:");
+    OGFX_LOG("  Offset: " + std::to_string(info.offset));
+    OGFX_LOG("  Size: " + std::to_string(info.size));
+    OGFX_LOG("  Source stages: " + to_string_bitmask(info.memory_barrier_info.src_stages));
+    OGFX_LOG("  Destination stages: " + to_string_bitmask(info.memory_barrier_info.dst_stages));
+    OGFX_LOG("  Source access: " + to_string_bitmask(info.memory_barrier_info.src_access));
+    OGFX_LOG("  Destination access: " + to_string_bitmask(info.memory_barrier_info.dst_access));
+
+    VkBufferMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    barrier.srcAccessMask = to_vk_access_flags(info.memory_barrier_info.src_access);
+    barrier.dstAccessMask = to_vk_access_flags(info.memory_barrier_info.dst_access);
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.buffer = info.buffer->m_impl->m_buffer;
+    barrier.offset = static_cast<VkDeviceSize>(info.offset);
+    barrier.size = static_cast<VkDeviceSize>(info.size);
+
+    vkCmdPipelineBarrier(m_impl->m_command_buffer, to_vk_pipeline_stage(info.memory_barrier_info.src_stages),
+                         to_vk_pipeline_stage(info.memory_barrier_info.dst_stages), 0, 0, nullptr, 1, &barrier, 0,
+                         nullptr);
+
+    OGFX_LOG("Buffer barrier recorded");
+}
+
+void CommandBuffer::image_barrier(const ImageBarrierInfo& info)
+{
+    OGFX_LOG("Recording image barrier:");
+    OGFX_LOG("  Old state: " + to_string_enum(info.old_state));
+    OGFX_LOG("  New state: " + to_string_enum(info.new_state));
+    OGFX_LOG("  Source stages: " + to_string_bitmask(info.memory_barrier_info.src_stages));
+    OGFX_LOG("  Destination stages: " + to_string_bitmask(info.memory_barrier_info.dst_stages));
+    OGFX_LOG("  Source access: " + to_string_bitmask(info.memory_barrier_info.src_access));
+    OGFX_LOG("  Destination access: " + to_string_bitmask(info.memory_barrier_info.dst_access));
+    OGFX_LOG("  Base mip level: " + std::to_string(info.base_mip_level));
+    OGFX_LOG("  Mip level count: " + std::to_string(info.mip_level_count));
+    OGFX_LOG("  Base array layer: " + std::to_string(info.base_array_layer));
+    OGFX_LOG("  Array layer count: " + std::to_string(info.array_layer_count));
+
+    VkImageMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.srcAccessMask = to_vk_access_flags(info.memory_barrier_info.src_access);
+    barrier.dstAccessMask = to_vk_access_flags(info.memory_barrier_info.dst_access);
+    barrier.oldLayout = to_vk_image_state(info.old_state);
+    barrier.newLayout = to_vk_image_state(info.new_state);
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = info.image->m_impl->m_image;
+
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = info.base_mip_level;
+    barrier.subresourceRange.levelCount = info.mip_level_count;
+    barrier.subresourceRange.baseArrayLayer = info.base_array_layer;
+    barrier.subresourceRange.layerCount = info.array_layer_count;
+
+    vkCmdPipelineBarrier(m_impl->m_command_buffer, to_vk_pipeline_stage(info.memory_barrier_info.src_stages),
+                         to_vk_pipeline_stage(info.memory_barrier_info.dst_stages), 0, 0, nullptr, 0, nullptr, 1,
+                         &barrier);
+
+    OGFX_LOG("Image barrier recorded");
 }
 
 } // namespace ogfx

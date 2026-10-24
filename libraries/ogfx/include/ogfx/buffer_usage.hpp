@@ -16,7 +16,8 @@ OGFX_BITMASK_ENUM(BufferUsage, uint32_t,
     Uniform = 1u << 2,
     Storage = 1u << 3,
     TransferSrc = 1u << 4,
-    TransferDst = 1u << 5
+    TransferDst = 1u << 5,
+    Indirect = 1u << 6
 );
 
 } // namespace ogfx

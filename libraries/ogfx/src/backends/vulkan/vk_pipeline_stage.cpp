@@ -34,6 +34,15 @@ VkPipelineStageFlags to_vk_pipeline_stage(PipelineStage stage)
     if (has_flag(stage, PipelineStage::BottomOfPipe))
         flags |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
+    if (has_flag(stage, PipelineStage::EarlyFragmentTests))
+        flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+
+    if (has_flag(stage, PipelineStage::LateFragmentTests))
+        flags |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+
+    if (has_flag(stage, PipelineStage::AllCommands))
+        flags |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
     return flags;
 }
 
@@ -67,6 +76,15 @@ PipelineStage from_vk_pipeline_stage(VkPipelineStageFlags flags)
 
     if (flags & VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
         stage = stage | PipelineStage::BottomOfPipe;
+
+    if (flags & VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT)
+        stage = stage | PipelineStage::EarlyFragmentTests;
+
+    if (flags & VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)
+        stage = stage | PipelineStage::LateFragmentTests;
+
+    if (flags & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)
+        stage = stage | PipelineStage::AllCommands;
 
     return stage;
 }

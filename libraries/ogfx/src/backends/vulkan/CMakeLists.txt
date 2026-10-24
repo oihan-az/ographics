@@ -41,6 +41,8 @@ target_sources(
         vk_sampler.cpp
         vk_compute_pipeline.cpp
         vk_pipeline_type.cpp
+        vk_index_type.cpp
+        vk_access_flags.cpp
         
 )
 

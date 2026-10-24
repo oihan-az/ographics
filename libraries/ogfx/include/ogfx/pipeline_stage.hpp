@@ -18,7 +18,10 @@ OGFX_BITMASK_ENUM(PipelineStage, uint32_t,
     ColorAttachmentOutput = 1u << 5,
     ComputeShader = 1u << 6,
     Transfer = 1u << 7,
-    BottomOfPipe = 1u << 8
+    BottomOfPipe = 1u << 8,
+    EarlyFragmentTests = 1u << 9,
+    LateFragmentTests = 1u << 10,
+    AllCommands = 1u << 11
 );
 
 } // namespace ogfx
