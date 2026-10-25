@@ -2,6 +2,7 @@
 #include <ogfx/enum_string.hpp>
 
 #include "vk_compute_pipeline.hpp"
+#include "vk_pipeline.hpp"
 #include "vk_device.hpp"
 #include "vk_pipeline_layout.hpp"
 #include "vk_shader.hpp"
@@ -12,11 +13,8 @@
 namespace ogfx
 {
 
-ComputePipeline::ComputePipeline(const Device& device, const ComputePipelineDesc& desc)
-    : m_impl(std::make_unique<Impl>())
+ComputePipeline::ComputePipeline(const Device& device, const ComputePipelineDesc& desc) : Pipeline(device)
 {
-    m_impl->m_device = device.m_impl->m_device;
-
     if (desc.layout == nullptr || !desc.layout->m_impl)
     {
         OGFX_LOG_ERROR("Cannot create compute pipeline: invalid pipeline layout");
@@ -62,18 +60,7 @@ ComputePipeline::ComputePipeline(const Device& device, const ComputePipelineDesc
 
 ComputePipeline::~ComputePipeline()
 {
-    if (!m_impl)
-    {
-        return;
-    }
-
-    if (m_impl->m_pipeline != VK_NULL_HANDLE)
-    {
-        vkDestroyPipeline(m_impl->m_device, m_impl->m_pipeline, nullptr);
-        m_impl->m_pipeline = VK_NULL_HANDLE;
-
-        OGFX_LOG("Compute pipeline destroyed");
-    }
+    OGFX_LOG("Compute pipeline destroyed");
 }
 
 ComputePipeline::ComputePipeline(ComputePipeline&&) noexcept = default;

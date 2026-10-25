@@ -1,6 +1,8 @@
 #ifndef OGFX_GRAPHICS_PIEPLINE_HPP
 #define OGFX_GRAPHICS_PIEPLINE_HPP
 
+#include <ogfx/pipeline.hpp>
+
 #include <ogfx/vertex_input.hpp>
 #include <ogfx/input_assembly.hpp>
 
@@ -44,7 +46,7 @@ struct GraphicsPipelineDesc
     ViewportStateDesc viewport;
 };
 
-class GraphicsPipeline
+class GraphicsPipeline : public Pipeline
 {
   public:
     GraphicsPipeline(const Device& device, const GraphicsPipelineDesc& desc);
@@ -57,11 +59,10 @@ class GraphicsPipeline
     GraphicsPipeline(GraphicsPipeline&&) noexcept;
     GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept;
 
-  private:
-    struct Impl;
-    std::unique_ptr<Impl> m_impl;
-
-    friend class CommandBuffer;
+    PipelineType type() const noexcept override
+    {
+        return PipelineType::Graphics;
+    }
 };
 
 } // namespace ogfx

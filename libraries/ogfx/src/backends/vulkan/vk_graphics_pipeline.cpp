@@ -2,6 +2,7 @@
 #include <ogfx/enum_string.hpp>
 
 #include "vk_graphics_pipeline.hpp"
+#include "vk_pipeline.hpp"
 #include "vk_device.hpp"
 #include "vk_render_pass.hpp"
 #include "vk_pipeline_layout.hpp"
@@ -19,11 +20,8 @@
 namespace ogfx
 {
 
-GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineDesc& desc)
-    : m_impl(std::make_unique<Impl>())
+GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineDesc& desc) : Pipeline(device)
 {
-    m_impl->m_device = device.m_impl->m_device;
-
     if (desc.render_pass == nullptr)
     {
         throw std::invalid_argument("Graphics pipeline requires a render pass.");
@@ -330,19 +328,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
 
 GraphicsPipeline::~GraphicsPipeline()
 {
-    if (!m_impl)
-    {
-        return;
-    }
-
-    if (m_impl->m_pipeline != VK_NULL_HANDLE)
-    {
-        vkDestroyPipeline(m_impl->m_device, m_impl->m_pipeline, nullptr);
-
-        m_impl->m_pipeline = VK_NULL_HANDLE;
-
-        OGFX_LOG("Graphics pipeline destroyed");
-    }
+    OGFX_LOG("Graphics pipeline destroyed");
 }
 
 GraphicsPipeline::GraphicsPipeline(GraphicsPipeline&&) noexcept = default;

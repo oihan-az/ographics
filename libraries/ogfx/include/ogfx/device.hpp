@@ -82,6 +82,7 @@ class Device
     friend class RenderPass;
     friend class Framebuffer;
     friend class Shader;
+    friend class Pipeline;
     friend class GraphicsPipeline;
     friend class ComputePipeline;
     friend class Buffer;

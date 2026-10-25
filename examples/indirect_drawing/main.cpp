@@ -611,7 +611,7 @@ int main()
 
     graphicsPipelineDesc.color_blend.attachments = {colorBlendAttachment};
 
-    ogfx::GraphicsPipeline graphicsPipeline(device, graphicsPipelineDesc);
+    ogfx::GraphicsPipeline graphics_pipeline(device, graphicsPipelineDesc);
 
 
 
@@ -676,7 +676,9 @@ int main()
 
         {
             // Generate indexed indirect commands on the GPU
-            commandBuffer.bind_compute_pipeline(compute_pipeline);
+            ogfx::PipelineBindInfo compute_pipeline_bind_info;
+            compute_pipeline_bind_info.pipeline = &compute_pipeline;
+            commandBuffer.bind_pipeline(compute_pipeline_bind_info);
 
             ogfx::ResourceSetBindInfo compute_bind_info;
             compute_bind_info.layout = &compute_pipeline_layout;
@@ -715,10 +717,13 @@ int main()
             render_pass_begin_info.width = swapchainDesc.width;
             render_pass_begin_info.height = swapchainDesc.height;
             render_pass_begin_info.clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
+            render_pass_begin_info.render_pass = &renderPass;
+            render_pass_begin_info.framebuffer = &framebuffers[imageIndex];
+            commandBuffer.begin_render_pass(render_pass_begin_info);
 
-            commandBuffer.begin_render_pass(renderPass, framebuffers[imageIndex], render_pass_begin_info);
-
-            commandBuffer.bind_graphics_pipeline(graphicsPipeline);
+            ogfx::PipelineBindInfo graphics_pipeline_bind_info;
+            graphics_pipeline_bind_info.pipeline = &graphics_pipeline;
+            commandBuffer.bind_pipeline(graphics_pipeline_bind_info);
 
             ogfx::ResourceSetBindInfo graphics_bind_info;
             graphics_bind_info.layout = &graphics_pipeline_layout;

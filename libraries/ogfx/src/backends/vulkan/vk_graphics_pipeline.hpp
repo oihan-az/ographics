@@ -8,12 +8,6 @@
 namespace ogfx
 {
 
-struct GraphicsPipeline::Impl
-{
-    VkPipeline m_pipeline = VK_NULL_HANDLE;
-    VkDevice m_device = VK_NULL_HANDLE;
-};
-
 } // namespace ogfx
 
 #endif // OGFX_VK_GRAPHICS_PIEPLINE_HPP

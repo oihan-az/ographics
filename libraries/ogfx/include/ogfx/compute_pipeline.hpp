@@ -1,6 +1,8 @@
 #ifndef OGFX_COMPUTE_PIPELINE_HPP
 #define OGFX_COMPUTE_PIPELINE_HPP
 
+#include <ogfx/pipeline.hpp>
+
 #include <memory>
 
 namespace ogfx
@@ -16,7 +18,7 @@ struct ComputePipelineDesc
     const Shader* shader = nullptr;
 };
 
-class ComputePipeline
+class ComputePipeline : public Pipeline
 {
   public:
     ComputePipeline(const Device& device, const ComputePipelineDesc& desc);
@@ -29,11 +31,10 @@ class ComputePipeline
     ComputePipeline(ComputePipeline&&) noexcept;
     ComputePipeline& operator=(ComputePipeline&&) noexcept;
 
-  private:
-    friend class CommandBuffer;
-
-    struct Impl;
-    std::unique_ptr<Impl> m_impl;
+    PipelineType type() const noexcept override
+    {
+        return PipelineType::Compute;
+    }
 };
 
 } // namespace ogfx

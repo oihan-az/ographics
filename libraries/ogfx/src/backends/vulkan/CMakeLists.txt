@@ -29,6 +29,7 @@ target_sources(
         vk_multisample.cpp
         vk_color_blend.cpp
         vk_viewport.cpp
+        vk_pipeline.cpp
         vk_graphics_pipeline.cpp
         vk_buffer_usage.cpp
         vk_memory_property.cpp
@@ -43,6 +44,13 @@ target_sources(
         vk_pipeline_type.cpp
         vk_index_type.cpp
         vk_access_flags.cpp
+        commands/vk_render_pass_commands.cpp
+        commands/vk_binding_commands.cpp
+        commands/vk_inline_constants_commands.cpp
+        commands/vk_draw_commands.cpp
+        commands/vk_dispatch_commands.cpp
+        commands/vk_barrier_commands.cpp
+        commands/vk_transfer_commands.cpp
         
 )
 

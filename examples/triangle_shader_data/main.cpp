@@ -247,12 +247,15 @@ int main()
     render_pass_begin_info.offset_y = 0;
     render_pass_begin_info.width = swapchainDesc.width;
     render_pass_begin_info.height = swapchainDesc.height;
-
     render_pass_begin_info.clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
+    render_pass_begin_info.render_pass = &renderPass;
+    render_pass_begin_info.framebuffer = &framebuffers[imageIndex];
+    commandBuffer.begin_render_pass(render_pass_begin_info);
 
-    commandBuffer.begin_render_pass(renderPass, framebuffers[imageIndex], render_pass_begin_info);
+    ogfx::PipelineBindInfo graphics_pipeline_bind_info;
+    graphics_pipeline_bind_info.pipeline = &graphicsPipeline;
+    commandBuffer.bind_pipeline(graphics_pipeline_bind_info);
 
-    commandBuffer.bind_graphics_pipeline(graphicsPipeline);
     ogfx::DrawInfo draw_info;
     draw_info.vertex_count = 3;
     commandBuffer.draw(draw_info);
