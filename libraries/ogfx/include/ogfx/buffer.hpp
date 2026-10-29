@@ -45,9 +45,12 @@ class Buffer
 
     void write(const BufferWriteInfo& info);
 
+    uint64_t device_address() const;
+
   private:
     friend class CommandBuffer;
     friend class ResourceSet;
+    friend class AccelerationStructure;
 
     void create();
     void destroy();

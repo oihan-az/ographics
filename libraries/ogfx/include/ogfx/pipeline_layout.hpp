@@ -33,6 +33,7 @@ class PipelineLayout
   private:
     friend class GraphicsPipeline;
     friend class ComputePipeline;
+    friend class RayTracingPipeline;
     friend class CommandBuffer;
 
     struct Impl;

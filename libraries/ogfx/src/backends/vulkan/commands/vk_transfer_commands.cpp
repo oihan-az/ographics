@@ -67,6 +67,142 @@ void CommandBuffer::copy_buffer_to_image(const BufferToImageCopyInfo& info)
              std::to_string(info.depth));
 }
 
+void CommandBuffer::copy_image_to_image(const ImageToImageCopyInfo& info)
+{
+    if (!m_impl || !info.src_image || !info.dst_image || info.width == 0 || info.height == 0 || info.depth == 0 ||
+        info.array_layer_count == 0)
+    {
+        OGFX_LOG_ERROR("Cannot copy image to image: invalid copy info parameters");
+        return;
+    }
+
+    if (info.src_mip_level >= info.src_image->m_desc.mip_levels ||
+        info.src_base_array_layer >= info.src_image->m_desc.array_layers ||
+        info.array_layer_count > info.src_image->m_desc.array_layers - info.src_base_array_layer)
+    {
+        OGFX_LOG_ERROR("Cannot copy image to image: source mip level or array layer range out of bounds");
+        return;
+    }
+
+    if (info.dst_mip_level >= info.dst_image->m_desc.mip_levels ||
+        info.dst_base_array_layer >= info.dst_image->m_desc.array_layers ||
+        info.array_layer_count > info.dst_image->m_desc.array_layers - info.dst_base_array_layer)
+    {
+        OGFX_LOG_ERROR("Cannot copy image to image: destination mip level or array layer range out of bounds");
+        return;
+    }
+
+    const uint32_t src_mip_width = std::max(1u, info.src_image->width() >> info.src_mip_level);
+    const uint32_t src_mip_height = std::max(1u, info.src_image->height() >> info.src_mip_level);
+    const uint32_t dst_mip_width = std::max(1u, info.dst_image->width() >> info.dst_mip_level);
+    const uint32_t dst_mip_height = std::max(1u, info.dst_image->height() >> info.dst_mip_level);
+
+    if (info.width > src_mip_width || info.height > src_mip_height || info.width > dst_mip_width ||
+        info.height > dst_mip_height || info.depth > 1)
+    {
+        OGFX_LOG_ERROR(
+            "Cannot copy image to image: copy extent exceeds source or destination subresource layout dimensions");
+        return;
+    }
+
+    VkImageCopy copy_region{};
+
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = info.src_mip_level;
+    copy_region.srcSubresource.baseArrayLayer = info.src_base_array_layer;
+    copy_region.srcSubresource.layerCount = info.array_layer_count;
+    copy_region.srcOffset = {0, 0, 0};
+
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.mipLevel = info.dst_mip_level;
+    copy_region.dstSubresource.baseArrayLayer = info.dst_base_array_layer;
+    copy_region.dstSubresource.layerCount = info.array_layer_count;
+    copy_region.dstOffset = {0, 0, 0};
+
+    copy_region.extent = {info.width, info.height, info.depth};
+
+    vkCmdCopyImage(m_impl->m_command_buffer, info.src_image->m_impl->m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   info.dst_image->m_impl->m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+
+    OGFX_LOG("Recorded Vulkan image-to-image copy:");
+    OGFX_LOG("  Src Mip level: " + std::to_string(info.src_mip_level) +
+             ", Src Base Layer: " + std::to_string(info.src_base_array_layer));
+    OGFX_LOG("  Dst Mip level: " + std::to_string(info.dst_mip_level) +
+             ", Dst Base Layer: " + std::to_string(info.dst_base_array_layer));
+    OGFX_LOG("  Layer count:   " + std::to_string(info.array_layer_count));
+    OGFX_LOG("  Extent:        " + std::to_string(info.width) + "x" + std::to_string(info.height) + "x" +
+             std::to_string(info.depth));
+}
+
+void CommandBuffer::blit_image(const ImageToImageCopyInfo& info)
+{
+    if (!m_impl || !info.src_image || !info.dst_image || info.width == 0 || info.height == 0 ||
+        info.array_layer_count == 0)
+    {
+        OGFX_LOG_ERROR("Cannot blit image: invalid blit info");
+        return;
+    }
+
+    if (info.src_mip_level >= info.src_image->m_desc.mip_levels ||
+        info.src_base_array_layer >= info.src_image->m_desc.array_layers ||
+        info.array_layer_count > info.src_image->m_desc.array_layers - info.src_base_array_layer)
+    {
+        OGFX_LOG_ERROR("Cannot blit image: source mip level or array layer range is out of bounds");
+        return;
+    }
+
+    if (info.dst_mip_level >= info.dst_image->m_desc.mip_levels ||
+        info.dst_base_array_layer >= info.dst_image->m_desc.array_layers ||
+        info.array_layer_count > info.dst_image->m_desc.array_layers - info.dst_base_array_layer)
+    {
+        OGFX_LOG_ERROR("Cannot blit image: destination mip level or array layer range is out of bounds");
+        return;
+    }
+
+    const uint32_t src_mip_width = std::max(1u, info.src_image->width() >> info.src_mip_level);
+    const uint32_t src_mip_height = std::max(1u, info.src_image->height() >> info.src_mip_level);
+
+    const uint32_t dst_mip_width = std::max(1u, info.dst_image->width() >> info.dst_mip_level);
+    const uint32_t dst_mip_height = std::max(1u, info.dst_image->height() >> info.dst_mip_level);
+
+    if (info.width > src_mip_width || info.height > src_mip_height || info.width > dst_mip_width ||
+        info.height > dst_mip_height)
+    {
+        OGFX_LOG_ERROR("Cannot blit image: blit extent exceeds mip dimensions of source or destination");
+        return;
+    }
+
+    VkImageBlit region{};
+
+    region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.mipLevel = info.src_mip_level;
+    region.srcSubresource.baseArrayLayer = info.src_base_array_layer;
+    region.srcSubresource.layerCount = info.array_layer_count;
+    region.srcOffsets[0] = {0, 0, 0};
+    region.srcOffsets[1] = {static_cast<int32_t>(info.width), static_cast<int32_t>(info.height), 1};
+
+    region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.mipLevel = info.dst_mip_level;
+    region.dstSubresource.baseArrayLayer = info.dst_base_array_layer;
+    region.dstSubresource.layerCount = info.array_layer_count;
+    region.dstOffsets[0] = {0, 0, 0};
+    region.dstOffsets[1] = {static_cast<int32_t>(info.width), static_cast<int32_t>(info.height), 1};
+
+    vkCmdBlitImage(m_impl->m_command_buffer, info.src_image->m_impl->m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   info.dst_image->m_impl->m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
+                   VK_FILTER_NEAREST);
+
+    OGFX_LOG("Recorded Vulkan image-to-image blit:");
+    OGFX_LOG("  Source mip level: " + std::to_string(info.src_mip_level));
+    OGFX_LOG("  Source base array layer: " + std::to_string(info.src_base_array_layer));
+    OGFX_LOG("  Destination mip level: " + std::to_string(info.dst_mip_level));
+    OGFX_LOG("  Destination base array layer: " + std::to_string(info.dst_base_array_layer));
+    OGFX_LOG("  Array layer count: " + std::to_string(info.array_layer_count));
+    OGFX_LOG("  Extent: " + std::to_string(info.width) + "x" + std::to_string(info.height));
+}
+
+
+
 void CommandBuffer::generate_mipmaps(const GenerateMipmapsInfo& info)
 {
     if (!m_impl || !info.image)

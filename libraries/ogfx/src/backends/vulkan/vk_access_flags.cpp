@@ -55,6 +55,12 @@ VkAccessFlags to_vk_access_flags(AccessFlags flags)
     if (has_flag(flags, AccessFlags::MemoryWrite))
         vk_flags |= VK_ACCESS_MEMORY_WRITE_BIT;
 
+    if (has_flag(flags, AccessFlags::AccelerationStructureRead))
+        vk_flags |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+
+    if (has_flag(flags, AccessFlags::AccelerationStructureWrite))
+        vk_flags |= VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+
     return vk_flags;
 }
 
@@ -109,6 +115,12 @@ AccessFlags from_vk_access_flags(VkAccessFlags flags)
 
     if (flags & VK_ACCESS_MEMORY_WRITE_BIT)
         result |= AccessFlags::MemoryWrite;
+
+    if (flags & VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR)
+        result |= AccessFlags::AccelerationStructureRead;
+
+    if (flags & VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)
+        result |= AccessFlags::AccelerationStructureWrite;
 
     return result;
 }

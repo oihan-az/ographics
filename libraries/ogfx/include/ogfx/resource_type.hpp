@@ -13,7 +13,8 @@ enum class ResourceType : uint32_t
     StorageBuffer,
     SampledTexture,
     StorageTexture,
-    Sampler
+    Sampler,
+    AccelerationStructure
 };
 
 } // namespace ogfx

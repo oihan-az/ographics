@@ -43,7 +43,7 @@ target_sources(
         vk_compute_pipeline.cpp
         vk_pipeline_type.cpp
         vk_index_type.cpp
-        vk_access_flags.cpp
+        vk_access_flags.cpp  
         commands/vk_render_pass_commands.cpp
         commands/vk_binding_commands.cpp
         commands/vk_inline_constants_commands.cpp
@@ -51,6 +51,15 @@ target_sources(
         commands/vk_dispatch_commands.cpp
         commands/vk_barrier_commands.cpp
         commands/vk_transfer_commands.cpp
+        vk_acc_struct.cpp
+        vk_acc_struct_type.cpp
+        vk_acc_struct_geometry.cpp
+        vk_acc_struct_build_preference.cpp
+        commands/vk_acc_struct_commands.cpp
+        vk_device_functions.cpp
+        vk_ray_tracing_pipeline.cpp
+        
+        commands/vk_ray_tracing_commands.cpp
         
 )
 

@@ -23,7 +23,9 @@ OGFX_BITMASK_ENUM(AccessFlags, uint32_t,
     HostRead = 1u << 12,
     HostWrite = 1u << 13,
     MemoryRead = 1u << 14,
-    MemoryWrite = 1u << 15
+    MemoryWrite = 1u << 15,
+    AccelerationStructureRead  = 1u << 16,
+    AccelerationStructureWrite = 1u << 17
 );
 
 } // namespace ogfx

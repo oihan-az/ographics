@@ -39,7 +39,8 @@ OGFX_BITMASK_ENUM(DeviceFeature, uint32_t,
     None                   = 0,
     MultiDrawIndirect       = 1 << 0,
     DrawIndirectFirstInstance = 1 << 1,
-    SamplerAnisotropy       = 1 << 2
+    SamplerAnisotropy       = 1 << 2,
+    RayTracing       = 1 << 3
 );
 
 struct DeviceDesc
@@ -90,6 +91,7 @@ class Device
     friend class ResourceAllocator;
     friend class PipelineLayout;
     friend class Sampler;
+    friend class AccelerationStructure;
 
     std::array<Queue, to_index(QueueType::Count)> m_queues;
 

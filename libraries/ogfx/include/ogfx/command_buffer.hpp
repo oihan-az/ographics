@@ -8,6 +8,8 @@
 #include <ogfx/commands/inline_constants_commands.hpp>
 #include <ogfx/commands/transfer_commands.hpp>
 #include <ogfx/commands/barrier_commands.hpp>
+#include <ogfx/commands/acc_struct_commands.hpp>
+#include <ogfx/commands/ray_tracing_commands.hpp>
 
 #include <memory>
 
@@ -50,11 +52,19 @@ class CommandBuffer
     void set_inline_constants(const InlineConstantsInfo& info);
 
     void copy_buffer_to_image(const BufferToImageCopyInfo& info);
+    void copy_image_to_image(const ImageToImageCopyInfo& info);
+    void blit_image(const ImageToImageCopyInfo& info);
+
     void generate_mipmaps(const GenerateMipmapsInfo& info);
 
+    void memory_barrier(const MemoryBarrierInfo& info);
     void buffer_barrier(const BufferBarrierInfo& info);
     void image_barrier(const ImageBarrierInfo& info);
     void transition_image(const ImageTransitionInfo& info);
+
+    void build_acceleration_structure(const AccelerationStructureBuildInfo& info);
+
+    void trace_rays(const TraceRaysInfo& info);
 
   private:
     friend class Queue;

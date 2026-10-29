@@ -60,6 +60,7 @@ function(ogfx_compile_shaders TARGET)
             "${SHADER_SOURCE}"
         )
 
+        set(IS_RAY_TRACING FALSE)
 
         if(SHADER_RELATIVE MATCHES "\\.vert\\.hlsl$")
 
@@ -78,6 +79,36 @@ function(ogfx_compile_shaders TARGET)
             set(SHADER_TYPE "compute")
             set(SHADER_PROFILE "cs_6_0")
             set(SHADER_ENTRY_POINT "CSMain")
+
+        elseif(SHADER_RELATIVE MATCHES "\\.rgen\\.hlsl$")
+
+            set(SHADER_TYPE "raygen")
+            set(SHADER_PROFILE "lib_6_3")
+            set(IS_RAY_TRACING TRUE)
+
+        elseif(SHADER_RELATIVE MATCHES "\\.rmiss\\.hlsl$")
+
+            set(SHADER_TYPE "miss")
+            set(SHADER_PROFILE "lib_6_3")
+            set(IS_RAY_TRACING TRUE)
+
+        elseif(SHADER_RELATIVE MATCHES "\\.rchit\\.hlsl$")
+
+            set(SHADER_TYPE "closesthit")
+            set(SHADER_PROFILE "lib_6_3")
+            set(IS_RAY_TRACING TRUE)
+
+        elseif(SHADER_RELATIVE MATCHES "\\.rahit\\.hlsl$")
+
+            set(SHADER_TYPE "anyhit")
+            set(SHADER_PROFILE "lib_6_3")
+            set(IS_RAY_TRACING TRUE)
+
+        elseif(SHADER_RELATIVE MATCHES "\\.rint\\.hlsl$")
+
+            set(SHADER_TYPE "intersection")
+            set(SHADER_PROFILE "lib_6_3")
+            set(IS_RAY_TRACING TRUE)
 
         else()
 
@@ -114,10 +145,17 @@ function(ogfx_compile_shaders TARGET)
 
             list(APPEND DXC_ARGUMENTS
                 -spirv
+                -fspv-target-env=vulkan1.2
+                -fspv-extension=SPV_KHR_ray_tracing
             )
 
         endif()
 
+        if(IS_RAY_TRACING)
+            set(DXC_ENTRY_POINT_ARGS)
+        else()
+            set(DXC_ENTRY_POINT_ARGS -E "${SHADER_ENTRY_POINT}")
+        endif()
 
         add_custom_command(
             OUTPUT
@@ -131,7 +169,7 @@ function(ogfx_compile_shaders TARGET)
                 "${DXC_EXECUTABLE}"
                 ${DXC_ARGUMENTS}
                 -T "${SHADER_PROFILE}"
-                -E "${SHADER_ENTRY_POINT}"
+                ${DXC_ENTRY_POINT_ARGS}
                 -Fo "${SHADER_OUTPUT}"
                 "${SHADER_SOURCE}"
 

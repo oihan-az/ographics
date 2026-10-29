@@ -42,6 +42,8 @@ class PhysicalDevice
     friend class Swapchain;
     friend class Buffer;
     friend class Image;
+    friend class AccelerationStructure;
+    friend class RayTracingPipeline;
 
     PhysicalDeviceDesc m_desc;
 

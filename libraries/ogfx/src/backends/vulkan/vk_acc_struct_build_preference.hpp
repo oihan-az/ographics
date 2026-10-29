@@ -1,0 +1,19 @@
+#ifndef OGFX_VK_ACCELERATION_STRUCTURE_BUILD_PREFERENCE_HPP
+#define OGFX_VK_ACCELERATION_STRUCTURE_BUILD_PREFERENCE_HPP
+
+#include <ogfx/acc_struct_build_preference.hpp>
+
+#include <vulkan/vulkan.h>
+
+namespace ogfx
+{
+
+VkBuildAccelerationStructureFlagsKHR
+to_vk_acceleration_structure_build_preference(AccelerationStructureBuildPreference preference);
+
+AccelerationStructureBuildPreference
+from_vk_acceleration_structure_build_preference(VkBuildAccelerationStructureFlagsKHR flags);
+
+} // namespace ogfx
+
+#endif // OGFX_VK_ACCELERATION_STRUCTURE_BUILD_PREFERENCE_HPP

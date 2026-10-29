@@ -52,6 +52,26 @@ class Swapchain
         return static_cast<uint32_t>(m_image_views.size());
     }
 
+        [[nodiscard]] Image& image(uint32_t index)
+    {
+        if (index >= m_image_views.size())
+        {
+            throw std::out_of_range("Swapchain image index out of range.");
+        }
+
+        return m_images[index];
+    }
+
+    [[nodiscard]] const Image& image(uint32_t index) const
+    {
+        if (index >= m_image_views.size())
+        {
+            throw std::out_of_range("Swapchain image index out of range.");
+        }
+
+        return m_images[index];
+    }
+
     [[nodiscard]] ImageView& image_view(uint32_t index)
     {
         if (index >= m_image_views.size())

@@ -6,6 +6,7 @@
 #include "vk_memory_property.hpp"
 #include "vk_physical_device.hpp"
 #include "vk_device.hpp"
+#include "vk_device_functions.hpp"
 
 #include <stdexcept>
 
@@ -118,6 +119,15 @@ void Buffer::allocate_memory()
     allocation_info.allocationSize = memory_requirements.size;
     allocation_info.memoryTypeIndex = memory_type_index;
 
+    VkMemoryAllocateFlagsInfo allocation_flags{};
+    allocation_flags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+
+    if (ogfx::has_flag(m_desc.usage, BufferUsage::ShaderDeviceAddress))
+    {
+        allocation_flags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+        allocation_info.pNext = &allocation_flags;
+    }
+
     if (vkAllocateMemory(m_impl->m_device, &allocation_info, nullptr, &m_impl->m_memory) != VK_SUCCESS)
     {
         m_impl->m_memory = VK_NULL_HANDLE;
@@ -226,6 +236,27 @@ void Buffer::write(const BufferWriteInfo& info)
     OGFX_LOG("Wrote buffer data:");
     OGFX_LOG("  Size: " + std::to_string(info.size));
     OGFX_LOG("  Offset: " + std::to_string(info.offset));
+}
+
+uint64_t Buffer::device_address() const
+{
+    if (!m_impl || m_impl->m_buffer == VK_NULL_HANDLE)
+    {
+        OGFX_LOG_ERROR("Cannot retrieve device address: buffer is not initialized");
+        return 0;
+    }
+
+    if (!has_flag(m_desc.usage, BufferUsage::ShaderDeviceAddress))
+    {
+        OGFX_LOG_ERROR("Cannot retrieve device address: buffer was not created for device-address usage");
+        return 0;
+    }
+
+    VkBufferDeviceAddressInfo address_info{};
+    address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    address_info.buffer = m_impl->m_buffer;
+
+    return static_cast<uint64_t>(vkGetBufferDeviceAddressKHR(m_impl->m_device, &address_info));
 }
 
 } // namespace ogfx

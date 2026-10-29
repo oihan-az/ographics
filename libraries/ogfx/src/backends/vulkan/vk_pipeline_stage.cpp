@@ -43,6 +43,12 @@ VkPipelineStageFlags to_vk_pipeline_stage(PipelineStage stage)
     if (has_flag(stage, PipelineStage::AllCommands))
         flags |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
+    if (has_flag(stage, PipelineStage::AccelerationStructureBuild))
+        flags |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+
+    if (has_flag(stage, PipelineStage::RayTracingShader))
+        flags |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+
     return flags;
 }
 
@@ -85,6 +91,12 @@ PipelineStage from_vk_pipeline_stage(VkPipelineStageFlags flags)
 
     if (flags & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)
         stage = stage | PipelineStage::AllCommands;
+
+    if (flags & VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR)
+        stage = stage | PipelineStage::AccelerationStructureBuild;
+
+    if (flags & VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR)
+        stage = stage | PipelineStage::RayTracingShader;
 
     return stage;
 }

@@ -16,6 +16,26 @@
 namespace ogfx
 {
 
+void CommandBuffer::memory_barrier(const MemoryBarrierInfo& info)
+{
+    OGFX_LOG("Recording memory barrier:");
+    OGFX_LOG("  Source stages: " + to_string_bitmask(info.src_stages));
+    OGFX_LOG("  Destination stages: " + to_string_bitmask(info.dst_stages));
+    OGFX_LOG("  Source access: " + to_string_bitmask(info.src_access));
+    OGFX_LOG("  Destination access: " + to_string_bitmask(info.dst_access));
+
+    VkMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    barrier.pNext = nullptr;
+    barrier.srcAccessMask = to_vk_access_flags(info.src_access);
+    barrier.dstAccessMask = to_vk_access_flags(info.dst_access);
+
+    vkCmdPipelineBarrier(m_impl->m_command_buffer, to_vk_pipeline_stage(info.src_stages),
+                         to_vk_pipeline_stage(info.dst_stages), 0, 1, &barrier, 0, nullptr, 0, nullptr);
+
+    OGFX_LOG("Memory barrier recorded");
+}
+
 void CommandBuffer::buffer_barrier(const BufferBarrierInfo& info)
 {
     OGFX_LOG("Recording buffer barrier:");

@@ -21,7 +21,9 @@ OGFX_BITMASK_ENUM(PipelineStage, uint32_t,
     BottomOfPipe = 1u << 8,
     EarlyFragmentTests = 1u << 9,
     LateFragmentTests = 1u << 10,
-    AllCommands = 1u << 11
+    AllCommands = 1u << 11,
+    AccelerationStructureBuild = 1u << 12,
+    RayTracingShader = 1u << 13
 );
 
 } // namespace ogfx

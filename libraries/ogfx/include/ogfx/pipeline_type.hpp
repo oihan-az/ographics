@@ -8,7 +8,8 @@ enum class PipelineType
 {
     Undefined,
     Graphics,
-    Compute
+    Compute,
+    RayTracing
 };
 
 } // namespace ogfx

@@ -16,6 +16,7 @@ class ResourceAllocator;
 class Buffer;
 class ImageView;
 class Sampler;
+class AccelerationStructure;
 
 struct BufferBinding
 {
@@ -38,11 +39,18 @@ struct SamplerBinding
     const Sampler* sampler = nullptr;
 };
 
+struct AccelerationStructureBinding
+{
+    uint32_t binding = 0;
+    const AccelerationStructure* acceleration_structure = nullptr;
+};
+
 struct ResourceSetWriteInfo
 {
     std::vector<BufferBinding> buffers{};
     std::vector<ImageBinding> textures{};
     std::vector<SamplerBinding> samplers{};
+    std::vector<AccelerationStructureBinding> acceleration_structures{};
 };
 
 struct ResourceSetDesc

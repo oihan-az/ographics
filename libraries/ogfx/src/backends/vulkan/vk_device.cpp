@@ -1,6 +1,7 @@
 #include <debug.hpp>
 
 #include "vk_device.hpp"
+#include "vk_device_functions.hpp"
 #include "vk_physical_device.hpp"
 #include "vk_queue.hpp"
 
@@ -10,6 +11,65 @@
 
 namespace ogfx
 {
+
+void check_device_features_support(VkPhysicalDevice physical_device, ogfx::DeviceFeature features)
+{
+    const bool request_multi_draw_indirect = ogfx::has_flag(features, ogfx::DeviceFeature::MultiDrawIndirect);
+    const bool request_draw_indirect_first_instance = ogfx::has_flag(features, ogfx::DeviceFeature::DrawIndirectFirstInstance);
+    const bool request_sampler_anisotropy = ogfx::has_flag(features, ogfx::DeviceFeature::SamplerAnisotropy);
+    const bool request_ray_tracing = ogfx::has_flag(features, ogfx::DeviceFeature::RayTracing);
+
+    // Check core features only when at least one is requested.
+    if (request_multi_draw_indirect || request_draw_indirect_first_instance || request_sampler_anisotropy)
+    {
+        VkPhysicalDeviceFeatures supported{};
+        vkGetPhysicalDeviceFeatures(physical_device, &supported);
+
+        if (request_multi_draw_indirect && !supported.multiDrawIndirect)
+        {
+            throw std::runtime_error("Multi draw indirect is not supported.");
+        }
+
+        if (request_draw_indirect_first_instance && !supported.drawIndirectFirstInstance)
+        {
+            throw std::runtime_error("Draw indirect first instance is not supported.");
+        }
+
+        if (request_sampler_anisotropy && !supported.samplerAnisotropy)
+        {
+            throw std::runtime_error("Sampler Anisotropy is not supported.");
+        }
+    }
+
+    // Check ray-tracing features only when ray tracing is requested.
+    if (request_ray_tracing)
+    {
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing{};
+        ray_tracing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure{};
+        acceleration_structure.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+
+        VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address{};
+        buffer_device_address.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+
+        ray_tracing.pNext = &acceleration_structure;
+        acceleration_structure.pNext = &buffer_device_address;
+
+        VkPhysicalDeviceFeatures2 supported{};
+        supported.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        supported.pNext = &ray_tracing;
+
+        vkGetPhysicalDeviceFeatures2(physical_device, &supported);
+
+        if (!ray_tracing.rayTracingPipeline || 
+            !acceleration_structure.accelerationStructure ||
+            !buffer_device_address.bufferDeviceAddress)
+        {
+            throw std::runtime_error("Ray tracing is not supported.");
+        }
+    }
+}
 
 Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, const Surface* surface)
     : m_impl(std::make_unique<Impl>())
@@ -80,33 +140,57 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    // Device features
-    VkPhysicalDeviceFeatures supported_features{};
-    vkGetPhysicalDeviceFeatures(physical_device.m_impl->m_physical_device, &supported_features);
-
+    // Requested features
     const bool request_multi_draw_indirect = ogfx::has_flag(desc.features, ogfx::DeviceFeature::MultiDrawIndirect);
     const bool request_draw_indirect_first_instance = ogfx::has_flag(desc.features, ogfx::DeviceFeature::DrawIndirectFirstInstance);
     const bool request_sampler_anisotropy = ogfx::has_flag(desc.features, ogfx::DeviceFeature::SamplerAnisotropy);
+    const bool request_ray_tracing = ogfx::has_flag(desc.features, ogfx::DeviceFeature::RayTracing);
 
-    if (request_multi_draw_indirect && !supported_features.multiDrawIndirect)
+    OGFX_LOG("Requested device features:");
+
+    if (request_multi_draw_indirect)
     {
-        throw std::runtime_error("Multi draw indirect is not supported.");
+        OGFX_LOG("  Multi draw indirect");
     }
 
-    if (request_draw_indirect_first_instance && !supported_features.drawIndirectFirstInstance)
+    if (request_draw_indirect_first_instance)
     {
-        throw std::runtime_error("Draw indirect first instance is not supported.");
+        OGFX_LOG("  Draw indirect first instance");
     }
 
-    if (request_sampler_anisotropy && !supported_features.samplerAnisotropy)
+    if (request_sampler_anisotropy)
     {
-        throw std::runtime_error("Sampler Anisotropy is not supported.");
+        OGFX_LOG("  Sampler anisotropy");
     }
 
+    if (request_ray_tracing)
+    {
+        OGFX_LOG("  Ray tracing");
+    }
+
+    check_device_features_support(physical_device.m_impl->m_physical_device, desc.features);
+
+    // Enable features
     VkPhysicalDeviceFeatures device_features{};
     device_features.multiDrawIndirect = request_multi_draw_indirect ? VK_TRUE : VK_FALSE;
     device_features.drawIndirectFirstInstance = request_draw_indirect_first_instance ? VK_TRUE : VK_FALSE;
     device_features.samplerAnisotropy = request_sampler_anisotropy ? VK_TRUE : VK_FALSE;
+
+    // Ray tracing support
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing_features = {};
+    ray_tracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+    ray_tracing_features.rayTracingPipeline = request_ray_tracing ? VK_TRUE : VK_FALSE;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {};
+    acceleration_structure_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    acceleration_structure_features.accelerationStructure = request_ray_tracing ? VK_TRUE : VK_FALSE;
+
+    VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features = {};
+    buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+    buffer_device_address_features.bufferDeviceAddress = request_ray_tracing ? VK_TRUE : VK_FALSE;
+
+    ray_tracing_features.pNext = &acceleration_structure_features;
+    acceleration_structure_features.pNext = &buffer_device_address_features;
 
     // Extensions
     std::vector<const char*> extensions;
@@ -114,6 +198,18 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
     if (request_present)
     {
         extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
+
+    if (request_ray_tracing)
+    {
+        extensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+        extensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+        extensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+        extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+        extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+
+        extensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+        extensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
     }
 
     // Device
@@ -126,6 +222,11 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
     createInfo.ppEnabledExtensionNames = extensions.data();
     createInfo.enabledLayerCount = 0;
 
+    if (request_ray_tracing)
+    {
+        createInfo.pNext = &ray_tracing_features;
+    }
+
     if (vkCreateDevice(physical_device.m_impl->m_physical_device, &createInfo, nullptr, &m_impl->m_device) != VK_SUCCESS)
     {
         OGFX_LOG_ERROR("Failed to create logical device");
@@ -133,6 +234,39 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
     }
 
     OGFX_LOG("Vulkan logical device created");
+
+    // Extension function pointers
+    {
+        if (request_ray_tracing)
+        {
+            vkGetBufferDeviceAddressKHR = reinterpret_cast<PFN_vkGetBufferDeviceAddressKHR>(
+                vkGetDeviceProcAddr(m_impl->m_device, "vkGetBufferDeviceAddressKHR"));
+
+            vkGetAccelerationStructureDeviceAddressKHR = reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(
+                vkGetDeviceProcAddr(m_impl->m_device, "vkGetAccelerationStructureDeviceAddressKHR"));
+
+            vkCreateAccelerationStructureKHR = reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(
+                vkGetDeviceProcAddr(m_impl->m_device, "vkCreateAccelerationStructureKHR"));
+
+            vkDestroyAccelerationStructureKHR = reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(
+                vkGetDeviceProcAddr(m_impl->m_device, "vkDestroyAccelerationStructureKHR"));
+
+            vkGetAccelerationStructureBuildSizesKHR = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(
+                vkGetDeviceProcAddr(m_impl->m_device, "vkGetAccelerationStructureBuildSizesKHR"));
+
+            vkCmdBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(
+                vkGetDeviceProcAddr(m_impl->m_device, "vkCmdBuildAccelerationStructuresKHR"));
+
+            vkCreateRayTracingPipelinesKHR = reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(
+                vkGetDeviceProcAddr(m_impl->m_device, "vkCreateRayTracingPipelinesKHR"));
+
+            vkCmdTraceRaysKHR = reinterpret_cast<PFN_vkCmdTraceRaysKHR>(
+                vkGetDeviceProcAddr(m_impl->m_device, "vkCmdTraceRaysKHR"));
+
+            vkGetRayTracingShaderGroupHandlesKHR = reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(
+                vkGetDeviceProcAddr(m_impl->m_device, "vkGetRayTracingShaderGroupHandlesKHR"));
+        }
+    }
 
     // Get the queues
     {

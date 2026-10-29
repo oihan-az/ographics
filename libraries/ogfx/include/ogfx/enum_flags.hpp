@@ -43,6 +43,7 @@
         const auto value_bits = static_cast<Underlying>(value);                                                        \
         const auto flag_bits = static_cast<Underlying>(flag);                                                          \
         return (value_bits & flag_bits) == flag_bits;                                                                  \
-    }
+    }                                                                                                                  \
+                                                                                                                       
 
 #endif // OGFX_ENUM_FLAGS_HPP

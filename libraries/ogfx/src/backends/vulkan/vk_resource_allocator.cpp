@@ -16,18 +16,19 @@ namespace ogfx
 namespace
 {
 
-constexpr std::array<VkDescriptorType, 5> types = 
+constexpr std::array<VkDescriptorType, 6> types = 
 {
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
     VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
     VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
     VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 
-    VK_DESCRIPTOR_TYPE_SAMPLER
+    VK_DESCRIPTOR_TYPE_SAMPLER,
+    VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR
 };
 
 struct DescriptorPoolSizes
 {
-    std::array<uint32_t, 5> counts{};
+    std::array<uint32_t, 6> counts{};
 
     bool add(VkDescriptorType type, uint32_t count)
     {
@@ -54,6 +55,10 @@ struct DescriptorPoolSizes
 
         case VK_DESCRIPTOR_TYPE_SAMPLER:
             index = 4;
+            break;
+
+        case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+            index = 5;
             break;
 
         default:

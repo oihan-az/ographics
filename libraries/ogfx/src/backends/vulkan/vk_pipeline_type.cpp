@@ -13,6 +13,9 @@ VkPipelineBindPoint to_vk_pipeline_type(PipelineType pipeline_type)
     case PipelineType::Compute:
         return VK_PIPELINE_BIND_POINT_COMPUTE;
 
+    case PipelineType::RayTracing:
+        return VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+
     default:
         return VK_PIPELINE_BIND_POINT_MAX_ENUM;
     }
@@ -27,6 +30,9 @@ PipelineType from_vk_pipeline_type(VkPipelineBindPoint pipeline_type)
 
     case VK_PIPELINE_BIND_POINT_COMPUTE:
         return PipelineType::Compute;
+
+    case VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR:
+        return PipelineType::RayTracing;
 
     default:
         return PipelineType::Undefined;

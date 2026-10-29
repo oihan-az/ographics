@@ -22,6 +22,9 @@ VkDescriptorType to_vk_descriptor_type(ResourceType type)
     case ResourceType::Sampler:
         return VK_DESCRIPTOR_TYPE_SAMPLER;
 
+    case ResourceType::AccelerationStructure:
+        return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+
     case ResourceType::Undefined:
     default:
         return VK_DESCRIPTOR_TYPE_MAX_ENUM;
@@ -47,6 +50,9 @@ ResourceType from_vk_descriptor_type(VkDescriptorType type)
 
     case VK_DESCRIPTOR_TYPE_SAMPLER:
         return ResourceType::Sampler;
+
+    case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+        return ResourceType::AccelerationStructure;
 
     default:
         return ResourceType::Undefined;

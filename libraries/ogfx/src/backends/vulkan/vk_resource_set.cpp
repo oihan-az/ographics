@@ -10,6 +10,7 @@
 #include "vk_image_view.hpp"
 #include "vk_image_state.hpp"
 #include "vk_sampler.hpp"
+#include "vk_acc_struct.hpp"
 
 #include <string>
 #include <utility>
@@ -41,15 +42,18 @@ void ResourceSet::write(const ResourceSetWriteInfo& info)
     OGFX_LOG("  Buffer binding count: " + std::to_string(info.buffers.size()));
     OGFX_LOG("  Texture binding count: " + std::to_string(info.textures.size()));
     OGFX_LOG("  Sampler binding count: " + std::to_string(info.samplers.size()));
+    OGFX_LOG("  Acceleration Structure binding count: " + std::to_string(info.acceleration_structures.size()));
 
     std::vector<VkDescriptorBufferInfo> buffer_infos;
     std::vector<VkDescriptorImageInfo> texture_infos;
     std::vector<VkDescriptorImageInfo> sampler_infos;
+    std::vector<VkWriteDescriptorSetAccelerationStructureKHR> as_infos;
     std::vector<VkWriteDescriptorSet> writes;
 
     buffer_infos.reserve(info.buffers.size());
     texture_infos.reserve(info.textures.size());
     sampler_infos.reserve(info.samplers.size());
+    as_infos.reserve(info.acceleration_structures.size());
     writes.reserve(info.buffers.size() + info.textures.size() + info.samplers.size());
 
     for (const BufferBinding& binding : info.buffers)
@@ -128,6 +132,36 @@ void ResourceSet::write(const ResourceSetWriteInfo& info)
                           .pImageInfo = &sampler_infos.back(),
                           .pBufferInfo = nullptr,
                           .pTexelBufferView = nullptr});
+    }
+
+    // Acceleration Structure descriptors
+    for (const AccelerationStructureBinding& binding : info.acceleration_structures)
+    {
+        OGFX_LOG("  Acceleration Structure binding:");
+        OGFX_LOG("    Binding: " + std::to_string(binding.binding));
+
+        const VkDescriptorType descriptor_type = to_vk_descriptor_type(m_desc.layout->m_desc.bindings[binding.binding].type);
+        
+        VkWriteDescriptorSetAccelerationStructureKHR as_write_info{};
+        as_write_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+        as_write_info.pNext = nullptr;
+        as_write_info.accelerationStructureCount = 1;
+        as_write_info.pAccelerationStructures = &binding.acceleration_structure->m_impl->m_acceleration_structure;
+
+        as_infos.push_back(as_write_info);
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.pNext = &as_infos.back();
+        write.dstSet = m_impl->m_descriptor_set;
+        write.dstBinding = binding.binding;
+        write.dstArrayElement = 0;
+        write.descriptorCount = 1;
+        write.descriptorType = descriptor_type;
+        write.pImageInfo = nullptr;
+        write.pBufferInfo = nullptr;
+        write.pTexelBufferView = nullptr;
+
+        writes.push_back(write);
     }
 
     OGFX_LOG("Updating resources:");

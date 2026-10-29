@@ -15,6 +15,22 @@ VkShaderStageFlagBits to_vk_shader_stage(ShaderStage stage)
 
     case ShaderStage::Compute:
         return VK_SHADER_STAGE_COMPUTE_BIT;
+
+    case ShaderStage::RayGen:
+        return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+
+    case ShaderStage::Miss:
+        return VK_SHADER_STAGE_MISS_BIT_KHR;
+
+    case ShaderStage::ClosestHit:
+        return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
+    case ShaderStage::AnyHit:
+        return VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+
+    case ShaderStage::Intersection:
+        return VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+
     }
 
     return static_cast<VkShaderStageFlagBits>(0);
@@ -32,6 +48,21 @@ ShaderStage from_vk_shader_stage(VkShaderStageFlagBits stage)
 
     case VK_SHADER_STAGE_COMPUTE_BIT:
         return ShaderStage::Compute;
+
+    case VK_SHADER_STAGE_RAYGEN_BIT_KHR:
+        return ShaderStage::RayGen;
+
+    case VK_SHADER_STAGE_MISS_BIT_KHR:
+        return ShaderStage::Miss;
+
+    case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:
+        return ShaderStage::ClosestHit;
+
+    case VK_SHADER_STAGE_ANY_HIT_BIT_KHR:
+        return ShaderStage::AnyHit;
+
+    case VK_SHADER_STAGE_INTERSECTION_BIT_KHR:
+        return ShaderStage::Intersection;
 
     default:
         return ShaderStage::Undefined;
@@ -57,6 +88,31 @@ VkShaderStageFlags to_vk_shader_stage_flags(ShaderStageFlags stages)
         flags |= VK_SHADER_STAGE_COMPUTE_BIT;
     }
 
+    if (has_flag(stages, ShaderStageFlags::RayGen))
+    {
+        flags |= VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+    }
+
+    if (has_flag(stages, ShaderStageFlags::Miss))
+    {
+        flags |= VK_SHADER_STAGE_MISS_BIT_KHR;
+    }
+
+    if (has_flag(stages, ShaderStageFlags::ClosestHit))
+    {
+        flags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    }
+
+    if (has_flag(stages, ShaderStageFlags::AnyHit))
+    {
+        flags |= VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+    }
+
+    if (has_flag(stages, ShaderStageFlags::Intersection))
+    {
+        flags |= VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+    }
+
     return flags;
 }
 
@@ -77,6 +133,31 @@ ShaderStageFlags from_vk_shader_stage_flags(VkShaderStageFlags stages)
     if ((stages & VK_SHADER_STAGE_COMPUTE_BIT) != 0)
     {
         flags |= ShaderStageFlags::Compute;
+    }
+
+    if ((stages & VK_SHADER_STAGE_RAYGEN_BIT_KHR) != 0)
+    {
+        flags |= ShaderStageFlags::RayGen;
+    }
+
+    if ((stages & VK_SHADER_STAGE_MISS_BIT_KHR) != 0)
+    {
+        flags |= ShaderStageFlags::Miss;
+    }
+
+    if ((stages & VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR) != 0)
+    {
+        flags |= ShaderStageFlags::ClosestHit;
+    }
+
+    if ((stages & VK_SHADER_STAGE_ANY_HIT_BIT_KHR) != 0)
+    {
+        flags |= ShaderStageFlags::AnyHit;
+    }
+
+    if ((stages & VK_SHADER_STAGE_INTERSECTION_BIT_KHR) != 0)
+    {
+        flags |= ShaderStageFlags::Intersection;
     }
 
     return flags;
