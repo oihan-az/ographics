@@ -53,8 +53,12 @@ void check_device_features_support(VkPhysicalDevice physical_device, ogfx::Devic
         VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address{};
         buffer_device_address.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
 
+        VkPhysicalDeviceVulkanMemoryModelFeatures memory_model{};
+        memory_model.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
+
         ray_tracing.pNext = &acceleration_structure;
         acceleration_structure.pNext = &buffer_device_address;
+        buffer_device_address.pNext = &memory_model;
 
         VkPhysicalDeviceFeatures2 supported{};
         supported.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -62,12 +66,17 @@ void check_device_features_support(VkPhysicalDevice physical_device, ogfx::Devic
 
         vkGetPhysicalDeviceFeatures2(physical_device, &supported);
 
-        if (!ray_tracing.rayTracingPipeline || 
-            !acceleration_structure.accelerationStructure ||
-            !buffer_device_address.bufferDeviceAddress)
-        {
-            throw std::runtime_error("Ray tracing is not supported.");
-        }
+        if (!ray_tracing.rayTracingPipeline)
+            throw std::runtime_error("Ray tracing pipeline is not supported.");
+
+        if (!acceleration_structure.accelerationStructure)
+            throw std::runtime_error("Acceleration structures are not supported.");
+
+        if (!buffer_device_address.bufferDeviceAddress)
+            throw std::runtime_error("Buffer device address is not supported.");
+
+        if (!memory_model.vulkanMemoryModel)
+            throw std::runtime_error("Vulkan memory model is not supported.");
     }
 }
 
@@ -189,8 +198,13 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
     buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
     buffer_device_address_features.bufferDeviceAddress = request_ray_tracing ? VK_TRUE : VK_FALSE;
 
+    VkPhysicalDeviceVulkanMemoryModelFeatures memory_model_features{};
+    memory_model_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
+    memory_model_features.vulkanMemoryModel = request_ray_tracing ? VK_TRUE : VK_FALSE;
+
     ray_tracing_features.pNext = &acceleration_structure_features;
     acceleration_structure_features.pNext = &buffer_device_address_features;
+    buffer_device_address_features.pNext = &memory_model_features;
 
     // Extensions
     std::vector<const char*> extensions;

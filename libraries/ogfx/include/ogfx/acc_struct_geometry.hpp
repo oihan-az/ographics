@@ -27,6 +27,14 @@ struct AccelerationStructureTriangleGeometry
     uint32_t primitive_count = 0;
 };
 
+struct AccelerationStructureAABBGeometry
+{
+    Buffer* buffer = nullptr;
+    uint64_t offset = 0;
+    uint64_t stride = sizeof(float) * 6;
+    uint32_t primitive_count = 1;
+};
+
 struct AccelerationStructureInstanceGeometry
 {
     const Buffer* instance_buffer = nullptr;

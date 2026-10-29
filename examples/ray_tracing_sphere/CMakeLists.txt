@@ -1,13 +1,13 @@
-add_executable(ray_tracing)
+add_executable(ray_tracing_sphere)
 
 target_sources(
-    ray_tracing
+    ray_tracing_sphere
     PRIVATE
         main.cpp
  )
 
 target_link_libraries(
-    ray_tracing
+    ray_tracing_sphere
     PRIVATE
         ographics::oplatform
         ographics::ogfx
@@ -18,5 +18,5 @@ include(
 )
 
 ogfx_compile_shaders(
-    ray_tracing
+    ray_tracing_sphere
 )

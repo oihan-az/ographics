@@ -9,6 +9,7 @@ namespace ogfx
 {
 
 VkAccelerationStructureGeometryKHR to_vk_acceleration_structure_triangle_geometry(const AccelerationStructureTriangleGeometry& geometry);
+VkAccelerationStructureGeometryKHR to_vk_acceleration_structure_aabb_geometry(const AccelerationStructureAABBGeometry& geometry);
 VkAccelerationStructureGeometryKHR to_vk_acceleration_structure_instance_geometry(const AccelerationStructureInstanceGeometry& geometry);
 
 } // namespace ogfx

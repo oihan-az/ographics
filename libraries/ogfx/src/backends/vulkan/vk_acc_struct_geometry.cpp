@@ -31,6 +31,23 @@ to_vk_acceleration_structure_triangle_geometry(const AccelerationStructureTriang
 }
 
 VkAccelerationStructureGeometryKHR
+to_vk_acceleration_structure_aabb_geometry(const AccelerationStructureAABBGeometry& geometry)
+{
+    VkAccelerationStructureGeometryKHR vk_geometry{};
+    vk_geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+    vk_geometry.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
+    vk_geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+
+    VkAccelerationStructureGeometryAabbsDataKHR aabbs{};
+    aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+    aabbs.data.deviceAddress = geometry.buffer ? geometry.buffer->device_address() + geometry.offset : 0;
+    aabbs.stride = geometry.stride;
+    vk_geometry.geometry.aabbs = aabbs;
+
+    return vk_geometry;
+}
+
+VkAccelerationStructureGeometryKHR
 to_vk_acceleration_structure_instance_geometry(const AccelerationStructureInstanceGeometry& geometry)
 {
     VkAccelerationStructureGeometryKHR vk_geometry{};

@@ -131,15 +131,17 @@ BLAS::BLAS(const PhysicalDevice& physical_device, const Device& device, const BL
     OGFX_LOG("Creating BLAS:");
     OGFX_LOG("  Build preference: " + to_string_enum(desc.build_preference));
     OGFX_LOG("  Triangle geometries: " + std::to_string(desc.triangle_geometries.size()));
+    OGFX_LOG("  AABB geometries: " + std::to_string(desc.aabb_geometries.size()));
 
-    if (desc.triangle_geometries.empty())
+    if (desc.triangle_geometries.empty() && desc.aabb_geometries.empty())
     {
-        OGFX_LOG_ERROR("Cannot create bottom-level acceleration structure without triangle geometry");
+        OGFX_LOG_ERROR("Cannot create bottom-level acceleration structure without geometry");
         return;
     }
 
-    m_impl->m_geometries.reserve(desc.triangle_geometries.size());
-    m_impl->m_primitive_counts.reserve(desc.triangle_geometries.size());
+    const size_t geometry_count = desc.triangle_geometries.size() + desc.aabb_geometries.size();
+    m_impl->m_geometries.reserve(geometry_count);
+    m_impl->m_primitive_counts.reserve(geometry_count);
 
     for (const auto& geometry : desc.triangle_geometries)
     {
@@ -150,6 +152,18 @@ BLAS::BLAS(const PhysicalDevice& physical_device, const Device& device, const BL
         }
 
         m_impl->m_geometries.push_back(to_vk_acceleration_structure_triangle_geometry(geometry));
+        m_impl->m_primitive_counts.push_back(geometry.primitive_count);
+    }
+
+    for (const auto& geometry : desc.aabb_geometries)
+    {
+        if (geometry.primitive_count == 0)
+        {
+            OGFX_LOG_ERROR("AABB geometry primitive count must be greater than zero");
+            return;
+        }
+
+        m_impl->m_geometries.push_back(to_vk_acceleration_structure_aabb_geometry(geometry));
         m_impl->m_primitive_counts.push_back(geometry.primitive_count);
     }
 

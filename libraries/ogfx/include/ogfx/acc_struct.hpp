@@ -24,6 +24,7 @@ struct AccelerationStructureDesc
 struct BLASDesc : public AccelerationStructureDesc
 {
     std::vector<AccelerationStructureTriangleGeometry> triangle_geometries;
+    std::vector<AccelerationStructureAABBGeometry> aabb_geometries;
 };
 
 struct TLASDesc : public AccelerationStructureDesc
