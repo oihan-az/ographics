@@ -5,6 +5,7 @@
 #include <ogfx/shader_stage.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace ogfx
 {
