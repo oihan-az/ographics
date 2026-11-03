@@ -1,7 +1,7 @@
 function(ogfx_compile_shaders TARGET)
 
     set(SHADER_DIR
-        "${CMAKE_SOURCE_DIR}/assets/shaders"
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
     )
 
     set(SHADER_OUTPUT_DIR
