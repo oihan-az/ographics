@@ -398,8 +398,6 @@ int main()
         render_finished.push_back(std::make_unique<ogfx::Semaphore>(device));
     }
 
-    ogfx::Semaphore imageAvailable(device);
-
 
 
 
@@ -665,7 +663,7 @@ int main()
 
         frame.in_flight->wait();
 
-        imageIndex = swapchain.acquire_next_image(imageAvailable);
+        imageIndex = swapchain.acquire_next_image(*frame.image_available.get());
 
         frame.in_flight->reset();
 
@@ -675,7 +673,7 @@ int main()
         {
             ogfx::SubmitDesc submitDesc;
             submitDesc.command_buffers.push_back(&cmd);
-            submitDesc.wait_semaphores.push_back({&imageAvailable, ogfx::PipelineStage::ColorAttachmentOutput});
+            submitDesc.wait_semaphores.push_back({frame.image_available.get(), ogfx::PipelineStage::ColorAttachmentOutput});
             submitDesc.signal_semaphores.push_back(render_finished[imageIndex].get());
             submitDesc.fence = frame.in_flight.get();
 
