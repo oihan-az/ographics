@@ -19,7 +19,8 @@ void log(LogLevel level, std::string_view message, std::string_view file, int li
 
 } // namespace ogfx
 
-#ifndef NDEBUG
+
+#ifdef OGFX_ENABLE_LOGS
 
 #define OGFX_LOG(message) ::ogfx::log(::ogfx::LogLevel::Info, (message), __FILE__, __LINE__)
 
@@ -30,6 +31,8 @@ void log(LogLevel level, std::string_view message, std::string_view file, int li
 #else
 
 #define OGFX_LOG(message) ((void)0)
+#define OGFX_LOG_WARNING(message) ((void)0)
+#define OGFX_LOG_ERROR(message) ((void)0)
 
 #endif
 

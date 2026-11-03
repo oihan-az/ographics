@@ -8,16 +8,18 @@
 
     "configurePresets": [
         {
-            "name": "windows-debug",
-            "displayName": "Windows Debug",
+            "name": "windows-x64",
+            "displayName": "Windows x64",
             "generator": "Visual Studio 17 2022",
             "architecture": "x64",
-            "binaryDir": "${sourceDir}/build/windows-debug",
+            "binaryDir": "${sourceDir}/build/windows",
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "CMAKE_CXX_STANDARD": "20",
                 "CMAKE_CXX_STANDARD_REQUIRED": "ON",
-                "OGFX_API": "VULKAN"
+                "OGRAPHICS_API": "VULKAN",
+                "OGFX_ENABLE_LOGS": "OFF",
+                "OPLATFORM_ENABLE_LOGS": "OFF"
             }
         }
     ],
@@ -25,7 +27,21 @@
     "buildPresets": [
         {
             "name": "windows-debug",
-            "configurePreset": "windows-debug"
+            "displayName": "Windows Debug",
+            "configurePreset": "windows-x64",
+            "configuration": "Debug"
+        },
+        {
+          "name": "windows-release",
+          "displayName": "Windows Release",
+          "configurePreset": "windows-x64",
+          "configuration": "Release"
+        },
+        {
+            "name": "windows-relwithdebinfo",
+            "displayName": "Windows Release With Debug Info",
+            "configurePreset": "windows-x64",
+            "configuration": "RelWithDebInfo"
         }
     ]
 }

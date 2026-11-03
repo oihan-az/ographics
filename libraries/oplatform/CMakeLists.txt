@@ -23,6 +23,20 @@ target_compile_definitions(
         OPLATFORM_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+option(OPLATFORM_ENABLE_LOGS "Enable logging for oplatform" ON)
+
+if(OPLATFORM_ENABLE_LOGS)
+    message(STATUS "oplatform: Logging ENABLED")
+
+    target_compile_definitions(
+        oplatform
+        PRIVATE
+            OPLATFORM_ENABLE_LOGS
+    )
+else()
+    message(STATUS "oplatform: Logging DISABLED")
+endif()
+
 target_sources(
     oplatform
     PRIVATE

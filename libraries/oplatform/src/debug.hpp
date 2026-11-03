@@ -19,7 +19,7 @@ void log(LogLevel level, std::string_view message, std::string_view file, int li
 
 } // namespace oplatform
 
-#ifndef NDEBUG
+#ifdef OPLATFORM_ENABLE_LOGS
 
 #define OPLATFORM_LOG(message) ::oplatform::log(::oplatform::LogLevel::Info, (message), __FILE__, __LINE__)
 
@@ -30,6 +30,8 @@ void log(LogLevel level, std::string_view message, std::string_view file, int li
 #else
 
 #define OPLATFORM_LOG(message) ((void)0)
+#define OPLATFORM_LOG_WARNING(message) ((void)0)
+#define OPLATFORM_LOG_ERROR(message) ((void)0)
 
 #endif
 

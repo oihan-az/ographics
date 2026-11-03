@@ -19,8 +19,8 @@ struct ClearColor
 
 struct RenderPassBeginInfo
 {
-    const RenderPass* render_pass;
-    const Framebuffer* framebuffer;
+    const RenderPass* render_pass = nullptr;
+    const Framebuffer* framebuffer = nullptr;
 
     uint32_t offset_x = 0;
     uint32_t offset_y = 0;

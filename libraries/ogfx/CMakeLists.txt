@@ -23,6 +23,20 @@ target_compile_definitions(
         OGFX_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+option(OGFX_ENABLE_LOGS "Enable logging for ogfx" ON)
+
+if(OGFX_ENABLE_LOGS)
+    message(STATUS "ogfx: Logging ENABLED")
+
+    target_compile_definitions(
+        ogfx
+        PRIVATE
+            OGFX_ENABLE_LOGS
+    )
+else()
+    message(STATUS "ogfx: Logging DISABLED")
+endif()
+
 target_sources(
     ogfx
     PRIVATE
@@ -30,7 +44,7 @@ target_sources(
         
 )
 
-if(OGRAPHICS_API  STREQUAL "VULKAN")
+if(OGRAPHICS_API STREQUAL "VULKAN")
 
     add_subdirectory(src/backends/vulkan)
 
