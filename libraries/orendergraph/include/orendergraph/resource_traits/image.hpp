@@ -18,7 +18,10 @@ struct ResourceTraits<ogfx::Image> : DefaultResourceTraits<ogfx::Image>
 {
     using DescType = ogfx::ImageDesc;
     using StateType = ogfx::ImageState;
-    struct DataType {};
+    struct DataType 
+    {
+        ogfx::ImageAspect aspect = ogfx::ImageAspect::Color;
+    };
 
     static ogfx::Image* create(const ogfx::PhysicalDevice& physical_devic, const ogfx::Device& devic, 
                                DescType desc)
@@ -41,6 +44,7 @@ struct ResourceTraits<ogfx::Image> : DefaultResourceTraits<ogfx::Image>
         transition_info.image = resource;
         transition_info.old_state = old_state;
         transition_info.new_state = new_state;
+        transition_info.aspect = data.aspect;
 
         cmd.transition_image(transition_info);
     }

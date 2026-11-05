@@ -16,6 +16,7 @@ RenderGraph::~RenderGraph()
 {
     reset();
 }
+
 void RenderGraph::compile()
 {
     // Build resource dependencies
@@ -54,6 +55,11 @@ void RenderGraph::execute(ogfx::CommandBuffer& cmd)
         node->pre_execute(*this, cmd);
         node->execute(*this, cmd);
         node->post_execute(*this, cmd);
+
+        for (auto& access : node->writes())
+        {
+            access->update_state(m_registry);
+        }
 
         if (node->execution_frequency() == ExecutionFrequency::Once)
             node->mark_executed();

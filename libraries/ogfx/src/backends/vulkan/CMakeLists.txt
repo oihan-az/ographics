@@ -11,6 +11,7 @@ target_sources(
         vk_image.cpp
         vk_image_view.cpp
         vk_image_usage.cpp
+        vk_image_aspect.cpp
         vk_queue.cpp
         vk_command_pool.cpp
         vk_command_buffer.cpp
@@ -27,6 +28,9 @@ target_sources(
         vk_input_assembly.cpp
         vk_rasterization.cpp
         vk_multisample.cpp
+        vk_compare_op.cpp
+        vk_stencil_op.cpp
+        vk_depth_stencil.cpp
         vk_color_blend.cpp
         vk_viewport.cpp
         vk_pipeline.cpp

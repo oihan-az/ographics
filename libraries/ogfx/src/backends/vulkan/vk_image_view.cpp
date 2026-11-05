@@ -4,6 +4,7 @@
 #include "vk_image_view.hpp"
 #include "vk_image.hpp"
 #include "vk_format.hpp"
+#include "vk_image_aspect.hpp"
 
 namespace ogfx
 {
@@ -77,6 +78,7 @@ ImageView::ImageView(const ImageViewDesc& desc) : m_impl(std::make_unique<Impl>(
 
     OGFX_LOG("Creating Vulkan image view:");
     OGFX_LOG("  Type: " + to_string_enum(desc.type));
+    OGFX_LOG("  Aspect: " + to_string_bitmask(desc.aspect));
     OGFX_LOG("  Format: " + to_string_enum(desc.image->format()));
     OGFX_LOG("  Base mip level: " + std::to_string(desc.base_mip_level));
     OGFX_LOG("  Mip level count: " + std::to_string(desc.mip_level_count));
@@ -94,7 +96,7 @@ ImageView::ImageView(const ImageViewDesc& desc) : m_impl(std::make_unique<Impl>(
     create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
     create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-    create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    create_info.subresourceRange.aspectMask = to_vk_image_aspect(desc.aspect);
 
     create_info.subresourceRange.baseMipLevel = desc.base_mip_level;
     create_info.subresourceRange.levelCount = desc.mip_level_count;

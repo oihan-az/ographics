@@ -9,6 +9,7 @@ enum class PresentMode
     Immediate,
     FIFO,
     Mailbox,
+    Relaxed,
 };
 
 } // namespace ogfx

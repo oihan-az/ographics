@@ -21,9 +21,11 @@ struct NodePreExecute<RasterContext>
         RasterContext::Desc& desc = node.descriptor();
 
         ogfx::RenderPassBeginInfo render_pass_begin_info;
+        render_pass_begin_info.offset_x = desc.offset_x;
+        render_pass_begin_info.offset_y = desc.offset_y;
         render_pass_begin_info.width = desc.width;
         render_pass_begin_info.height = desc.height;
-        render_pass_begin_info.clear_color = desc.clear_color;
+        render_pass_begin_info.clear_values = desc.clear_values;
         render_pass_begin_info.render_pass = ctx.render_pass;
         render_pass_begin_info.framebuffer = ctx.framebuffers[desc.framebuffer_index];
         cmd.begin_render_pass(render_pass_begin_info);
@@ -37,7 +39,7 @@ struct NodePreExecute<RasterContext>
 template <> 
 struct NodePostExecute<RasterContext>
 {
-    static void execute(RenderGraph&, ogfx::CommandBuffer& cmd, RenderGraphNode<RasterContext>& node)
+    static void execute(RenderGraph& rg, ogfx::CommandBuffer& cmd, RenderGraphNode<RasterContext>& node)
     {
         cmd.end_render_pass();
     }

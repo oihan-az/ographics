@@ -45,6 +45,7 @@ void RasterContext::create(RenderGraph& graph, const Desc& desc)
     pipeline_desc.rasterization = desc.rasterization;
     pipeline_desc.multisampling = desc.multisampling;
     pipeline_desc.color_blend = desc.color_blend;
+    pipeline_desc.depth_stencil = desc.depth_stencil;
     pipeline = graph.get_or_create_object<ogfx::GraphicsPipeline>(pipeline_desc);
 }
 

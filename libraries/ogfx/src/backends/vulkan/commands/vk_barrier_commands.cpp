@@ -12,6 +12,7 @@
 #include "../vk_image_state.hpp"
 #include "../vk_buffer.hpp"
 #include "../vk_image.hpp"
+#include "../vk_image_aspect.hpp"
 
 namespace ogfx
 {
@@ -76,6 +77,7 @@ void CommandBuffer::image_barrier(const ImageBarrierInfo& info)
     OGFX_LOG("  Mip level count: " + std::to_string(info.mip_level_count));
     OGFX_LOG("  Base array layer: " + std::to_string(info.base_array_layer));
     OGFX_LOG("  Array layer count: " + std::to_string(info.array_layer_count));
+    OGFX_LOG("  Aspect: " + to_string_bitmask(info.aspect));
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -87,7 +89,7 @@ void CommandBuffer::image_barrier(const ImageBarrierInfo& info)
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.image = info.image->m_impl->m_image;
 
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.aspectMask = to_vk_image_aspect(info.aspect);
     barrier.subresourceRange.baseMipLevel = info.base_mip_level;
     barrier.subresourceRange.levelCount = info.mip_level_count;
     barrier.subresourceRange.baseArrayLayer = info.base_array_layer;
@@ -201,6 +203,7 @@ void CommandBuffer::transition_image(const ImageTransitionInfo& info)
     barrier_info.mip_level_count = info.mip_level_count;
     barrier_info.base_array_layer = info.base_array_layer;
     barrier_info.array_layer_count = info.array_layer_count;
+    barrier_info.aspect = info.aspect;
 
     image_barrier(barrier_info);
 }

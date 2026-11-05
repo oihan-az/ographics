@@ -452,7 +452,7 @@ int main()
             render_pass_begin_info.offset_y = 0;
             render_pass_begin_info.width = swapchainDesc.width;
             render_pass_begin_info.height = swapchainDesc.height;
-            render_pass_begin_info.clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
+            render_pass_begin_info.clear_values = {{.type = ogfx::ClearValueType::Color, .color = {0.0f, 0.0f, 0.0f, 1.0f}}};
             render_pass_begin_info.render_pass = &renderPass;
             render_pass_begin_info.framebuffer = &framebuffers[imageIndex];
             commandBuffer.begin_render_pass(render_pass_begin_info);

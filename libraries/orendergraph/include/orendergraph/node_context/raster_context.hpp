@@ -12,6 +12,7 @@
 #include <ogfx/multisample.hpp>
 #include <ogfx/color_blend.hpp>
 #include <ogfx/viewport.hpp>
+#include <ogfx/depth_stencil.hpp>
 #include <ogfx/commands/render_pass_commands.hpp>
 
 #include <vector>
@@ -46,12 +47,15 @@ struct RasterContext : public PipelineContext
         ogfx::MultisampleStateDesc multisampling;
         ogfx::ColorBlendStateDesc color_blend;
         ogfx::ViewportStateDesc viewport;
+        ogfx::DepthStencilDesc depth_stencil;
 
         uint32_t framebuffer_index = 0;
 
+        uint32_t offset_x = 0;
+        uint32_t offset_y = 0;
         uint32_t width = 0;
         uint32_t height = 0;
-        ogfx::ClearColor clear_color = {0.0f, 0.0f, 0.0f, 1.0f};
+        std::vector<ogfx::ClearValue> clear_values;
     };
 
     void create(RenderGraph& graph, const Desc& desc);

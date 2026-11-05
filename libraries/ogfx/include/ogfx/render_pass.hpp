@@ -3,6 +3,7 @@
 
 #include <ogfx/format.hpp>
 #include <ogfx/image_state.hpp>
+#include <ogfx/image_aspect.hpp>
 #include <ogfx/load_store_op.hpp>
 
 #include <memory>
@@ -22,6 +23,8 @@ struct RenderPassAttachmentDesc
 
     ImageState initial_state = ImageState::Undefined;
     ImageState final_state = ImageState::Present;
+
+    ImageAspect image_aspect = ImageAspect::Color;
 };
 
 struct RenderPassDesc

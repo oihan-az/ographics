@@ -14,6 +14,9 @@
 #include "vk_multisample.hpp"
 #include "vk_color_blend.hpp"
 #include "vk_viewport.hpp"
+#include "vk_compare_op.hpp"
+#include "vk_stencil_op.hpp"
+#include "vk_depth_stencil.hpp"
 
 #include <stdexcept>
 
@@ -27,7 +30,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
         throw std::invalid_argument("Graphics pipeline requires a render pass.");
     }
 
-    // Collect the Vulkan shader stages.
+    // Collect the Vulkan shader stages
     std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
     shader_stages.reserve(2);
 
@@ -212,6 +215,46 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     multisampling.alphaToCoverageEnable = desc.multisampling.alpha_to_coverage_enable ? VK_TRUE : VK_FALSE;
     multisampling.alphaToOneEnable = desc.multisampling.alpha_to_one_enable ? VK_TRUE : VK_FALSE;
 
+    // Depth/Stencil
+    OGFX_LOG("Creating depth/stencil state:");
+    OGFX_LOG("  Depth test: " + std::string(desc.depth_stencil.depth_test_enable ? "true" : "false"));
+    OGFX_LOG("  Depth write: " + std::string(desc.depth_stencil.depth_write_enable ? "true" : "false"));
+    OGFX_LOG("  Depth compare op: " + to_string_enum(desc.depth_stencil.depth_compare_op));
+    OGFX_LOG("  Depth bounds test: " + std::string(desc.depth_stencil.depth_bounds_test_enable ? "true" : "false"));
+    OGFX_LOG("  Min depth bounds: " + std::to_string(desc.depth_stencil.min_depth_bounds));
+    OGFX_LOG("  Max depth bounds: " + std::to_string(desc.depth_stencil.max_depth_bounds));
+    OGFX_LOG("  Stencil test: " + std::string(desc.depth_stencil.stencil_test_enable ? "true" : "false"));
+
+    OGFX_LOG("  Front stencil state:");
+    OGFX_LOG("    Fail op: " + to_string_enum(desc.depth_stencil.front.fail_op));
+    OGFX_LOG("    Pass op: " + to_string_enum(desc.depth_stencil.front.pass_op));
+    OGFX_LOG("    Depth fail op: " + to_string_enum(desc.depth_stencil.front.depth_fail_op));
+    OGFX_LOG("    Compare op: " + to_string_enum(desc.depth_stencil.front.compare_op));
+    OGFX_LOG("    Compare mask: " + std::to_string(desc.depth_stencil.front.compare_mask));
+    OGFX_LOG("    Write mask: " + std::to_string(desc.depth_stencil.front.write_mask));
+    OGFX_LOG("    Reference: " + std::to_string(desc.depth_stencil.front.reference));
+
+    OGFX_LOG("  Back stencil state:");
+    OGFX_LOG("    Fail op: " + to_string_enum(desc.depth_stencil.back.fail_op));
+    OGFX_LOG("    Pass op: " + to_string_enum(desc.depth_stencil.back.pass_op));
+    OGFX_LOG("    Depth fail op: " + to_string_enum(desc.depth_stencil.back.depth_fail_op));
+    OGFX_LOG("    Compare op: " + to_string_enum(desc.depth_stencil.back.compare_op));
+    OGFX_LOG("    Compare mask: " + std::to_string(desc.depth_stencil.back.compare_mask));
+    OGFX_LOG("    Write mask: " + std::to_string(desc.depth_stencil.back.write_mask));
+    OGFX_LOG("    Reference: " + std::to_string(desc.depth_stencil.back.reference));
+
+    VkPipelineDepthStencilStateCreateInfo depth_stencil{};
+    depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil.depthTestEnable = desc.depth_stencil.depth_test_enable ? VK_TRUE : VK_FALSE;
+    depth_stencil.depthWriteEnable = desc.depth_stencil.depth_write_enable ? VK_TRUE : VK_FALSE;
+    depth_stencil.depthCompareOp = to_vk_compare_op(desc.depth_stencil.depth_compare_op);
+    depth_stencil.depthBoundsTestEnable = desc.depth_stencil.depth_bounds_test_enable ? VK_TRUE : VK_FALSE;
+    depth_stencil.stencilTestEnable = desc.depth_stencil.stencil_test_enable ? VK_TRUE : VK_FALSE;
+    depth_stencil.minDepthBounds = desc.depth_stencil.min_depth_bounds;
+    depth_stencil.maxDepthBounds = desc.depth_stencil.max_depth_bounds;
+    depth_stencil.front = to_vk_stencil_op_state(desc.depth_stencil.front);
+    depth_stencil.back = to_vk_stencil_op_state(desc.depth_stencil.back);
+
     // Color blend
     OGFX_LOG("Creating color blend state:");
     OGFX_LOG("  Attachment count: " + std::to_string(desc.color_blend.attachments.size()));
@@ -284,6 +327,11 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     viewport_state.scissorCount = desc.viewport.dynamic_scissor ? 1 : static_cast<uint32_t>(scissors.size());
     viewport_state.pScissors = (!desc.viewport.dynamic_scissor && !scissors.empty()) ? scissors.data() : nullptr;
 
+    OGFX_LOG("Viewport state created:");
+    OGFX_LOG("  Viewport count: " + std::to_string(viewport_state.viewportCount));
+    OGFX_LOG("  Scissor count: " + std::to_string(viewport_state.scissorCount));
+
+    // Dynamic states
     std::vector<VkDynamicState> dynamic_states;
 
     if (desc.viewport.dynamic_viewport)
@@ -297,10 +345,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
     dynamic_state.pDynamicStates = dynamic_states.empty() ? nullptr : dynamic_states.data();
 
-    OGFX_LOG("Viewport state created:");
-    OGFX_LOG("  Viewport count: " + std::to_string(viewport_state.viewportCount));
-    OGFX_LOG("  Scissor count: " + std::to_string(viewport_state.scissorCount));
-
+    // Graphics pipeline
     VkGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipeline_info.stageCount = static_cast<uint32_t>(shader_stages.size());
@@ -310,6 +355,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineD
     pipeline_info.pViewportState = &viewport_state;
     pipeline_info.pRasterizationState = &rasterization;
     pipeline_info.pMultisampleState = &multisampling;
+    pipeline_info.pDepthStencilState = &depth_stencil;
     pipeline_info.pColorBlendState = &color_blend;
     pipeline_info.pDynamicState = dynamic_states.empty() ? nullptr : &dynamic_state;
     pipeline_info.layout = desc.layout->m_impl->m_pipeline_layout;

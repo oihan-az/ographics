@@ -388,10 +388,11 @@ int main()
             color_attachment.store_op = ogfx::StoreOp::Store;
             color_attachment.initial_state = ogfx::ImageState::Undefined;
             color_attachment.final_state = ogfx::ImageState::Present;
+            color_attachment.image_aspect = ogfx::ImageAspect::Color;
 
             desc.render_pass_desc.attachments.push_back(color_attachment);
 
-             // Framebuffers
+            // Framebuffers
             desc.framebuffers_desc.reserve(swapchain.image_count());
             for (uint32_t i = 0; i < swapchain.image_count(); ++i)
             {
@@ -520,7 +521,7 @@ int main()
             desc.framebuffer_index = 0;
             desc.width = swapchainDesc.width;
             desc.height = swapchainDesc.height;
-            desc.clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
+            desc.clear_values = {{.type = ogfx::ClearValueType::Color, .color = {0.0f, 0.0f, 0.0f, 1.0f}}};
         }
     );
 

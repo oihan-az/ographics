@@ -46,7 +46,8 @@ class RenderGraph
     template <typename TResource>
     void write(ResourceHandle<TResource> handle, 
                typename ResourceTraits<TResource>::StateType requested_state = {},
-               typename ResourceTraits<TResource>::DataType data = {});
+               typename ResourceTraits<TResource>::DataType data = {},
+               typename ResourceTraits<TResource>::StateType final_state = {}, bool update_state = false);
 
     void compile();
     void execute(ogfx::CommandBuffer& cmd);

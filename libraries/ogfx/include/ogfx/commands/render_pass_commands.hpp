@@ -2,6 +2,7 @@
 #define OGFX_RENDER_PASS_COMMANDS_HPP
 
 #include <cstdint>
+#include <vector>
 
 namespace ogfx
 {
@@ -17,6 +18,21 @@ struct ClearColor
     float a = 1.0f;
 };
 
+enum class ClearValueType
+{
+    Color,
+    DepthStencil
+};
+
+struct ClearValue
+{
+    ClearValueType type = ClearValueType::Color;
+
+    ClearColor color{};
+    float depth = 1.0f;
+    uint32_t stencil = 0;
+};
+
 struct RenderPassBeginInfo
 {
     const RenderPass* render_pass = nullptr;
@@ -28,7 +44,7 @@ struct RenderPassBeginInfo
     uint32_t width = 0;
     uint32_t height = 0;
 
-    ClearColor clear_color{};
+    std::vector<ClearValue> clear_values = {ClearValue{}};
 };
 
 } // namespace ogfx

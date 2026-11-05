@@ -91,12 +91,13 @@ void RenderGraph::read(ResourceHandle<TResource> handle,
 template <typename TResource>
 void RenderGraph::write(ResourceHandle<TResource> handle, 
                         typename ResourceTraits<TResource>::StateType requested_state,
-                        typename ResourceTraits<TResource>::DataType data)
+                        typename ResourceTraits<TResource>::DataType data,
+                        typename ResourceTraits<TResource>::StateType final_state, bool update_state)
 {
     if (!m_active_node)
         return;
 
-    auto access = std::make_unique<ResourceAccess<TResource>>(handle, requested_state, data);
+    auto access = std::make_unique<ResourceAccess<TResource>>(handle, requested_state, data, final_state, update_state);
     m_active_node->writes().push_back(std::move(access));
 }
 

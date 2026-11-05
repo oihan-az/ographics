@@ -17,6 +17,9 @@ VkPresentModeKHR to_vk_present_mode(PresentMode mode)
 
     case PresentMode::Mailbox:
         return VK_PRESENT_MODE_MAILBOX_KHR;
+
+    case PresentMode::Relaxed:
+        return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
     }
 
     return VK_PRESENT_MODE_FIFO_KHR;
@@ -34,6 +37,9 @@ PresentMode from_vk_present_mode(VkPresentModeKHR mode)
 
     case VK_PRESENT_MODE_MAILBOX_KHR:
         return PresentMode::Mailbox;
+
+    case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+        return PresentMode::Relaxed;
 
     default:
         throw std::runtime_error("Unknown Vulkan present mode.");

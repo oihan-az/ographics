@@ -31,6 +31,7 @@ RenderPass::RenderPass(const Device& device, const RenderPassDesc& desc) : m_imp
         OGFX_LOG("  Store op: " + to_string_enum(attachment.store_op));
         OGFX_LOG("  Initial state: " + to_string_enum(attachment.initial_state));
         OGFX_LOG("  Final state: " + to_string_enum(attachment.final_state));
+        OGFX_LOG("  Image aspect: " + to_string_enum(attachment.image_aspect));
 
         VkAttachmentDescription vk_attachment{};
         vk_attachment.format = to_vk_format(attachment.format);
@@ -45,23 +46,37 @@ RenderPass::RenderPass(const Device& device, const RenderPassDesc& desc) : m_imp
         attachments.push_back(vk_attachment);
     }
 
-    VkAttachmentReference color_reference{};
-    color_reference.attachment = 0;
-    color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    std::vector<VkAttachmentReference> color_references;
+    VkAttachmentReference depth_reference{VK_ATTACHMENT_UNUSED};
+
+    for (uint32_t i = 0; i < desc.attachments.size(); ++i)
+    {
+        const RenderPassAttachmentDesc& attachment = desc.attachments[i];
+
+        if (has_flag(attachment.image_aspect, ImageAspect::Color))
+        {
+            VkAttachmentReference reference{};
+            reference.attachment = i;
+            reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            color_references.push_back(reference);
+        }
+        else if (has_flag(attachment.image_aspect, ImageAspect::Depth))
+        {
+            depth_reference.attachment = i;
+            depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        }
+    }
 
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_reference;
+    subpass.colorAttachmentCount = static_cast<uint32_t>(color_references.size());
+    subpass.pColorAttachments = color_references.data();
 
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    if (depth_reference.attachment != VK_ATTACHMENT_UNUSED)
+    {
+        subpass.pDepthStencilAttachment = &depth_reference;
+    }
 
     VkRenderPassCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -72,8 +87,8 @@ RenderPass::RenderPass(const Device& device, const RenderPassDesc& desc) : m_imp
     create_info.subpassCount = 1;
     create_info.pSubpasses = &subpass;
 
-    create_info.dependencyCount = 1;
-    create_info.pDependencies = &dependency;
+    create_info.dependencyCount = 0;
+    create_info.pDependencies = nullptr;
 
     if (vkCreateRenderPass(m_impl->m_device, &create_info, nullptr, &m_impl->m_render_pass) != VK_SUCCESS)
     {

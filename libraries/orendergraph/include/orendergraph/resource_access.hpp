@@ -18,6 +18,7 @@ struct IResourceAccess
     virtual uint32_t resource_id() const = 0;
     virtual std::type_index resource_type_idx() const = 0;
 
+    virtual void update_state(ResourcePoolRegistry& registry) = 0;
     virtual void transition(ogfx::CommandBuffer& cmd, ResourcePoolRegistry& registry) = 0;
 };
 
@@ -32,11 +33,16 @@ struct ResourceAccess : public IResourceAccess
     StateType m_requested_state;
     DataType m_data;
 
-    ResourceAccess(ResourceHandle<T> handle, StateType requested_state, DataType data);
+    StateType m_final_state;
+    bool m_update_state;
+
+    ResourceAccess(ResourceHandle<T> handle, StateType requested_state, DataType data, 
+                   StateType final_state = {}, bool update_state = false);
 
     uint32_t resource_id() const override;
     std::type_index resource_type_idx() const override;
 
+    void update_state(ResourcePoolRegistry& registry) override;
     void transition(ogfx::CommandBuffer& cmd, ResourcePoolRegistry& registry) override;
 };
 

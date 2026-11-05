@@ -9,6 +9,8 @@
 #include <ogfx/rasterization.hpp>
 #include <ogfx/multisample.hpp>
 
+#include <ogfx/depth_stencil.hpp>
+
 #include <ogfx/color_blend.hpp>
 
 #include <ogfx/viewport.hpp>
@@ -40,6 +42,8 @@ struct GraphicsPipelineDesc
 
     RasterizationStateDesc rasterization;
     MultisampleStateDesc multisampling;
+
+    DepthStencilDesc depth_stencil;
 
     ColorBlendStateDesc color_blend;
 

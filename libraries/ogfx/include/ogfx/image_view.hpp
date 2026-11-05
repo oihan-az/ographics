@@ -1,6 +1,8 @@
 #ifndef OGFX_IMAGE_VIEW_HPP
 #define OGFX_IMAGE_VIEW_HPP
 
+#include <ogfx/image_aspect.hpp>
+
 #include <cstdint>
 #include <memory>
 
@@ -26,6 +28,7 @@ struct ImageViewDesc
     const Image* image = nullptr;
 
     ImageViewType type = ImageViewType::View2D;
+    ImageAspect aspect = ImageAspect::Color;
 
     uint32_t base_mip_level = 0;
     uint32_t mip_level_count = 1;

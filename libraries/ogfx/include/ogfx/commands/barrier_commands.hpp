@@ -4,6 +4,7 @@
 #include <ogfx/pipeline_stage.hpp>
 #include <ogfx/access_flags.hpp>
 #include <ogfx/image_state.hpp>
+#include <ogfx/image_aspect.hpp>
 
 #include <cstdint>
 
@@ -44,12 +45,16 @@ struct ImageBarrierInfo
     uint32_t base_array_layer = 0;
     uint32_t array_layer_count = 1;
 
+    ImageAspect aspect = ImageAspect::Color;
+
     MemoryBarrierInfo memory_barrier_info;
 };
 
 struct ImageTransitionInfo
 {
     const Image* image = nullptr;
+
+    ImageAspect aspect = ImageAspect::Color;
 
     ImageState old_state = ImageState::Undefined;
     ImageState new_state = ImageState::Undefined;
