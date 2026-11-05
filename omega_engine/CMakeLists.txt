@@ -18,6 +18,7 @@ target_sources(
         src/scene/scene.cpp
         src/scene/entity_iterator.cpp
         src/core/component_manager.cpp
+        src/core/event.cpp
 
  )
 

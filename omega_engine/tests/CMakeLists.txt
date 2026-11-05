@@ -4,6 +4,7 @@ add_executable(omega_tests
     scene/scene_tests.cpp
     core/component_storage_tests.cpp
     core/component_manager_tests.cpp
+    core/event_tests.cpp
 )
 
 target_link_libraries(omega_tests
