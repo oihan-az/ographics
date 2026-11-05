@@ -42,3 +42,7 @@ add_subdirectory(examples/ogfx/ray_tracing_sphere)
 add_subdirectory(examples/orendergraph/quad_compute)
 add_subdirectory(examples/orendergraph/ray_tracing_triangles)
 add_subdirectory(examples/orenderer/demo)
+
+add_subdirectory(omega_engine)
+
+include(CTest)
