@@ -9,8 +9,16 @@
 namespace omega
 {
 
+class IComponentStorage
+{
+  public:
+    virtual ~IComponentStorage() = default;
+
+    virtual void clear() = 0;
+};
+
 template <typename T> 
-class ComponentStorage
+class ComponentStorage : public IComponentStorage
 {
   public:
     bool add(Entity entity, T component);
@@ -18,7 +26,7 @@ class ComponentStorage
 
     bool contains(Entity entity) const;
 
-    void clear();
+    void clear() override;
 
     T* get(Entity entity);
     const T* get(Entity entity) const;

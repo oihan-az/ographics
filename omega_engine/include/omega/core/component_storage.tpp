@@ -2,7 +2,6 @@
 #define OMEGA_COMPONENT_STORAGE_TPP
 
 #include <utility>
-#include "component_storage.hpp"
 
 namespace omega
 {
