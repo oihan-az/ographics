@@ -4,7 +4,9 @@
 #include "entity_slot.hpp"
 #include "entity_iterator.hpp"
 #include "entity_commad.hpp"
+
 #include <omega/core/entity.hpp>
+#include <omega/core/component_manager.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -15,6 +17,8 @@ namespace omega
 class Scene
 {
   public:
+
+    // Entities
     Entity create_entity();
     bool destroy_entity(Entity entity);
     void flush_commands();
@@ -27,7 +31,18 @@ class Scene
     EntityIterator begin() const;
     EntityIterator end() const;
 
+    // Components
+    template <typename T> bool add(Entity entity, T component);
+    template <typename T> bool remove(Entity entity);
+
+    template <typename T> T* get(Entity entity);
+    template <typename T> const T* get(Entity entity) const;
+
+    template <typename T> bool has(Entity entity) const;
+
   private:
+
+    // Entities
     std::vector<EntitySlot> m_entity_slots;
     std::vector<uint32_t> m_free_indices;
 
@@ -36,8 +51,13 @@ class Scene
     std::vector<EntityCommand> m_pending_commands;
 
     friend class EntityIterator;
+
+    // Components
+    ComponentManager m_components;
 };
 
 } // namespace omega
+
+#include "scene.tpp"
 
 #endif // OMEGA_SCENE_HPP

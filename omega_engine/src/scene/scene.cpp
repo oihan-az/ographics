@@ -71,6 +71,8 @@ void Scene::flush_commands()
             if (slot.state != EntityState::Alive)
                 break;
 
+            m_components.remove_all(command.entity);
+
             if (slot.generation == std::numeric_limits<uint32_t>::max())
             {
                 slot.state = EntityState::Retired;

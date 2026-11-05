@@ -19,8 +19,6 @@ class ComponentManager
 
     template <typename T> bool has_storage() const;
 
-    void clear();
-
     template <typename T> bool add(Entity entity, T component);
     template <typename T> bool remove(Entity entity);
 
@@ -28,6 +26,9 @@ class ComponentManager
     template <typename T> const T* get(Entity entity) const;
 
     template <typename T> bool has(Entity entity) const;
+
+    void clear_all();
+    void remove_all(Entity entity);
 
   private:
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStorage>> m_storages;

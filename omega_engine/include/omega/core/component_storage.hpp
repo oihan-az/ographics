@@ -15,6 +15,7 @@ class IComponentStorage
     virtual ~IComponentStorage() = default;
 
     virtual void clear() = 0;
+    virtual bool remove(Entity entity) = 0;
 };
 
 template <typename T> 
@@ -22,7 +23,7 @@ class ComponentStorage : public IComponentStorage
 {
   public:
     bool add(Entity entity, T component);
-    bool remove(Entity entity);
+    bool remove(Entity entity) override;
 
     bool contains(Entity entity) const;
 

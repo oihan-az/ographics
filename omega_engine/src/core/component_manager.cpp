@@ -3,10 +3,16 @@
 namespace omega
 {
 
-void ComponentManager::clear()
+void ComponentManager::clear_all()
 {
     for (auto& [type, storage] : m_storages)
         storage->clear();
+}
+
+void ComponentManager::remove_all(Entity entity)
+{
+    for (auto& [type, storage] : m_storages)
+        storage->remove(entity);
 }
 
 } // namespace omega

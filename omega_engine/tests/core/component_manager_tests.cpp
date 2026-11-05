@@ -81,7 +81,7 @@ TEST(ComponentManagerTests, ClearsAllStorages)
     EXPECT_TRUE(positions.add(entity, {10.0f}));
     EXPECT_TRUE(velocities.add(entity, {20.0f}));
 
-    manager.clear();
+    manager.clear_all();
 
     EXPECT_TRUE(manager.has_storage<Position>());
     EXPECT_TRUE(manager.has_storage<Velocity>());
