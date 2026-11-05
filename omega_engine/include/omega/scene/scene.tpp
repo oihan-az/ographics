@@ -20,7 +20,8 @@ bool Scene::add(Entity entity, T component)
     return true;
 }
 
-template <typename T> bool Scene::remove(Entity entity)
+template <typename T> 
+bool Scene::remove(Entity entity)
 {
     if (!is_alive(entity))
         return false;
@@ -29,6 +30,20 @@ template <typename T> bool Scene::remove(Entity entity)
         return false;
 
     publish_component_event(entity, std::type_index(typeid(T)), ComponentEventType::Removed);
+
+    return true;
+}
+
+template <typename T> 
+bool Scene::mark_dirty(Entity entity)
+{
+    if (!is_alive(entity) || !m_components.has<T>(entity))
+        return false;
+
+    if (m_events)
+    {
+        m_events->publish(ComponentEvent{entity, std::type_index(typeid(T)), ComponentEventType::Changed});
+    }
 
     return true;
 }

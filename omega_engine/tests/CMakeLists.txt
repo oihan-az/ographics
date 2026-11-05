@@ -7,7 +7,8 @@ add_executable(omega_tests
     core/component_manager_tests.cpp
     core/event_tests.cpp
 
-    components/transform_tests.cpp
+    transform/transform_tests.cpp
+    transform/transform_system_tests.cpp
 )
 
 target_link_libraries(omega_tests

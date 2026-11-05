@@ -1,4 +1,4 @@
-#include <omega/components/transform.hpp>
+#include <omega/transform/transform.hpp>
 #include <omega/math/matrix_transform.hpp>
 
 namespace omega

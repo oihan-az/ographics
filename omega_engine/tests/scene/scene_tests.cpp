@@ -566,3 +566,81 @@ TEST(SceneTests, DestroyingParentReparentsAllChildren)
     EXPECT_NE(std::find(children.begin(), children.end(), first_child), children.end());
     EXPECT_NE(std::find(children.begin(), children.end(), second_child), children.end());
 }
+
+// Checks that marking an existing component dirty publishes a Changed event
+TEST(SceneTests, MarkDirtyPublishesChangedEvent)
+{
+    omega::EventSystem events;
+    omega::Scene scene(events);
+
+    auto entity = scene.create_entity();
+    scene.flush_commands();
+
+    ASSERT_TRUE(scene.add(entity, Position{}));
+
+    events.dispatch();
+
+    std::vector<omega::ComponentEvent> received_events;
+
+    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent& event)
+                                            { received_events.push_back(event); });
+
+    ASSERT_TRUE(scene.mark_dirty<Position>(entity));
+
+    events.dispatch();
+
+    ASSERT_EQ(received_events.size(), 1);
+    EXPECT_EQ(received_events[0].entity, entity);
+    EXPECT_EQ(received_events[0].component_type, std::type_index(typeid(Position)));
+    EXPECT_EQ(received_events[0].type, omega::ComponentEventType::Changed);
+}
+
+// Checks that marking a missing component dirty fails without publishing an event
+TEST(SceneTests, MarkDirtyFailsForMissingComponent)
+{
+    omega::EventSystem events;
+    omega::Scene scene(events);
+
+    auto entity = scene.create_entity();
+    scene.flush_commands();
+
+    int event_count = 0;
+
+    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent&) { ++event_count; });
+
+    EXPECT_FALSE(scene.mark_dirty<Position>(entity));
+
+    events.dispatch();
+
+    EXPECT_EQ(event_count, 0);
+}
+
+// Checks that marking a component on a destroyed entity fails
+TEST(SceneTests, MarkDirtyFailsForDestroyedEntity)
+{
+    omega::EventSystem events;
+    omega::Scene scene(events);
+
+    auto entity = scene.create_entity();
+    scene.flush_commands();
+
+    ASSERT_TRUE(scene.add(entity, Position{}));
+
+    scene.destroy_entity(entity);
+    scene.flush_commands();
+
+    EXPECT_FALSE(scene.mark_dirty<Position>(entity));
+}
+
+// Checks that marking a component dirty succeeds when no EventSystem is attached
+TEST(SceneTests, MarkDirtyWorksWithoutEventSystem)
+{
+    omega::Scene scene;
+
+    auto entity = scene.create_entity();
+    scene.flush_commands();
+
+    ASSERT_TRUE(scene.add(entity, Position{}));
+
+    EXPECT_TRUE(scene.mark_dirty<Position>(entity));
+}

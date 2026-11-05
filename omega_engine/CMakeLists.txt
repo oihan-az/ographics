@@ -24,7 +24,8 @@ target_sources(
         src/math/matrix_transform.cpp
         src/math/quaternion.cpp
 
-        src/components/transform.cpp
+        src/transform/transform.cpp
+        src/transform/transform_system.cpp
 
  )
 

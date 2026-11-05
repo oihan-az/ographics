@@ -1,0 +1,49 @@
+#ifndef OMEGA_TRANSFORM_SYSTEM_HPP
+#define OMEGA_TRANSFORM_SYSTEM_HPP
+
+#include <omega/math/matrix4.hpp>
+#include <omega/core/entity.hpp>
+#include <omega/core/event.hpp>
+#include <omega/core/component_event.hpp>
+#include <omega/scene/scene.hpp>
+#include <omega/scene/hierarchy_event.hpp>
+#include <omega/transform/transform.hpp>
+
+#include <unordered_map>
+
+namespace omega
+{
+
+class TransformSystem
+{
+  public:
+    explicit TransformSystem(Scene& scene, EventSystem& events);
+    ~TransformSystem();
+
+    TransformSystem(const TransformSystem&) = delete;
+    TransformSystem& operator=(const TransformSystem&) = delete;
+
+    Matrix4 get_world_matrix(Entity entity);
+
+  private:
+    Scene& m_scene;
+    EventSystem& m_events;
+    uint64_t m_component_subscription = 0;
+    uint64_t m_hierarchy_subscription = 0;
+
+    struct CacheEntry
+    {
+        Matrix4 world_matrix{1.0f};
+        bool dirty = true;
+    };
+
+    std::unordered_map<Entity, CacheEntry, EntityHash> m_cache;
+
+    void invalidate(Entity entity);
+    void on_component_event(const ComponentEvent& event);
+    void on_hierarchy_event(const HierarchyEvent& event);
+};
+
+} // namespace omega
+
+#endif // OMEGA_TRANSFORM_SYSTEM_HPP

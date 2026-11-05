@@ -11,7 +11,8 @@ namespace omega
 enum class ComponentEventType
 {
     Added,
-    Removed
+    Removed,
+    Changed
 };
 
 struct ComponentEvent

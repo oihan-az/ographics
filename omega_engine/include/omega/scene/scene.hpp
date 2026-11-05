@@ -47,6 +47,7 @@ class Scene
     // Components
     template <typename T> bool add(Entity entity, T component);
     template <typename T> bool remove(Entity entity);
+    template <typename T> bool mark_dirty(Entity entity);
 
     template <typename T> T* get(Entity entity);
     template <typename T> const T* get(Entity entity) const;

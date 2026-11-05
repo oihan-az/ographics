@@ -1,4 +1,5 @@
 #include <omega/scene/scene.hpp>
+#include <omega/scene/hierarchy_event.hpp>
 
 #include <limits>
 #include <algorithm>
@@ -81,11 +82,16 @@ void Scene::flush_commands()
             clear_parent(command.entity);
 
             // Reparent its children to the preserved parent
-            auto children = m_children.find(command.entity);
-            if (children != m_children.end())
+            auto children_it = m_children.find(command.entity);
+            if (children_it != m_children.end())
             {
-                for (Entity child : children->second)
+                // Move the children out before modifying the hierarchy map
+                std::vector<Entity> children = std::move(children_it->second);
+                m_children.erase(children_it);
+
+                for (Entity child : children)
                 {
+                    // Reparent children to the destroyed entity's parent
                     if (parent.is_valid())
                     {
                         m_parents[child] = parent;
@@ -93,11 +99,14 @@ void Scene::flush_commands()
                     }
                     else
                     {
+                        // Children become roots when their parent was a root
                         m_parents.erase(child);
                     }
-                }
 
-                m_children.erase(children);
+                    // Notify systems that this child's hierarchy changed
+                    if (m_events)
+                        m_events->publish(HierarchyEvent{child});
+                }
             }
 
             // Remove the entity's components
@@ -199,6 +208,10 @@ bool Scene::set_parent(Entity child, Entity parent)
     m_parents[child] = parent;
     m_children[parent].push_back(child);
 
+    // Notify listeners that the hierarchy changed
+    if (m_events)
+        m_events->publish(HierarchyEvent{child});
+
     return true;
 }
 
@@ -225,6 +238,10 @@ bool Scene::clear_parent(Entity child)
 
     // Remove the parent relationship
     m_parents.erase(parent);
+
+    // Notify listeners that the hierarchy changed
+    if (m_events)
+        m_events->publish(HierarchyEvent{child});
 
     return true;
 }
