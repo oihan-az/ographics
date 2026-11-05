@@ -35,6 +35,10 @@ target_link_libraries(
         ographics::orenderer
 )
 
+find_package(glm CONFIG REQUIRED)
+
+target_link_libraries(omega_engine PUBLIC glm::glm)
+
 include(
     "${CMAKE_SOURCE_DIR}/cmake/Shaders.cmake"
 )
