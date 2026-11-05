@@ -1,5 +1,5 @@
-#ifndef OMEGA_VECTOR2_HPP
-#define OMEGA_VECTOR2_HPP
+#ifndef OMEGA_MATH_VECTOR2_HPP
+#define OMEGA_MATH_VECTOR2_HPP
 
 #include <glm/vec2.hpp>
 
@@ -10,4 +10,4 @@ using Vector2 = glm::vec2;
 
 } // namespace omega
 
-#endif // OMEGA_VECTOR2_HPP
+#endif // OMEGA_MATH_VECTOR2_HPP

@@ -17,8 +17,14 @@ target_sources(
     PRIVATE
         src/scene/scene.cpp
         src/scene/entity_iterator.cpp
+
         src/core/component_manager.cpp
         src/core/event.cpp
+
+        src/math/matrix_transform.cpp
+        src/math/quaternion.cpp
+
+        src/components/transform.cpp
 
  )
 
@@ -37,7 +43,7 @@ target_link_libraries(
 
 find_package(glm CONFIG REQUIRED)
 
-target_link_libraries(omega_engine PUBLIC glm::glm)
+target_link_libraries(omega_engine PRIVATE glm::glm)
 
 include(
     "${CMAKE_SOURCE_DIR}/cmake/Shaders.cmake"

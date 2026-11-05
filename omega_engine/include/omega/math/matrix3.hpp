@@ -1,5 +1,5 @@
-#ifndef OMEGA_MATRIX3_HPP
-#define OMEGA_MATRIX3_HPP
+#ifndef OMEGA_MATH_MATRIX3_HPP
+#define OMEGA_MATH_MATRIX3_HPP
 
 #include <glm/mat3x3.hpp>
 
@@ -10,4 +10,4 @@ using Matrix3 = glm::mat3;
 
 } // namespace omega
 
-#endif // OMEGA_MATRIX3_HPP
+#endif // OMEGA_MATH_MATRIX3_HPP
