@@ -2,9 +2,11 @@ find_package(GTest CONFIG REQUIRED)
 
 add_executable(omega_tests
     scene/scene_tests.cpp
+
     core/component_storage_tests.cpp
     core/component_manager_tests.cpp
     core/event_tests.cpp
+
     components/transform_tests.cpp
 )
 

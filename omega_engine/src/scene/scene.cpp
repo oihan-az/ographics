@@ -1,6 +1,7 @@
 #include <omega/scene/scene.hpp>
 
 #include <limits>
+#include <algorithm>
 
 namespace omega
 {
@@ -73,6 +74,33 @@ void Scene::flush_commands()
             if (slot.state != EntityState::Alive)
                 break;
 
+            // Preserve the destroyed entity's parent
+            Entity parent = get_parent(command.entity);
+
+            // Detach the entity from its parent
+            clear_parent(command.entity);
+
+            // Reparent its children to the preserved parent
+            auto children = m_children.find(command.entity);
+            if (children != m_children.end())
+            {
+                for (Entity child : children->second)
+                {
+                    if (parent.is_valid())
+                    {
+                        m_parents[child] = parent;
+                        m_children[parent].push_back(child);
+                    }
+                    else
+                    {
+                        m_parents.erase(child);
+                    }
+                }
+
+                m_children.erase(children);
+            }
+
+            // Remove the entity's components
             auto removed_types = m_components.remove_all(command.entity);
             for (const std::type_index& type : removed_types)
             {
@@ -132,6 +160,100 @@ EntityIterator Scene::begin() const
 EntityIterator Scene::end() const
 {
     return EntityIterator(this, static_cast<uint32_t>(m_entity_slots.size()));
+}
+
+bool Scene::set_parent(Entity child, Entity parent)
+{
+    // Both entities must be alive
+    if (!is_alive(child) || !is_alive(parent))
+        return false;
+
+    // An entity cannot be its own parent
+    if (child == parent)
+        return false;
+
+    // Walk up the parent chain to prevent circular hierarchies
+    Entity ancestor = parent;
+    while (m_parents.contains(ancestor))
+    {
+        ancestor = m_parents.at(ancestor);
+
+        if (ancestor == child)
+            return false;
+
+        if (!is_alive(ancestor))
+            return false;
+    }
+
+    // Remove the child from its previous parent's child list
+    auto previous_parent = m_parents.find(child);
+    if (previous_parent != m_parents.end())
+    {
+        auto& siblings = m_children[previous_parent->second];
+        std::erase(siblings, child);
+        if (siblings.empty())
+            m_children.erase(previous_parent->second);
+    }
+
+    // Assign the new parent and update its child list
+    m_parents[child] = parent;
+    m_children[parent].push_back(child);
+
+    return true;
+}
+
+bool Scene::clear_parent(Entity child)
+{
+    // The child must be alive
+    if (!is_alive(child))
+        return false;
+
+    // Nothing to clear if the entity is already a root
+    auto parent = m_parents.find(child);
+    if (parent == m_parents.end())
+        return true;
+
+    // Remove the child from its parent's child list
+    auto children = m_children.find(parent->second);
+    if (children != m_children.end())
+    {
+        std::erase(children->second, child);
+
+        if (children->second.empty())
+            m_children.erase(children);
+    }
+
+    // Remove the parent relationship
+    m_parents.erase(parent);
+
+    return true;
+}
+
+bool Scene::has_parent(Entity entity) const
+{
+    return m_parents.contains(entity);
+}
+
+Entity Scene::get_parent(Entity entity) const
+{
+    // Return an invalid entity when there is no parent
+    auto it = m_parents.find(entity);
+    if (it == m_parents.end())
+        return Entity::invalid();
+
+    return it->second;
+}
+
+const std::vector<Entity>& Scene::get_children(Entity entity) const
+{
+    // Return an empty list when the entity has no children
+    static const std::vector<Entity> empty;
+
+    auto it = m_children.find(entity);
+    if (it == m_children.end())
+        return empty;
+
+    return it->second;
 }
 
 void Scene::publish_component_event(Entity entity, std::type_index component_type, ComponentEventType type)

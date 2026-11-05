@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <unordered_map>
 
 namespace omega
 {
@@ -35,6 +36,14 @@ class Scene
     EntityIterator begin() const;
     EntityIterator end() const;
 
+    bool set_parent(Entity child, Entity parent);
+    bool clear_parent(Entity child);
+
+    bool has_parent(Entity entity) const;
+
+    Entity get_parent(Entity entity) const;
+    const std::vector<Entity>& get_children(Entity entity) const;
+
     // Components
     template <typename T> bool add(Entity entity, T component);
     template <typename T> bool remove(Entity entity);
@@ -53,6 +62,9 @@ class Scene
     uint32_t m_entity_count = 0;
 
     std::vector<EntityCommand> m_pending_commands;
+
+    std::unordered_map<Entity, Entity, EntityHash> m_parents;
+    std::unordered_map<Entity, std::vector<Entity>, EntityHash> m_children;
 
     friend class EntityIterator;
 
