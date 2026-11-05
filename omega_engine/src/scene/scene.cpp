@@ -5,6 +5,8 @@
 namespace omega
 {
 
+Scene::Scene(EventSystem& events) : m_events(&events) {}
+
 Entity Scene::create_entity()
 {
     uint32_t index;
@@ -71,7 +73,11 @@ void Scene::flush_commands()
             if (slot.state != EntityState::Alive)
                 break;
 
-            m_components.remove_all(command.entity);
+            auto removed_types = m_components.remove_all(command.entity);
+            for (const std::type_index& type : removed_types)
+            {
+                publish_component_event(command.entity, type, ComponentEventType::Removed);
+            }
 
             if (slot.generation == std::numeric_limits<uint32_t>::max())
             {
@@ -126,6 +132,14 @@ EntityIterator Scene::begin() const
 EntityIterator Scene::end() const
 {
     return EntityIterator(this, static_cast<uint32_t>(m_entity_slots.size()));
+}
+
+void Scene::publish_component_event(Entity entity, std::type_index component_type, ComponentEventType type)
+{
+    if (!m_events)
+        return;
+
+    m_events->publish(ComponentEvent{entity, component_type, type});
 }
 
 } // namespace omega

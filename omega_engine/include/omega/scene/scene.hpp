@@ -7,6 +7,8 @@
 
 #include <omega/core/entity.hpp>
 #include <omega/core/component_manager.hpp>
+#include <omega/core/event.hpp>
+#include <omega/core/component_event.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -17,6 +19,8 @@ namespace omega
 class Scene
 {
   public:
+    Scene() = default;
+    explicit Scene(EventSystem& events);
 
     // Entities
     Entity create_entity();
@@ -54,6 +58,11 @@ class Scene
 
     // Components
     ComponentManager m_components;
+
+    // Events
+    EventSystem* m_events = nullptr;
+
+    void publish_component_event(Entity entity, std::type_index component_type, ComponentEventType type);
 };
 
 } // namespace omega

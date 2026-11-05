@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <typeindex>
+#include <vector>
+
 namespace
 {
 
@@ -199,4 +202,100 @@ TEST(SceneTests, RejectsDuplicateComponents)
 
     ASSERT_NE(scene.get<Position>(entity), nullptr);
     EXPECT_FLOAT_EQ(scene.get<Position>(entity)->x, 10.0f);
+}
+
+TEST(SceneTests, ComponentEvents)
+{
+    omega::EventSystem events;
+    omega::Scene scene(events);
+
+    omega::Entity entity = scene.create_entity();
+    scene.flush_commands();
+
+    std::vector<omega::ComponentEvent> received;
+
+    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent& event) { received.push_back(event); });
+
+    ASSERT_TRUE(scene.add<Position>(entity, Position{10.0f}));
+
+    // Events are queued until dispatch
+    EXPECT_TRUE(received.empty());
+
+    events.dispatch();
+
+    ASSERT_EQ(received.size(), 1);
+    EXPECT_EQ(received[0].entity, entity);
+    EXPECT_EQ(received[0].component_type, std::type_index(typeid(Position)));
+    EXPECT_EQ(received[0].type, omega::ComponentEventType::Added);
+
+    ASSERT_TRUE(scene.remove<Position>(entity));
+
+    events.dispatch();
+
+    ASSERT_EQ(received.size(), 2);
+    EXPECT_EQ(received[1].entity, entity);
+    EXPECT_EQ(received[1].component_type, std::type_index(typeid(Position)));
+    EXPECT_EQ(received[1].type, omega::ComponentEventType::Removed);
+}
+
+TEST(SceneTests, DestroyEntityPublishesComponentRemovedEvents)
+{
+    omega::EventSystem events;
+    omega::Scene scene(events);
+
+    omega::Entity entity = scene.create_entity();
+    scene.flush_commands();
+
+    ASSERT_TRUE(scene.add<Position>(entity, Position{10.0f}));
+    ASSERT_TRUE(scene.add<Velocity>(entity, Velocity{2.0f}));
+
+    events.dispatch();
+
+    std::vector<omega::ComponentEvent> received;
+
+    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent& event) { received.push_back(event); });
+
+    scene.destroy_entity(entity);
+    scene.flush_commands();
+
+    // Destruction queues one removal event per component
+    EXPECT_TRUE(received.empty());
+
+    events.dispatch();
+
+    ASSERT_EQ(received.size(), 2);
+
+    for (const auto& event : received)
+    {
+        EXPECT_EQ(event.entity, entity);
+        EXPECT_EQ(event.type, omega::ComponentEventType::Removed);
+    }
+
+    EXPECT_TRUE(scene.is_alive(entity) == false);
+}
+
+TEST(SceneTests, FailedComponentOperationsDoNotPublishEvents)
+{
+    omega::EventSystem events;
+    omega::Scene scene(events);
+
+    omega::Entity entity = scene.create_entity();
+    scene.flush_commands();
+
+    std::vector<omega::ComponentEvent> received;
+
+    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent& event) { received.push_back(event); });
+
+    // Removing a component that doesn't exist must fail
+    EXPECT_FALSE(scene.remove<Position>(entity));
+
+    // Adding a component to a destroyed entity must fail
+    scene.destroy_entity(entity);
+    scene.flush_commands();
+
+    EXPECT_FALSE(scene.add<Position>(entity, Position{10.0f}));
+
+    events.dispatch();
+
+    EXPECT_TRUE(received.empty());
 }

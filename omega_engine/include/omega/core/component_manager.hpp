@@ -6,6 +6,7 @@
 #include <typeindex>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 namespace omega
 {
@@ -28,7 +29,7 @@ class ComponentManager
     template <typename T> bool has(Entity entity) const;
 
     void clear_all();
-    void remove_all(Entity entity);
+    std::vector<std::type_index> remove_all(Entity entity);
 
   private:
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStorage>> m_storages;
