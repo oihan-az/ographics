@@ -1,7 +1,8 @@
 find_package(GTest CONFIG REQUIRED)
 
 add_executable(omega_tests
-    core/scene_tests.cpp
+    scene/scene_tests.cpp
+    core/component_storage_tests.cpp
 )
 
 target_link_libraries(omega_tests
