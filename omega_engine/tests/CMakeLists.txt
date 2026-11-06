@@ -9,6 +9,8 @@ add_executable(omega_tests
 
     transform/transform_tests.cpp
     transform/transform_system_tests.cpp
+
+    camera/camera_tests.cpp
 )
 
 target_link_libraries(omega_tests

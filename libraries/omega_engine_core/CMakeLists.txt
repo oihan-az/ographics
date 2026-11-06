@@ -23,11 +23,21 @@ target_compile_definitions(
         omega_engine_core_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+target_compile_definitions(
+    omega_engine_core
+    PRIVATE
+        omega_engine_core_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    PUBLIC
+        OMEGA_CLIP_DEPTH_ZERO_TO_ONE=${OMEGA_CLIP_DEPTH_ZERO_TO_ONE}
+        OMEGA_PROJECTION_LEFT_HANDED=${OMEGA_PROJECTION_LEFT_HANDED}
+)
+
 target_sources(
     omega_engine_core
     PRIVATE
         "src/math/quaternion.cpp"
         "src/math/matrix_transform.cpp"
+        "src/math/matrix_projection.cpp"
         "src/entity/entity_iterator.cpp"
         "src/event/event.cpp"
         "src/component/component_manager.cpp"

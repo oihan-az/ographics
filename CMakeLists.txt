@@ -22,6 +22,25 @@ set_property(
         METAL
 )
 
+if(OGRAPHICS_API STREQUAL "VULKAN")
+    set(OMEGA_CLIP_DEPTH_ZERO_TO_ONE 1)
+    set(OMEGA_PROJECTION_FLIP_Y 1)
+    set(OMEGA_PROJECTION_LEFT_HANDED 0)
+
+elseif(OGRAPHICS_API STREQUAL "D3D12")
+    set(OMEGA_CLIP_DEPTH_ZERO_TO_ONE 1)
+    set(OMEGA_PROJECTION_FLIP_Y 0)
+    set(OMEGA_PROJECTION_LEFT_HANDED 0)
+
+elseif(OGRAPHICS_API STREQUAL "METAL")
+    set(OMEGA_CLIP_DEPTH_ZERO_TO_ONE 1)
+    set(OMEGA_PROJECTION_FLIP_Y 0)
+    set(OMEGA_PROJECTION_LEFT_HANDED 0)
+
+else()
+    message(FATAL_ERROR "Unsupported graphics API: ${OGRAPHICS_API}")
+endif()
+
 message(STATUS "Graphics API: ${OGRAPHICS_API}")
 
 add_subdirectory(libraries/oplatform)
