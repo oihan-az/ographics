@@ -35,9 +35,8 @@ Matrix4 TransformSystem::get_world_matrix(Entity entity)
         return Matrix4(1.0f);
 
     // Reuse the cached matrix when it is still valid
-    auto it = m_cache.find(entity);
-    if (it != m_cache.end() && !it->second.dirty)
-        return it->second.world_matrix;
+    if (!m_cache.is_dirty(entity))
+        return *m_cache.get(entity);
 
     // Get the local matrix, or return the parent's world matrix if no Transform exists
     const Transform* transform = m_scene.get<Transform>(entity);
@@ -56,19 +55,14 @@ Matrix4 TransformSystem::get_world_matrix(Entity entity)
         world_matrix = get_world_matrix(parent) * local_matrix;
 
     // Update the cache
-    auto& entry = m_cache[entity];
-    entry.world_matrix = world_matrix;
-    entry.dirty = false;
+    m_cache.set(entity, world_matrix);
 
     return world_matrix;
 }
 
 void TransformSystem::invalidate(Entity entity)
 {
-    // Invalidate the cached matrix only if an entry exists
-    auto it = m_cache.find(entity);
-    if (it != m_cache.end())
-        it->second.dirty = true;
+    m_cache.invalidate(entity);
 
     // Invalidate descendants because their world transforms depend on this entity
     for (Entity child : m_scene.get_children(entity))
@@ -95,7 +89,6 @@ void TransformSystem::on_component_event(const ComponentEvent<Transform>& event)
 
 void TransformSystem::on_hierarchy_event(const HierarchyEvent& event)
 {
-    // Invalidate the entity and its descendants after a hierarchy change
     invalidate(event.entity);
 }
 
