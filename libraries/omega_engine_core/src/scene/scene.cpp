@@ -1,5 +1,5 @@
-#include <omega/scene/scene.hpp>
-#include <omega/scene/hierarchy_event.hpp>
+#include <omega/core/scene/scene.hpp>
+#include <omega/core/scene/hierarchy_event.hpp>
 
 #include <limits>
 #include <algorithm>

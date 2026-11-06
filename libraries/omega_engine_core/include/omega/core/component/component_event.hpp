@@ -1,7 +1,7 @@
 #ifndef OMEGA_COMPONENT_EVENT_HPP
 #define OMEGA_COMPONENT_EVENT_HPP
 
-#include <omega/core/entity.hpp>
+#include <omega/core/entity/entity.hpp>
 
 #include <typeindex>
 

@@ -1,7 +1,7 @@
 #ifndef OMEGA_EVENT_HPP
 #define OMEGA_EVENT_HPP
 
-#include <omega/core/event_queue.hpp>
+#include <omega/core/event/event_queue.hpp>
 
 #include <cstdint>
 #include <memory>

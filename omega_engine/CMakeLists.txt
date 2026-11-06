@@ -15,15 +15,6 @@ target_include_directories(
 target_sources(
     omega_engine
     PRIVATE
-        src/scene/scene.cpp
-        src/scene/entity_iterator.cpp
-
-        src/core/component_manager.cpp
-        src/core/event.cpp
-
-        src/math/matrix_transform.cpp
-        src/math/quaternion.cpp
-
         src/transform/transform.cpp
         src/transform/transform_system.cpp
 
@@ -35,16 +26,13 @@ endif()
 
 target_link_libraries(
     omega_engine
-    PRIVATE
+    PUBLIC
         ographics::oplatform
         ographics::ogfx
         ographics::orendergraph
         ographics::orenderer
+        ographics::omega_engine_core
 )
-
-find_package(glm CONFIG REQUIRED)
-
-target_link_libraries(omega_engine PRIVATE glm::glm)
 
 include(
     "${CMAKE_SOURCE_DIR}/cmake/Shaders.cmake"

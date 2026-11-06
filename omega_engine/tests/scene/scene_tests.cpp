@@ -1,6 +1,6 @@
-#include <omega/scene/scene.hpp>
-
 #include <gtest/gtest.h>
+
+#include <omega/core/scene/scene.hpp>
 
 #include <typeindex>
 #include <vector>

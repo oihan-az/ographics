@@ -1,12 +1,13 @@
 #ifndef OMEGA_TRANSFORM_SYSTEM_HPP
 #define OMEGA_TRANSFORM_SYSTEM_HPP
 
-#include <omega/math/matrix4.hpp>
-#include <omega/core/entity.hpp>
-#include <omega/core/event.hpp>
-#include <omega/core/component_event.hpp>
-#include <omega/scene/scene.hpp>
-#include <omega/scene/hierarchy_event.hpp>
+#include <omega/core/math/matrix4.hpp>
+#include <omega/core/entity/entity.hpp>
+#include <omega/core/event/event.hpp>
+#include <omega/core/component/component_event.hpp>
+#include <omega/core/scene/scene.hpp>
+#include <omega/core/scene/hierarchy_event.hpp>
+
 #include <omega/transform/transform.hpp>
 
 #include <unordered_map>

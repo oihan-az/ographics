@@ -1,4 +1,4 @@
-#include <omega/math/quaternion.hpp>
+#include <omega/core/math/quaternion.hpp>
 
 namespace omega
 {

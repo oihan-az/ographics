@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <omega/core/component_manager.hpp>
+#include <omega/core/component/component_manager.hpp>
 
 namespace
 {

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <omega/core/component_storage.hpp>
+#include <omega/core/component/component_storage.hpp>
 
 #include <stdexcept>
 

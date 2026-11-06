@@ -1,5 +1,5 @@
-#include <omega/scene/entity_iterator.hpp>
-#include <omega/scene/scene.hpp>
+#include <omega/core/entity/entity_iterator.hpp>
+#include <omega/core/scene/scene.hpp>
 
 namespace omega
 {

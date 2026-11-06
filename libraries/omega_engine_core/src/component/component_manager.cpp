@@ -1,4 +1,4 @@
-#include <omega/core/component_manager.hpp>
+#include <omega/core/component/component_manager.hpp>
 
 namespace omega
 {

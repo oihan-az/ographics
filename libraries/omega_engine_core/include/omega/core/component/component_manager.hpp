@@ -1,7 +1,7 @@
 #ifndef OMEGA_COMPONENT_MANAGER_HPP
 #define OMEGA_COMPONENT_MANAGER_HPP
 
-#include <omega/core/component_storage.hpp>
+#include <omega/core/component/component_storage.hpp>
 
 #include <typeindex>
 #include <memory>

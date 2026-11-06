@@ -28,6 +28,7 @@ add_subdirectory(libraries/oplatform)
 add_subdirectory(libraries/ogfx)
 add_subdirectory(libraries/orendergraph)
 add_subdirectory(libraries/orenderer)
+add_subdirectory(libraries/omega_engine_core)
 
 add_subdirectory(examples/ogfx/triangle_shader_data)
 add_subdirectory(examples/ogfx/triangle_vertex_buffer)

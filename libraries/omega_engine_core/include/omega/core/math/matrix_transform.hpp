@@ -1,9 +1,9 @@
 #ifndef OMEGA_MATH_MATRIX_TRANSFORM_HPP
 #define OMEGA_MATH_MATRIX_TRANSFORM_HPP
 
-#include <omega/math/matrix4.hpp>
-#include <omega/math/quaternion.hpp>
-#include <omega/math/vector3.hpp>
+#include <omega/core/math/matrix4.hpp>
+#include <omega/core/math/quaternion.hpp>
+#include <omega/core/math/vector3.hpp>
 
 namespace omega
 {

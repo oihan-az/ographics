@@ -1,5 +1,5 @@
 #include <omega/transform/transform.hpp>
-#include <omega/math/matrix_transform.hpp>
+#include <omega/core/math/matrix_transform.hpp>
 
 namespace omega
 {

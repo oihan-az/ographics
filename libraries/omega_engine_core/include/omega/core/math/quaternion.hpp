@@ -1,7 +1,7 @@
 #ifndef OMEGA_MATH_QUATERNION_HPP
 #define OMEGA_MATH_QUATERNION_HPP
 
-#include <omega/math/vector3.hpp>
+#include <omega/core/math/vector3.hpp>
 
 #include <glm/gtc/quaternion.hpp>
 

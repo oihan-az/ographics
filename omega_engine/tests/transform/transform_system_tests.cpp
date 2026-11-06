@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <omega/core/event.hpp>
-#include <omega/math/matrix4.hpp>
-#include <omega/scene/scene.hpp>
+#include <omega/core/event/event.hpp>
+#include <omega/core/math/matrix4.hpp>
+#include <omega/core/scene/scene.hpp>
 #include <omega/transform/transform.hpp>
 #include <omega/transform/transform_system.hpp>
 

@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <omega/transform/transform.hpp>
-#include <omega/scene/scene.hpp>
-#include <omega/math/constants.hpp>
+#include <omega/core/scene/scene.hpp>
+#include <omega/core/math/constants.hpp>
 
 namespace omega
 {

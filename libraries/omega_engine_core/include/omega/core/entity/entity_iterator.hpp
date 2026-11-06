@@ -1,7 +1,7 @@
 #ifndef OMEGA_ENTITY_ITERATOR_HPP
 #define OMEGA_ENTITY_ITERATOR_HPP
 
-#include <omega/core/entity.hpp>
+#include <omega/core/entity/entity.hpp>
 
 #include <cstdint>
 

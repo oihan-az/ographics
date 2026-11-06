@@ -1,14 +1,13 @@
 #ifndef OMEGA_SCENE_HPP
 #define OMEGA_SCENE_HPP
 
-#include "entity_slot.hpp"
-#include "entity_iterator.hpp"
-#include "entity_commad.hpp"
-
-#include <omega/core/entity.hpp>
-#include <omega/core/component_manager.hpp>
-#include <omega/core/event.hpp>
-#include <omega/core/component_event.hpp>
+#include <omega/core/entity/entity.hpp>
+#include <omega/core/entity/entity_slot.hpp>
+#include <omega/core/entity/entity_iterator.hpp>
+#include <omega/core/entity/entity_commad.hpp>
+#include <omega/core/component/component_manager.hpp>
+#include <omega/core/event/event.hpp>
+#include <omega/core/component/component_event.hpp>
 
 #include <cstdint>
 #include <vector>

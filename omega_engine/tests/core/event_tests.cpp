@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <omega/core/event.hpp>
+#include <omega/core/event/event.hpp>
 
 namespace
 {
