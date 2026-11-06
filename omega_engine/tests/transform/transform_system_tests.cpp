@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <omega/core/event/event.hpp>
+#include <omega/core/event/event_system.hpp>
 #include <omega/core/math/matrix4.hpp>
 #include <omega/core/scene/scene.hpp>
 #include <omega/transform/transform.hpp>

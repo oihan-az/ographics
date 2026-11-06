@@ -110,11 +110,10 @@ void Scene::flush_commands()
             }
 
             // Remove the entity's components
-            auto removed_types = m_components.remove_all(command.entity);
-            for (const std::type_index& type : removed_types)
-            {
-                publish_component_event(command.entity, type, ComponentEventType::Removed);
-            }
+            if (m_events)
+                m_components.remove_all(command.entity, *m_events);
+            else
+                m_components.remove_all(command.entity);
 
             if (slot.generation == std::numeric_limits<uint32_t>::max())
             {
@@ -271,14 +270,6 @@ const std::vector<Entity>& Scene::get_children(Entity entity) const
         return empty;
 
     return it->second;
-}
-
-void Scene::publish_component_event(Entity entity, std::type_index component_type, ComponentEventType type)
-{
-    if (!m_events)
-        return;
-
-    m_events->publish(ComponentEvent{entity, component_type, type});
 }
 
 } // namespace omega

@@ -15,7 +15,8 @@ bool Scene::add(Entity entity, T component)
     if (!m_components.add<T>(entity, std::move(component)))
         return false;
 
-    publish_component_event(entity, std::type_index(typeid(T)), ComponentEventType::Added);
+    if (m_events)
+        m_components.publish_added<T>(entity, *m_events);
 
     return true;
 }
@@ -29,7 +30,8 @@ bool Scene::remove(Entity entity)
     if (!m_components.remove<T>(entity))
         return false;
 
-    publish_component_event(entity, std::type_index(typeid(T)), ComponentEventType::Removed);
+    if (m_events)
+        m_components.publish_removed<T>(entity, *m_events);
 
     return true;
 }
@@ -41,9 +43,7 @@ bool Scene::mark_dirty(Entity entity)
         return false;
 
     if (m_events)
-    {
-        m_events->publish(ComponentEvent{entity, std::type_index(typeid(T)), ComponentEventType::Changed});
-    }
+        m_components.publish_changed<T>(entity, *m_events);
 
     return true;
 }
@@ -66,7 +66,8 @@ const T* Scene::get(Entity entity) const
     return m_components.get<T>(entity);
 }
 
-template <typename T> bool Scene::has(Entity entity) const
+template <typename T> 
+bool Scene::has(Entity entity) const
 {
     if (!is_alive(entity))
         return false;

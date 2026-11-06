@@ -1,5 +1,5 @@
-#ifndef OMEGA_EVENT_HPP
-#define OMEGA_EVENT_HPP
+#ifndef OMEGA_EVENT_SYSTEM_HPP
+#define OMEGA_EVENT_SYSTEM_HPP
 
 #include <omega/core/event/event_queue.hpp>
 
@@ -31,6 +31,6 @@ private:
 
 } // namespace omega
 
-#include "event.tpp"
+#include "event_system.tpp"
 
-#endif // OMEGA_EVENT_HPP
+#endif // OMEGA_EVENT_SYSTEM_HPP

@@ -15,10 +15,10 @@ enum class ComponentEventType
     Changed
 };
 
+template<typename T>
 struct ComponentEvent
 {
     Entity entity;
-    std::type_index component_type;
     ComponentEventType type;
 };
 

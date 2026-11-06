@@ -11,6 +11,8 @@
 namespace omega
 {
 
+class EventSystem;
+
 class ComponentManager
 {
   public:
@@ -28,8 +30,13 @@ class ComponentManager
 
     template <typename T> bool has(Entity entity) const;
 
+    template <typename T> void publish_added(Entity entity, EventSystem& events);
+    template <typename T> void publish_removed(Entity entity, EventSystem& events);
+    template <typename T> void publish_changed(Entity entity, EventSystem& events);
+
     void clear_all();
-    std::vector<std::type_index> remove_all(Entity entity);
+    void remove_all(Entity entity);
+    void remove_all(Entity entity, EventSystem& events);
 
   private:
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStorage>> m_storages;

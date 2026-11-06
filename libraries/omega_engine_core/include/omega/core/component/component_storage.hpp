@@ -9,6 +9,8 @@
 namespace omega
 {
 
+class EventSystem;
+
 class IComponentStorage
 {
   public:
@@ -17,6 +19,10 @@ class IComponentStorage
     virtual void clear() = 0;
     virtual bool remove(Entity entity) = 0;
     virtual bool contains(Entity entity) const = 0;
+
+    virtual void publish_added(Entity entity, EventSystem& events) = 0;
+    virtual void publish_removed(Entity entity, EventSystem& events) = 0;
+    virtual void publish_changed(Entity entity, EventSystem& events) = 0;
 };
 
 template <typename T> 
@@ -41,6 +47,10 @@ class ComponentStorage : public IComponentStorage
     auto end() const;
 
     Entity entity_at(uint32_t index) const;
+
+    void publish_added(Entity entity, EventSystem& events) override;
+    void publish_removed(Entity entity, EventSystem& events) override;
+    void publish_changed(Entity entity, EventSystem& events) override;
 
   private:
     std::vector<uint32_t> m_sparse;

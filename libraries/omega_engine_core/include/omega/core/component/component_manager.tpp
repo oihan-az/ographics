@@ -1,6 +1,7 @@
-#include "component_manager.hpp"
 #ifndef OMEGA_COMPONENT_MANAGER_TPP
 #define OMEGA_COMPONENT_MANAGER_TPP
+
+#include <omega/core/event/event_system.hpp>
 
 #include <utility>
 
@@ -69,7 +70,7 @@ const T* ComponentManager::get(Entity entity) const
     if (it == m_storages.end())
         return nullptr;
 
-    auto* storage = static_cast<const ComponentStorage<T>*>(it->second.get());
+    const ComponentStorage<T>* storage = static_cast<const ComponentStorage<T>*>(it->second.get());
     return storage->get(entity);
 }
 
@@ -81,8 +82,35 @@ bool ComponentManager::has(Entity entity) const
     if (it == m_storages.end())
         return false;
 
-    auto* storage = static_cast<const ComponentStorage<T>*>(it->second.get());
+    const ComponentStorage<T>* storage = static_cast<const ComponentStorage<T>*>(it->second.get());
     return storage->contains(entity);
+}
+
+template <typename T> 
+void ComponentManager::publish_added(Entity entity, EventSystem& events)
+{
+    if (!has_storage<T>())
+        return;
+
+    get_storage<T>().publish_added(entity, events);
+}
+
+template <typename T> 
+void ComponentManager::publish_removed(Entity entity, EventSystem& events)
+{
+    if (!has_storage<T>())
+        return;
+
+    get_storage<T>().publish_removed(entity, events);
+}
+
+template <typename T> 
+void ComponentManager::publish_changed(Entity entity, EventSystem& events)
+{
+    if (!has_storage<T>())
+        return;
+
+    get_storage<T>().publish_changed(entity, events);
 }
 
 } // namespace omega

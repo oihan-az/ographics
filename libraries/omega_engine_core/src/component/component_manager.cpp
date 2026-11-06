@@ -9,20 +9,21 @@ void ComponentManager::clear_all()
         storage->clear();
 }
 
-std::vector<std::type_index> ComponentManager::remove_all(Entity entity)
+void ComponentManager::remove_all(Entity entity)
 {
-    std::vector<std::type_index> removed_types;
-
-    for (auto& [type, storage] : m_storages)
+    for (auto& [_, storage] : m_storages)
     {
-        if (!storage->contains(entity))
-            continue;
-
-        if (storage->remove(entity))
-            removed_types.push_back(type);
+        storage->remove(entity);
     }
+}
 
-    return removed_types;
+void ComponentManager::remove_all(Entity entity, EventSystem& events)
+{
+    for (auto& [_, storage] : m_storages)
+    {
+        if (storage->remove(entity))
+            storage->publish_removed(entity, events);
+    }
 }
 
 } // namespace omega

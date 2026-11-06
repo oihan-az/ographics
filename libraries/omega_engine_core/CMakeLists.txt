@@ -39,7 +39,7 @@ target_sources(
         "src/math/matrix_transform.cpp"
         "src/math/matrix_projection.cpp"
         "src/entity/entity_iterator.cpp"
-        "src/event/event.cpp"
+        "src/event/event_system.cpp"
         "src/component/component_manager.cpp"
         "src/scene/scene.cpp"
 )

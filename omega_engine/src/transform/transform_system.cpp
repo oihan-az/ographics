@@ -5,8 +5,21 @@ namespace omega
 
 TransformSystem::TransformSystem(Scene& scene, EventSystem& events) : m_scene(scene), m_events(events)
 {
-    m_component_subscription = m_events.subscribe<ComponentEvent>([this](const ComponentEvent& event) { on_component_event(event); });
-    m_hierarchy_subscription = m_events.subscribe<HierarchyEvent>([this](const HierarchyEvent& event) { on_hierarchy_event(event); });
+    m_component_subscription = m_events.subscribe<ComponentEvent<Transform>>
+    (
+        [this](const ComponentEvent<Transform>& event) 
+        { 
+            on_component_event(event); 
+        }
+    );
+
+    m_hierarchy_subscription =m_events.subscribe<HierarchyEvent>
+    (
+        [this](const HierarchyEvent& event) 
+        { 
+            on_hierarchy_event(event); 
+        }
+    );
 }
 
 TransformSystem::~TransformSystem()
@@ -62,12 +75,8 @@ void TransformSystem::invalidate(Entity entity)
         invalidate(child);
 }
 
-void TransformSystem::on_component_event(const ComponentEvent& event)
+void TransformSystem::on_component_event(const ComponentEvent<Transform>& event)
 {
-    // Only process Transform component events
-    if (event.component_type != std::type_index(typeid(Transform)))
-        return;
-
     switch (event.type)
     {
     case ComponentEventType::Added:

@@ -1,4 +1,4 @@
-#include <omega/core/event/event.hpp>
+#include <omega/core/event/event_system.hpp>
 
 #include <algorithm>
 

@@ -1,6 +1,9 @@
 #ifndef OMEGA_COMPONENT_STORAGE_TPP
 #define OMEGA_COMPONENT_STORAGE_TPP
 
+#include <omega/core/event/event_system.hpp>
+#include <omega/core/component/component_event.hpp>
+
 #include <utility>
 
 namespace omega
@@ -128,6 +131,24 @@ template <typename T>
 Entity ComponentStorage<T>::entity_at(uint32_t index) const
 {
     return m_entities.at(index);
+}
+
+template <typename T>
+void ComponentStorage<T>::publish_added(Entity entity, EventSystem& events)
+{
+    events.publish(ComponentEvent<T>{entity, ComponentEventType::Added});
+}
+
+template <typename T>
+void ComponentStorage<T>::publish_removed(Entity entity, EventSystem& events)
+{
+    events.publish(ComponentEvent<T>{entity, ComponentEventType::Removed});
+}
+
+template <typename T>
+void ComponentStorage<T>::publish_changed(Entity entity, EventSystem& events)
+{
+    events.publish(ComponentEvent<T>{entity, ComponentEventType::Changed});
 }
 
 } // namespace omega

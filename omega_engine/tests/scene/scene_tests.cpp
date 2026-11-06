@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <omega/core/scene/scene.hpp>
+#include <omega/core/component/component_event.hpp>
 
 #include <typeindex>
 #include <vector>
@@ -212,9 +213,10 @@ TEST(SceneTests, ComponentEvents)
     omega::Entity entity = scene.create_entity();
     scene.flush_commands();
 
-    std::vector<omega::ComponentEvent> received;
+    std::vector<omega::ComponentEvent<Position>> received;
 
-    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent& event) { received.push_back(event); });
+    events.subscribe<omega::ComponentEvent<Position>>([&](const omega::ComponentEvent<Position>& event)
+                                                      { received.push_back(event); });
 
     ASSERT_TRUE(scene.add<Position>(entity, Position{10.0f}));
 
@@ -225,7 +227,6 @@ TEST(SceneTests, ComponentEvents)
 
     ASSERT_EQ(received.size(), 1);
     EXPECT_EQ(received[0].entity, entity);
-    EXPECT_EQ(received[0].component_type, std::type_index(typeid(Position)));
     EXPECT_EQ(received[0].type, omega::ComponentEventType::Added);
 
     ASSERT_TRUE(scene.remove<Position>(entity));
@@ -234,7 +235,6 @@ TEST(SceneTests, ComponentEvents)
 
     ASSERT_EQ(received.size(), 2);
     EXPECT_EQ(received[1].entity, entity);
-    EXPECT_EQ(received[1].component_type, std::type_index(typeid(Position)));
     EXPECT_EQ(received[1].type, omega::ComponentEventType::Removed);
 }
 
@@ -251,27 +251,33 @@ TEST(SceneTests, DestroyEntityPublishesComponentRemovedEvents)
 
     events.dispatch();
 
-    std::vector<omega::ComponentEvent> received;
+    std::vector<omega::ComponentEvent<Position>> position_events;
+    std::vector<omega::ComponentEvent<Velocity>> velocity_events;
 
-    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent& event) { received.push_back(event); });
+    events.subscribe<omega::ComponentEvent<Position>>([&](const omega::ComponentEvent<Position>& event)
+                                                      { position_events.push_back(event); });
+
+    events.subscribe<omega::ComponentEvent<Velocity>>([&](const omega::ComponentEvent<Velocity>& event)
+                                                      { velocity_events.push_back(event); });
 
     scene.destroy_entity(entity);
     scene.flush_commands();
 
     // Destruction queues one removal event per component
-    EXPECT_TRUE(received.empty());
+    EXPECT_TRUE(position_events.empty());
+    EXPECT_TRUE(velocity_events.empty());
 
     events.dispatch();
 
-    ASSERT_EQ(received.size(), 2);
+    ASSERT_EQ(position_events.size(), 1);
+    EXPECT_EQ(position_events[0].entity, entity);
+    EXPECT_EQ(position_events[0].type, omega::ComponentEventType::Removed);
 
-    for (const auto& event : received)
-    {
-        EXPECT_EQ(event.entity, entity);
-        EXPECT_EQ(event.type, omega::ComponentEventType::Removed);
-    }
+    ASSERT_EQ(velocity_events.size(), 1);
+    EXPECT_EQ(velocity_events[0].entity, entity);
+    EXPECT_EQ(velocity_events[0].type, omega::ComponentEventType::Removed);
 
-    EXPECT_TRUE(scene.is_alive(entity) == false);
+    EXPECT_FALSE(scene.is_alive(entity));
 }
 
 TEST(SceneTests, FailedComponentOperationsDoNotPublishEvents)
@@ -282,9 +288,9 @@ TEST(SceneTests, FailedComponentOperationsDoNotPublishEvents)
     omega::Entity entity = scene.create_entity();
     scene.flush_commands();
 
-    std::vector<omega::ComponentEvent> received;
+    int event_count = 0;
 
-    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent& event) { received.push_back(event); });
+    events.subscribe<omega::ComponentEvent<Position>>([&](const omega::ComponentEvent<Position>&) { ++event_count; });
 
     // Removing a component that doesn't exist must fail
     EXPECT_FALSE(scene.remove<Position>(entity));
@@ -297,7 +303,7 @@ TEST(SceneTests, FailedComponentOperationsDoNotPublishEvents)
 
     events.dispatch();
 
-    EXPECT_TRUE(received.empty());
+    EXPECT_EQ(event_count, 0);
 }
 
 // Checks that a parent and its children can be queried
@@ -580,10 +586,10 @@ TEST(SceneTests, MarkDirtyPublishesChangedEvent)
 
     events.dispatch();
 
-    std::vector<omega::ComponentEvent> received_events;
+    std::vector<omega::ComponentEvent<Position>> received_events;
 
-    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent& event)
-                                            { received_events.push_back(event); });
+    events.subscribe<omega::ComponentEvent<Position>>([&](const omega::ComponentEvent<Position>& event)
+                                                      { received_events.push_back(event); });
 
     ASSERT_TRUE(scene.mark_dirty<Position>(entity));
 
@@ -591,7 +597,6 @@ TEST(SceneTests, MarkDirtyPublishesChangedEvent)
 
     ASSERT_EQ(received_events.size(), 1);
     EXPECT_EQ(received_events[0].entity, entity);
-    EXPECT_EQ(received_events[0].component_type, std::type_index(typeid(Position)));
     EXPECT_EQ(received_events[0].type, omega::ComponentEventType::Changed);
 }
 
@@ -606,7 +611,7 @@ TEST(SceneTests, MarkDirtyFailsForMissingComponent)
 
     int event_count = 0;
 
-    events.subscribe<omega::ComponentEvent>([&](const omega::ComponentEvent&) { ++event_count; });
+    events.subscribe<omega::ComponentEvent<Position>>([&](const omega::ComponentEvent<Position>&) { ++event_count; });
 
     EXPECT_FALSE(scene.mark_dirty<Position>(entity));
 

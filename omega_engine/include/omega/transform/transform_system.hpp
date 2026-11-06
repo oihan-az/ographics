@@ -3,7 +3,7 @@
 
 #include <omega/core/math/matrix4.hpp>
 #include <omega/core/entity/entity.hpp>
-#include <omega/core/event/event.hpp>
+#include <omega/core/event/event_system.hpp>
 #include <omega/core/component/component_event.hpp>
 #include <omega/core/scene/scene.hpp>
 #include <omega/core/scene/hierarchy_event.hpp>
@@ -41,7 +41,7 @@ class TransformSystem
     std::unordered_map<Entity, CacheEntry, EntityHash> m_cache;
 
     void invalidate(Entity entity);
-    void on_component_event(const ComponentEvent& event);
+    void on_component_event(const ComponentEvent<Transform>& event);
     void on_hierarchy_event(const HierarchyEvent& event);
 };
 
