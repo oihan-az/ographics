@@ -1,4 +1,6 @@
 #include <omega/transform/transform_system.hpp>
+#include <omega/transform/transform_event.hpp>
+#include <omega/transform/matrix_transform.hpp>
 
 namespace omega
 {
@@ -46,7 +48,7 @@ Matrix4 TransformSystem::get_world_matrix(Entity entity)
         return parent.is_valid() ? get_world_matrix(parent) : Matrix4(1.0f);
     }
 
-    Matrix4 local_matrix = transform->matrix();
+    Matrix4 local_matrix = mtx_transform(*transform);
 
     // Combine the local matrix with the parent's world matrix
     Matrix4 world_matrix = local_matrix;
@@ -63,6 +65,9 @@ Matrix4 TransformSystem::get_world_matrix(Entity entity)
 void TransformSystem::invalidate(Entity entity)
 {
     m_cache.invalidate(entity);
+
+    // Notify dependent systems that this world transform may have changed
+    m_events.publish(WorldTransformChangedEvent{entity});
 
     // Invalidate descendants because their world transforms depend on this entity
     for (Entity child : m_scene.get_children(entity))

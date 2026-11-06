@@ -1,18 +1,18 @@
-#include <omega/camera/camera_projection.hpp>
+#include <omega/camera/camera.hpp>
 
-#include <glm/ext/matrix_clip_space.hpp>
+#include <omega/core/math/matrix_projection.hpp>
 
 namespace omega
 {
 
-Matrix4 perspective_projection(const PerspectiveCamera& camera)
+Matrix4 mtx_perspective_projection(const PerspectiveCamera& camera)
 {
-    return glm::perspective(camera.field_of_view, camera.aspect_ratio, camera.near_plane, camera.far_plane);
+    return perspective_projection(camera.proj);
 }
 
-Matrix4 orthogonal_projection(const OrthogonalCamera& camera)
+Matrix4 mtx_orthogonal_projection(const OrthogonalCamera& camera)
 {
-    return glm::ortho(camera.left, camera.right, camera.bottom, camera.top, camera.near_plane, camera.far_plane);
+    return orthogonal_projection(camera.proj);
 }
 
 } // namespace omega

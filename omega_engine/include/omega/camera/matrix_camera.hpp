@@ -7,8 +7,8 @@
 namespace omega
 {
 
-Matrix4 perspective_projection(const PerspectiveCamera& camera);
-Matrix4 orthogonal_projection(const OrthogonalCamera& camera);
+Matrix4 mtx_perspective_projection(const PerspectiveCamera& camera);
+Matrix4 mtx_orthogonal_projection(const OrthogonalCamera& camera);
 
 } // namespace omega
 

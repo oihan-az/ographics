@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <omega/transform/transform.hpp>
+#include <omega/transform/matrix_transform.hpp>
 #include <omega/core/scene/scene.hpp>
 #include <omega/core/math/constants.hpp>
 
@@ -50,7 +51,7 @@ TEST(TransformTests, MatrixContainsTranslationAndScale)
     transform.position = Vector3(1.0f, 2.0f, 3.0f);
     transform.scale = Vector3(2.0f, 3.0f, 4.0f);
 
-    Matrix4 matrix = transform.matrix();
+    Matrix4 matrix = mtx_transform(transform);
 
     EXPECT_EQ(Vector3(matrix[3]), transform.position);
     EXPECT_EQ(Vector3(matrix[0]), Vector3(2.0f, 0.0f, 0.0f));
@@ -63,7 +64,7 @@ TEST(TransformTests, MatrixContainsRotation)
     Transform transform;
     transform.rotation = angle_axis(half_pi<float>(), Vector3(0.0f, 0.0f, 1.0f));
 
-    Matrix4 matrix = transform.matrix();
+    Matrix4 matrix = mtx_transform(transform);
 
     EXPECT_NEAR(matrix[0][0], 0.0f, 0.0001f);
     EXPECT_NEAR(matrix[0][1], 1.0f, 0.0001f);
@@ -78,7 +79,7 @@ TEST(TransformTests, MatrixCombinesTranslationRotationAndScale)
     transform.rotation = angle_axis(pi<float>() / 2.0f, Vector3(0.0f, 0.0f, 1.0f));
     transform.scale = Vector3(2.0f, 3.0f, 4.0f);
 
-    Matrix4 matrix = transform.matrix();
+    Matrix4 matrix = mtx_transform(transform);
 
     EXPECT_NEAR(matrix[0][0], 0.0f, 0.0001f);
     EXPECT_NEAR(matrix[0][1], 2.0f, 0.0001f);

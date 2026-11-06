@@ -4,6 +4,7 @@
 #include <omega/core/math/matrix4.hpp>
 #include <omega/core/scene/scene.hpp>
 #include <omega/transform/transform.hpp>
+#include <omega/transform/matrix_transform.hpp>
 #include <omega/transform/transform_system.hpp>
 
 namespace
@@ -40,7 +41,7 @@ TEST(TransformSystemTests, RootWorldMatrixEqualsLocalMatrix)
     omega::TransformSystem transforms(scene, events);
     events.dispatch();
 
-    ExpectMatrixNear(transforms.get_world_matrix(entity), transform.matrix());
+    ExpectMatrixNear(transforms.get_world_matrix(entity), mtx_transform(transform));
 }
 
 // Checks that a child world matrix combines its parent's and its local matrix
@@ -66,7 +67,7 @@ TEST(TransformSystemTests, ChildWorldMatrixIncludesParentTransform)
     omega::TransformSystem transforms(scene, events);
     events.dispatch();
 
-    auto expected = parent_transform.matrix() * child_transform.matrix();
+    auto expected = mtx_transform(parent_transform) * mtx_transform(child_transform);
 
     ExpectMatrixNear(transforms.get_world_matrix(child), expected);
 }
@@ -101,7 +102,7 @@ TEST(TransformSystemTests, NestedChildWorldMatrixIncludesAllAncestors)
     omega::TransformSystem transforms(scene, events);
     events.dispatch();
 
-    auto expected = grandparent_transform.matrix() * parent_transform.matrix() * child_transform.matrix();
+    auto expected = mtx_transform(grandparent_transform) * mtx_transform(parent_transform) * mtx_transform(child_transform);
 
     ExpectMatrixNear(transforms.get_world_matrix(child), expected);
 }
@@ -134,7 +135,7 @@ TEST(TransformSystemTests, ChangedTransformInvalidatesWorldMatrix)
     auto updated = transforms.get_world_matrix(entity);
 
     EXPECT_FALSE(updated == initial);
-    ExpectMatrixNear(updated, stored_transform->matrix());
+    ExpectMatrixNear(updated, mtx_transform(*stored_transform));
 }
 
 // Checks that changing a parent's transform invalidates its descendants
@@ -170,7 +171,7 @@ TEST(TransformSystemTests, ChangedParentTransformInvalidatesChildren)
     events.dispatch();
 
     auto updated = transforms.get_world_matrix(child);
-    auto expected = stored_parent->matrix() * child_transform.matrix();
+    auto expected = mtx_transform(*stored_parent) * mtx_transform(child_transform);
 
     EXPECT_FALSE(updated == initial);
     ExpectMatrixNear(updated, expected);
@@ -211,7 +212,7 @@ TEST(TransformSystemTests, ReparentingInvalidatesWorldMatrix)
     events.dispatch();
 
     auto updated = transforms.get_world_matrix(child);
-    auto expected = second_transform.matrix() * child_transform.matrix();
+    auto expected = mtx_transform(second_transform) * mtx_transform(child_transform);
 
     EXPECT_FALSE(updated == initial);
     ExpectMatrixNear(updated, expected);
@@ -245,7 +246,7 @@ TEST(TransformSystemTests, ClearingParentInvalidatesWorldMatrix)
     ASSERT_TRUE(scene.clear_parent(child));
     events.dispatch();
 
-    ExpectMatrixNear(transforms.get_world_matrix(child), child_transform.matrix());
+    ExpectMatrixNear(transforms.get_world_matrix(child), mtx_transform(child_transform));
 }
 
 // Checks that removing a Transform invalidates its cached matrix
@@ -319,5 +320,5 @@ TEST(TransformSystemTests, DestroyingParentInvalidatesChildWorldMatrix)
 
     EXPECT_TRUE(scene.is_alive(child));
 
-    ExpectMatrixNear(transforms.get_world_matrix(child), child_transform.matrix());
+    ExpectMatrixNear(transforms.get_world_matrix(child), mtx_transform(child_transform));
 }

@@ -13,8 +13,6 @@ struct Transform
     Vector3 position{0.0f};
     Quaternion rotation{1.0f, 0.0f, 0.0f, 0.0f};
     Vector3 scale{1.0f};
-
-    Matrix4 matrix() const;
 };
 
 } // namespace omega
