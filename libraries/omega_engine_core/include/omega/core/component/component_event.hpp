@@ -2,24 +2,25 @@
 #define OMEGA_COMPONENT_EVENT_HPP
 
 #include <omega/core/entity/entity.hpp>
-
-#include <typeindex>
+#include <omega/core/container/sparse_set.hpp>
 
 namespace omega
 {
 
-enum class ComponentEventType
-{
-    Added,
-    Removed,
-    Changed
-};
-
-template<typename T>
-struct ComponentEvent
+template <typename T> struct ComponentAddedEvent
 {
     Entity entity;
-    ComponentEventType type;
+};
+
+template <typename T> struct ComponentModifiedEvent
+{
+    Entity entity;
+};
+
+template <typename T> struct ComponentRemovedEvent
+{
+    Entity entity;
+    SparseSetSwapInfo<Entity> swap_info;
 };
 
 } // namespace omega

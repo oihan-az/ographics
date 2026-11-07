@@ -2,9 +2,9 @@
 #define OMEGA_COMPONENT_STORAGE_HPP
 
 #include <omega/core/entity/entity.hpp>
+#include <omega/core/container/sparse_set.hpp>
 
 #include <cstdint>
-#include <vector>
 
 namespace omega
 {
@@ -18,10 +18,11 @@ class IComponentStorage
 
     virtual void clear() = 0;
     virtual bool remove(Entity entity) = 0;
+    virtual bool remove(Entity entity, SparseSetSwapInfo<Entity>& swap_info) = 0;
     virtual bool contains(Entity entity) const = 0;
 
     virtual void publish_added(Entity entity, EventSystem& events) = 0;
-    virtual void publish_removed(Entity entity, EventSystem& events) = 0;
+    virtual void publish_removed(Entity entity, const SparseSetSwapInfo<Entity>& swap_info, EventSystem& events) = 0;
     virtual void publish_changed(Entity entity, EventSystem& events) = 0;
 };
 
@@ -31,29 +32,26 @@ class ComponentStorage : public IComponentStorage
   public:
     bool add(Entity entity, T component);
     bool remove(Entity entity) override;
-
+    bool remove(Entity entity, SparseSetSwapInfo<Entity>& swap_info) override;
     bool contains(Entity entity) const override;
 
     void clear() override;
+
+    uint32_t get_index(Entity entity);
 
     T* get(Entity entity);
     const T* get(Entity entity) const;
 
     uint32_t size() const;
 
-    template <typename Callback> void for_each(Callback&& callback);
-    template <typename Callback> void for_each(Callback&& callback) const;
-
     Entity entity_at(uint32_t index) const;
 
     void publish_added(Entity entity, EventSystem& events) override;
-    void publish_removed(Entity entity, EventSystem& events) override;
+    void publish_removed(Entity entity, const SparseSetSwapInfo<Entity>& swap_info, EventSystem& events) override;
     void publish_changed(Entity entity, EventSystem& events) override;
 
   private:
-    std::vector<uint32_t> m_sparse;
-    std::vector<Entity> m_entities;
-    std::vector<T> m_components;
+    SparseSetContainer<T, Entity> m_set;
 };
 
 } // namespace omega

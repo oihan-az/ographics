@@ -215,26 +215,23 @@ TEST(SceneTests, ComponentEvents)
 
     ASSERT_TRUE(scene.add<Position>(entity, Position{10.0f}));
 
-    // Events are safely queued inside the incoming buffer until a frame swap occurs
-    EXPECT_TRUE(events.get_queue<omega::ComponentEvent<Position>>().get_events().empty());
+    EXPECT_TRUE(events.get_queue<omega::ComponentAddedEvent<Position>>().get_events().empty());
 
     events.swap_all_buffers();
 
-    // Read the processed frame queue linearly
-    const auto& added_queue = events.get_queue<omega::ComponentEvent<Position>>().get_events();
+    const auto& added_queue = events.get_queue<omega::ComponentAddedEvent<Position>>().get_events();
     ASSERT_EQ(added_queue.size(), 1);
     EXPECT_EQ(added_queue[0].entity, entity);
-    EXPECT_EQ(added_queue[0].type, omega::ComponentEventType::Added);
 
     ASSERT_TRUE(scene.remove<Position>(entity));
 
-    // Next frame swap processes the removal event
     events.swap_all_buffers();
 
-    const auto& removed_queue = events.get_queue<omega::ComponentEvent<Position>>().get_events();
+    const auto& removed_queue = events.get_queue<omega::ComponentRemovedEvent<Position>>().get_events();
     ASSERT_EQ(removed_queue.size(), 1);
     EXPECT_EQ(removed_queue[0].entity, entity);
-    EXPECT_EQ(removed_queue[0].type, omega::ComponentEventType::Removed);
+
+    EXPECT_FALSE(removed_queue[0].swap_info.exchanged);
 }
 
 TEST(SceneTests, DestroyEntityPublishesComponentRemovedEvents)
@@ -248,28 +245,23 @@ TEST(SceneTests, DestroyEntityPublishesComponentRemovedEvents)
     ASSERT_TRUE(scene.add<Position>(entity, Position{10.0f}));
     ASSERT_TRUE(scene.add<Velocity>(entity, Velocity{2.0f}));
 
-    EXPECT_TRUE(events.get_queue<omega::ComponentEvent<Position>>().get_events().empty());
-    EXPECT_TRUE(events.get_queue<omega::ComponentEvent<Velocity>>().get_events().empty());
+    EXPECT_TRUE(events.get_queue<omega::ComponentAddedEvent<Position>>().get_events().empty());
+    EXPECT_TRUE(events.get_queue<omega::ComponentAddedEvent<Velocity>>().get_events().empty());
 
-    // Swap buffers to clear addition events out of the current pipeline
     events.swap_all_buffers();
 
-    // Destruction queues removal events inside the incoming buffer
     scene.destroy_entity(entity);
     scene.flush_commands();
 
     events.swap_all_buffers();
 
-    // Verify both components successfully emitted their independent removal data structures
-    const auto& position_queue = events.get_queue<omega::ComponentEvent<Position>>().get_events();
+    const auto& position_queue = events.get_queue<omega::ComponentRemovedEvent<Position>>().get_events();
     ASSERT_EQ(position_queue.size(), 1);
     EXPECT_EQ(position_queue[0].entity, entity);
-    EXPECT_EQ(position_queue[0].type, omega::ComponentEventType::Removed);
 
-    const auto& velocity_queue = events.get_queue<omega::ComponentEvent<Velocity>>().get_events();
+    const auto& velocity_queue = events.get_queue<omega::ComponentRemovedEvent<Velocity>>().get_events();
     ASSERT_EQ(velocity_queue.size(), 1);
     EXPECT_EQ(velocity_queue[0].entity, entity);
-    EXPECT_EQ(velocity_queue[0].type, omega::ComponentEventType::Removed);
 
     EXPECT_FALSE(scene.is_alive(entity));
 }
@@ -282,10 +274,10 @@ TEST(SceneTests, FailedComponentOperationsDoNotPublishEvents)
     omega::Entity entity = scene.create_entity();
     scene.flush_commands();
 
-    // Removing a component that doesn't exist must fail and log no event entries
+    // Removing a component that does not exist must return false and push no event entries
     EXPECT_FALSE(scene.remove<Position>(entity));
 
-    // Adding a component to a destroyed entity must fail as well
+    // Adding a component to an already dead entity boundary must fail as well
     scene.destroy_entity(entity);
     scene.flush_commands();
 
@@ -293,8 +285,9 @@ TEST(SceneTests, FailedComponentOperationsDoNotPublishEvents)
 
     events.swap_all_buffers();
 
-    // The event vector must remain totally untouched
-    EXPECT_TRUE(events.get_queue<omega::ComponentEvent<Position>>().get_events().empty());
+    // Both action queues must remain completely empty and untouched
+    EXPECT_TRUE(events.get_queue<omega::ComponentAddedEvent<Position>>().get_events().empty());
+    EXPECT_TRUE(events.get_queue<omega::ComponentRemovedEvent<Position>>().get_events().empty());
 }
 
 // Checks that a parent and its children can be queried
@@ -564,7 +557,7 @@ TEST(SceneTests, DestroyingParentReparentsAllChildren)
     EXPECT_NE(std::find(children.begin(), children.end(), second_child), children.end());
 }
 
-// Checks that marking an existing component dirty publishes a Changed event
+// Checks that marking an existing component dirty publishes a Modified event
 TEST(SceneTests, MarkDirtyPublishesChangedEvent)
 {
     omega::EventSystem events;
@@ -580,13 +573,13 @@ TEST(SceneTests, MarkDirtyPublishesChangedEvent)
 
     ASSERT_TRUE(scene.mark_dirty<Position>(entity));
 
-    // Swap to expose mutation state change events
+    // Swap to expose mutation state change events inside the processed view
     events.swap_all_buffers();
 
-    const auto& changed_queue = events.get_queue<omega::ComponentEvent<Position>>().get_events();
-    ASSERT_EQ(changed_queue.size(), 1);
-    EXPECT_EQ(changed_queue[0].entity, entity);
-    EXPECT_EQ(changed_queue[0].type, omega::ComponentEventType::Changed);
+    // Read directly from the discrete, dedicated modification event queue
+    const auto& modified_queue = events.get_queue<omega::ComponentModifiedEvent<Position>>().get_events();
+    ASSERT_EQ(modified_queue.size(), 1);
+    EXPECT_EQ(modified_queue[0].entity, entity);
 }
 
 // Checks that marking a missing component dirty fails without publishing an event
@@ -603,8 +596,8 @@ TEST(SceneTests, MarkDirtyFailsForMissingComponent)
 
     events.swap_all_buffers();
 
-    // No structural or modification events must be logged
-    EXPECT_TRUE(events.get_queue<omega::ComponentEvent<Position>>().get_events().empty());
+    // No structural or modification events must be logged in the isolated channels
+    EXPECT_TRUE(events.get_queue<omega::ComponentModifiedEvent<Position>>().get_events().empty());
 }
 
 // Checks that marking a component on a destroyed entity fails

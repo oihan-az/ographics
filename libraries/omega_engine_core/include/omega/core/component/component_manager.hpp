@@ -24,6 +24,7 @@ class ComponentManager
 
     template <typename T> bool add(Entity entity, T component);
     template <typename T> bool remove(Entity entity);
+    template <typename T> bool remove(Entity entity, SparseSetSwapInfo<Entity>& swap_info);
 
     template <typename T> T* get(Entity entity);
     template <typename T> const T* get(Entity entity) const;
@@ -34,7 +35,7 @@ class ComponentManager
     template <typename T, typename Callback> void for_each(Callback&& callback) const;
 
     template <typename T> void publish_added(Entity entity, EventSystem& events);
-    template <typename T> void publish_removed(Entity entity, EventSystem& events);
+    template <typename T> void publish_removed(Entity entity, const SparseSetSwapInfo<Entity>& swap_info, EventSystem& events);
     template <typename T> void publish_changed(Entity entity, EventSystem& events);
 
     void clear_all();

@@ -27,11 +27,12 @@ bool Scene::remove(Entity entity)
     if (!is_alive(entity))
         return false;
 
-    if (!m_components.remove<T>(entity))
+    SparseSetSwapInfo<Entity> swap_info{};
+    if (!m_components.remove<T>(entity, swap_info))
         return false;
 
     if (m_events)
-        m_components.publish_removed<T>(entity, *m_events);
+        m_components.publish_removed<T>(entity, swap_info, *m_events);
 
     return true;
 }

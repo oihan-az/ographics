@@ -15,131 +15,92 @@ bool ComponentStorage<T>::add(Entity entity, T component)
     if (!entity.is_valid())
         return false;
 
-    if (entity.index < m_sparse.size() && m_sparse[entity.index] != Entity::invalid_index)
+    if (m_set.contains_key(entity))
         return false;
 
-    if (entity.index >= m_sparse.size())
-        m_sparse.resize(entity.index + 1, Entity::invalid_index);
-
-    uint32_t dense_index = static_cast<uint32_t>(m_components.size());
-
-    m_entities.push_back(entity);
-    m_components.push_back(std::move(component));
-
-    m_sparse[entity.index] = dense_index;
-
+    m_set.insert(entity, std::move(component));
     return true;
 }
 
 template<typename T>
 bool ComponentStorage<T>::remove(Entity entity)
 {
-    if (!contains(entity))
+    if (!m_set.contains(entity))
         return false;
 
-    uint32_t dense_index = m_sparse[entity.index];
-    uint32_t last_index = static_cast<uint32_t>(m_components.size() - 1);
+    m_set.erase(entity);
+    return true;
+}
 
-    if (dense_index != last_index)
-    {
-        m_entities[dense_index] = m_entities[last_index];
-        m_components[dense_index] = std::move(m_components[last_index]);
+template<typename T>
+bool ComponentStorage<T>::remove(Entity entity, SparseSetSwapInfo<Entity>& swap_info)
+{
+    if (!m_set.contains(entity))
+        return false;
 
-        m_sparse[m_entities[dense_index].index] = dense_index;
-    }
-
-    m_entities.pop_back();
-    m_components.pop_back();
-
-    m_sparse[entity.index] = Entity::invalid_index;
-
+    swap_info = m_set.erase(entity);
     return true;
 }
 
 template<typename T>
 bool ComponentStorage<T>::contains(Entity entity) const
 {
-    if (entity.index >= m_sparse.size())
-        return false;
-
-    uint32_t dense_index = m_sparse[entity.index];
-
-    if (dense_index == Entity::invalid_index)
-        return false;
-
-    return m_entities[dense_index] == entity;
+    return m_set.contains(entity);
 };
 
 template <typename T> 
 void ComponentStorage<T>::clear()
 {
-    m_sparse.clear();
-    m_entities.clear();
-    m_components.clear();
+    m_set.clear();
+}
+
+template<typename T>
+uint32_t ComponentStorage<T>::get_index(Entity entity)
+{
+    return m_set.get_dense_index(entity);
 }
 
 template<typename T>
 T* ComponentStorage<T>::get(Entity entity)
 {
-    if (!contains(entity))
-        return nullptr;
-
-    return &m_components[m_sparse[entity.index]];
+    return m_set.get(entity);
 }
 
 template<typename T>
 const T* ComponentStorage<T>::get(Entity entity) const
 {
-    if (!contains(entity))
-        return nullptr;
-
-    return &m_components[m_sparse[entity.index]];
+    return m_set.get(entity);
 }
 
 template <typename T> 
 uint32_t ComponentStorage<T>::size() const
 {
-    return static_cast<uint32_t>(m_components.size());
-}
-
-template<typename T>
-template<typename Callback>
-void ComponentStorage<T>::for_each(Callback&& callback)
-{
-    for (uint32_t i = 0; i < m_components.size(); ++i)
-        callback(m_entities[i], m_components[i]);
-}
-
-template<typename T>
-template<typename Callback>
-void ComponentStorage<T>::for_each(Callback&& callback) const
-{
-    for (uint32_t i = 0; i < m_components.size(); ++i)
-        callback(m_entities[i], m_components[i]);
+    return m_set.size();
 }
 
 template <typename T> 
 Entity ComponentStorage<T>::entity_at(uint32_t index) const
 {
-    return m_entities.at(index);
+    return m_set.key_at(index);
 }
 
 template <typename T>
 void ComponentStorage<T>::publish_added(Entity entity, EventSystem& events)
 {
-    events.publish(ComponentEvent<T>{entity, ComponentEventType::Added});
+    events.publish(ComponentAddedEvent<T>{entity});
 }
 
 template <typename T>
-void ComponentStorage<T>::publish_removed(Entity entity, EventSystem& events)
+void ComponentStorage<T>::publish_removed(Entity entity, const SparseSetSwapInfo<Entity>& swap_info, EventSystem& events)
 {
-    events.publish(ComponentEvent<T>{entity, ComponentEventType::Removed});
+    events.publish(ComponentRemovedEvent<T>{entity, swap_info});
 }
 
 template <typename T>
 void ComponentStorage<T>::publish_changed(Entity entity, EventSystem& events)
 {
-    events.publish(ComponentEvent<T>{entity, ComponentEventType::Changed});
+
+    events.publish(ComponentModifiedEvent<T>{entity});
 }
 
 } // namespace omega

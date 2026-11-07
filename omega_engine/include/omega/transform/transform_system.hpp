@@ -1,7 +1,7 @@
 #ifndef OMEGA_TRANSFORM_SYSTEM_HPP
 #define OMEGA_TRANSFORM_SYSTEM_HPP
 
-#include <omega/core/entity/entity_data_cache.hpp>
+#include <omega/core/container/dense_indexed_cache.hpp>
 #include <omega/core/event/event_system.hpp>
 #include <omega/core/component/component_event.hpp>
 #include <omega/core/scene/scene.hpp>
@@ -26,7 +26,7 @@ class TransformSystem
     void invalidate(Entity entity);
 
   private:
-    EntityDataCache<Matrix4> m_cache;
+    DenseIndexedCache<Matrix4> m_cache;
 
     Scene& m_scene;
     EventSystem& m_events;

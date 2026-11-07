@@ -1,7 +1,7 @@
 #ifndef OMEGA_CAMERA_SYSTEM_HPP
 #define OMEGA_CAMERA_SYSTEM_HPP
 
-#include <omega/core/entity/entity_data_cache.hpp>
+#include <omega/core/container/dense_indexed_cache.hpp>
 #include <omega/core/event/event_system.hpp>
 #include <omega/core/component/component_event.hpp>
 #include <omega/core/scene/scene.hpp>
@@ -33,7 +33,8 @@ class CameraSystem
     void invalidate(Entity entity);
 
   private:
-    EntityDataCache<CameraData> m_cache;
+    DenseIndexedCache<CameraData> m_perspective_cache;
+    DenseIndexedCache<CameraData> m_orthogonal_cache;
 
     Scene& m_scene;
     TransformSystem& m_transforms;

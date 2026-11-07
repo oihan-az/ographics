@@ -50,7 +50,17 @@ bool ComponentManager::remove(Entity entity)
     if (!has_storage<T>())
         return false;
 
+    
     return get_storage<T>().remove(entity);
+}
+
+template <typename T> 
+bool ComponentManager::remove(Entity entity, SparseSetSwapInfo<Entity>& swap_info)
+{
+    if (!has_storage<T>())
+        return false;
+
+    get_storage<T>().remove(entity, swap_info);
 }
 
 template<typename T>
@@ -115,12 +125,12 @@ void ComponentManager::publish_added(Entity entity, EventSystem& events)
 }
 
 template <typename T> 
-void ComponentManager::publish_removed(Entity entity, EventSystem& events)
+void ComponentManager::publish_removed(Entity entity, const SparseSetSwapInfo<Entity>& swap_info, EventSystem& events)
 {
     if (!has_storage<T>())
         return;
 
-    get_storage<T>().publish_removed(entity, events);
+    get_storage<T>().publish_removed(entity, swap_info, events);
 }
 
 template <typename T> 

@@ -4,13 +4,27 @@
 namespace omega
 {
 
+template <typename T, typename Key, typename Indexer>
+bool SparseSetContainer<T, Key, Indexer>::contains_key(const Key& key) const
+{
+    uint32_t id = m_indexer(key);
+    if (id >= m_sparse.size())
+        return false;
+    return m_sparse[id] != TOMBSTONE;
+}
+
 template <typename T, typename Key, typename Indexer> 
 bool SparseSetContainer<T, Key, Indexer>::contains(const Key& key) const
 {
     uint32_t id = m_indexer(key);
     if (id >= m_sparse.size())
         return false;
-    return m_sparse[id] != TOMBSTONE;
+
+    uint32_t dense_idx = m_sparse[id];
+    if (dense_idx == TOMBSTONE)
+        return false;
+
+    return m_dense_to_key[dense_idx] == key;
 }
 
 template <typename T, typename Key, typename Indexer>
@@ -96,19 +110,29 @@ void SparseSetContainer<T, Key, Indexer>::clear()
 }
 
 template <typename T, typename Key, typename Indexer> 
+uint32_t SparseSetContainer<T, Key, Indexer>::get_dense_index(const Key& key) const
+{
+    if (!contains(key))
+        return TOMBSTONE;
+
+    return m_sparse[m_indexer(key)];
+}
+
+template <typename T, typename Key, typename Indexer> 
 T* SparseSetContainer<T, Key, Indexer>::get(const Key& key)
 {
     if (!contains(key))
         return nullptr;
+
     return &m_dense_data[m_sparse[m_indexer(key)]];
 }
-
 
 template <typename T, typename Key, typename Indexer> 
 const T* SparseSetContainer<T, Key, Indexer>::get(const Key& key) const
 {
     if (!contains(key))
         return nullptr;
+
     return &m_dense_data[m_sparse[m_indexer(key)]];
 }
 

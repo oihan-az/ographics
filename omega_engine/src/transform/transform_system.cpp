@@ -10,23 +10,37 @@ TransformSystem::TransformSystem(Scene& scene, EventSystem& events) : m_scene(sc
 
 void TransformSystem::update()
 {
-    // Process transform events
-    const auto& component_events = m_events.get_queue<ComponentEvent<Transform>>().get_events();
-    for (const auto& event : component_events)
-    {
-        switch (event.type)
-        {
-        case ComponentEventType::Added:
-        case ComponentEventType::Changed:
-            // Recalculate this entity and its descendants on next access
-            invalidate(event.entity);
-            break;
+    auto& transform_storage = m_scene.component_manager().get_storage<Transform>();
 
-        case ComponentEventType::Removed:
-            // Remove the cached matrix and invalidate descendants
-            invalidate(event.entity);
-            m_cache.erase(event.entity);
-            break;
+    // Process added
+    const auto& added_queue = m_events.get_queue<ComponentAddedEvent<Transform>>().get_events();
+    if (!added_queue.empty())
+    {
+        for (auto it = added_queue.rbegin(); it != added_queue.rend(); ++it)
+        {
+            m_cache.resize(transform_storage.size());
+            invalidate(it->entity);
+        }
+    }
+
+    // Process modified
+    const auto& modified_queue = m_events.get_queue<ComponentModifiedEvent<Transform>>().get_events();
+    if (!modified_queue.empty())
+    {
+        for (auto it = modified_queue.rbegin(); it != modified_queue.rend(); ++it)
+        {
+            invalidate(it->entity);
+        }
+    }
+
+    // Process removed
+    const auto& removed_queue = m_events.get_queue<ComponentRemovedEvent<Transform>>().get_events();
+    if (!removed_queue.empty())
+    {
+        for (auto it = removed_queue.rbegin(); it != removed_queue.rend(); ++it)
+        {
+            invalidate(it->entity);
+            m_cache.handle_swap(it->swap_info.exchanged, it->swap_info.old_index, it->swap_info.new_index);
         }
     }
 
@@ -44,9 +58,12 @@ Matrix4 TransformSystem::get_world_matrix(Entity entity)
     if (!m_scene.is_alive(entity))
         return Matrix4(1.0f);
 
+    auto& transform_storage = m_scene.component_manager().get_storage<Transform>();
+    uint32_t dense_idx = transform_storage.get_index(entity);
+
     // Reuse the cached matrix when it is still valid
-    if (!m_cache.is_dirty(entity))
-        return *m_cache.get(entity);
+    if (!m_cache.is_dirty(dense_idx))
+        return *m_cache.get(dense_idx);
 
     // Get the local matrix, or return the parent's world matrix if no Transform exists
     const Transform* transform = m_scene.get<Transform>(entity);
@@ -65,14 +82,17 @@ Matrix4 TransformSystem::get_world_matrix(Entity entity)
         world_matrix = get_world_matrix(parent) * local_matrix;
 
     // Update the cache
-    m_cache.set(entity, world_matrix);
+    m_cache.set(dense_idx, world_matrix);
 
     return world_matrix;
 }
 
 void TransformSystem::invalidate(Entity entity)
 {
-    m_cache.invalidate(entity);
+    auto& transform_storage = m_scene.component_manager().get_storage<Transform>();
+    uint32_t dense_idx = transform_storage.get_index(entity);
+
+    m_cache.invalidate(dense_idx);
 
     // Notify dependent systems that this world transform may have changed
     m_events.publish(WorldTransformChangedEvent{entity});

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <omega/core/component/component_manager.hpp>
+#include <omega/core/entity/entity_indexer.hpp>
 
 namespace
 {

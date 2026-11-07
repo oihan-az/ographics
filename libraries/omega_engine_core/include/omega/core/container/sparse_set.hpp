@@ -31,6 +31,7 @@ class SparseSetContainer
     static constexpr uint32_t TOMBSTONE = static_cast<uint32_t>(-1);
 
     bool contains(const Key& key) const;
+    bool contains_key(const Key& key) const;
     Key key_at(uint32_t index) const;
 
     T& insert(const Key& key, T&& value);
@@ -38,6 +39,7 @@ class SparseSetContainer
     SparseSetSwapInfo<Key> erase(const Key& key);
     void clear();
 
+    uint32_t get_dense_index(const Key& key) const;
     T* get(const Key& key);
     const T* get(const Key& key) const;
     std::vector<T>& get_dense_data();

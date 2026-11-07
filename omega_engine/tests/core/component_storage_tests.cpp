@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <omega/core/component/component_storage.hpp>
+#include <omega/core/entity/entity_indexer.hpp>
 
 #include <stdexcept>
 
@@ -226,62 +227,6 @@ TEST(ComponentStorageTests, Clear)
     // Verify that the storage can be reused after clearing
     EXPECT_TRUE(storage.add(entity_a, {30}));
     EXPECT_EQ(storage.get(entity_a)->value, 30);
-}
-
-// Tests bounds checking when accessing dense entity indices
-TEST(ComponentStorageTests, EntityAtChecksBounds)
-{
-    omega::ComponentStorage<TestComponent> storage;
-
-    EXPECT_THROW(storage.entity_at(0), std::out_of_range);
-
-    omega::Entity entity{0, 0};
-    EXPECT_TRUE(storage.add(entity, {10}));
-
-    EXPECT_EQ(storage.entity_at(0), entity);
-    EXPECT_THROW(storage.entity_at(1), std::out_of_range);
-}
-
-// Tests iteration over the dense component array
-TEST(ComponentStorageTests, Iteration)
-{
-    omega::ComponentStorage<TestComponent> storage;
-
-    EXPECT_TRUE(storage.add({0, 0}, {10}));
-    EXPECT_TRUE(storage.add({1, 0}, {20}));
-    EXPECT_TRUE(storage.add({2, 0}, {30}));
-
-    int total = 0;
-    uint32_t count = 0;
-
-    storage.for_each
-    (
-        [&](omega::Entity entity, TestComponent& component)
-        {
-            EXPECT_TRUE(entity.is_valid());
-            total += component.value;
-            ++count;
-        }
-    );
-
-    EXPECT_EQ(total, 60);
-    EXPECT_EQ(count, 3);
-}
-
-TEST(ComponentStorageTests, ConstIteration)
-{
-    omega::ComponentStorage<TestComponent> storage;
-
-    ASSERT_TRUE(storage.add({0, 0}, {10}));
-    ASSERT_TRUE(storage.add({1, 0}, {20}));
-
-    const auto& const_storage = storage;
-
-    int total = 0;
-
-    const_storage.for_each([&](omega::Entity, const TestComponent& component) { total += component.value; });
-
-    EXPECT_EQ(total, 30);
 }
 
 } // namespace

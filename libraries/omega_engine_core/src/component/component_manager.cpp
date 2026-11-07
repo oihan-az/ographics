@@ -21,8 +21,9 @@ void ComponentManager::remove_all(Entity entity, EventSystem& events)
 {
     for (auto& [_, storage] : m_storages)
     {
-        if (storage->remove(entity))
-            storage->publish_removed(entity, events);
+        SparseSetSwapInfo<Entity> swap_info{};
+        if (storage->remove(entity, swap_info))
+            storage->publish_removed(entity, swap_info, events);
     }
 }
 
