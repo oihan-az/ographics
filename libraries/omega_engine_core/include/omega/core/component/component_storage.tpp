@@ -102,29 +102,20 @@ uint32_t ComponentStorage<T>::size() const
     return static_cast<uint32_t>(m_components.size());
 }
 
-template <typename T> 
-auto ComponentStorage<T>::begin()
+template<typename T>
+template<typename Callback>
+void ComponentStorage<T>::for_each(Callback&& callback)
 {
-    return m_components.begin();
+    for (uint32_t i = 0; i < m_components.size(); ++i)
+        callback(m_entities[i], m_components[i]);
 }
 
-template <typename T> 
-auto ComponentStorage<T>::end()
+template<typename T>
+template<typename Callback>
+void ComponentStorage<T>::for_each(Callback&& callback) const
 {
-    return m_components.end();
-}
-
-
-template <typename T> 
-auto ComponentStorage<T>::begin() const
-{
-    return m_components.begin();
-}
-
-template <typename T> 
-auto ComponentStorage<T>::end() const
-{
-    return m_components.end();
+    for (uint32_t i = 0; i < m_components.size(); ++i)
+        callback(m_entities[i], m_components[i]);
 }
 
 template <typename T> 

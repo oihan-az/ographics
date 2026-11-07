@@ -30,6 +30,9 @@ class ComponentManager
 
     template <typename T> bool has(Entity entity) const;
 
+    template <typename T, typename Callback> void for_each(Callback&& callback);
+    template <typename T, typename Callback> void for_each(Callback&& callback) const;
+
     template <typename T> void publish_added(Entity entity, EventSystem& events);
     template <typename T> void publish_removed(Entity entity, EventSystem& events);
     template <typename T> void publish_changed(Entity entity, EventSystem& events);

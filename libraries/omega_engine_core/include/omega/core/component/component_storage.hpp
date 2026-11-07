@@ -41,10 +41,8 @@ class ComponentStorage : public IComponentStorage
 
     uint32_t size() const;
 
-    auto begin();
-    auto end();
-    auto begin() const;
-    auto end() const;
+    template <typename Callback> void for_each(Callback&& callback);
+    template <typename Callback> void for_each(Callback&& callback) const;
 
     Entity entity_at(uint32_t index) const;
 

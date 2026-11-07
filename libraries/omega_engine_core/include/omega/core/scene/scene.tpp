@@ -75,6 +75,16 @@ bool Scene::has(Entity entity) const
     return m_components.has<T>(entity);
 }
 
+template <typename T, typename Callback> void Scene::for_each(Callback&& callback)
+{
+    m_components.for_each<T>(std::forward<Callback>(callback));
+}
+
+template <typename T, typename Callback> void Scene::for_each(Callback&& callback) const
+{
+    m_components.for_each<T>(std::forward<Callback>(callback));
+}
+
 } // namespace omega
 
 #endif // OMEGA_SCENE_TPP

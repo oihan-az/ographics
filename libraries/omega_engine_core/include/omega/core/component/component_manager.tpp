@@ -78,12 +78,31 @@ template<typename T>
 bool ComponentManager::has(Entity entity) const
 {
     auto it = m_storages.find(std::type_index(typeid(T)));
-
     if (it == m_storages.end())
         return false;
 
     const ComponentStorage<T>* storage = static_cast<const ComponentStorage<T>*>(it->second.get());
     return storage->contains(entity);
+}
+
+template<typename T, typename Callback>
+void ComponentManager::for_each(Callback&& callback)
+{
+    if (!has_storage<T>())
+        return;
+
+    get_storage<T>().for_each(std::forward<Callback>(callback));
+}
+
+template<typename T, typename Callback>
+void ComponentManager::for_each(Callback&& callback) const
+{
+    auto it = m_storages.find(std::type_index(typeid(T)));
+    if (it == m_storages.end())
+        return;
+
+    const ComponentStorage<T>* storage = static_cast<const ComponentStorage<T>*>(it->second.get());
+    storage->for_each(std::forward<Callback>(callback));
 }
 
 template <typename T> 

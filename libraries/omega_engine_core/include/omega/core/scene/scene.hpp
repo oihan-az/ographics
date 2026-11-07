@@ -52,6 +52,9 @@ class Scene
 
     template <typename T> bool has(Entity entity) const;
 
+    template <typename T, typename Callback> void for_each(Callback&& callback);
+    template <typename T, typename Callback> void for_each(Callback&& callback) const;
+
   private:
 
     // Entities

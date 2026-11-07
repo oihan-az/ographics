@@ -252,11 +252,36 @@ TEST(ComponentStorageTests, Iteration)
     EXPECT_TRUE(storage.add({2, 0}, {30}));
 
     int total = 0;
+    uint32_t count = 0;
 
-    for (const TestComponent& component : storage)
-        total += component.value;
+    storage.for_each
+    (
+        [&](omega::Entity entity, TestComponent& component)
+        {
+            EXPECT_TRUE(entity.is_valid());
+            total += component.value;
+            ++count;
+        }
+    );
 
     EXPECT_EQ(total, 60);
+    EXPECT_EQ(count, 3);
+}
+
+TEST(ComponentStorageTests, ConstIteration)
+{
+    omega::ComponentStorage<TestComponent> storage;
+
+    ASSERT_TRUE(storage.add({0, 0}, {10}));
+    ASSERT_TRUE(storage.add({1, 0}, {20}));
+
+    const auto& const_storage = storage;
+
+    int total = 0;
+
+    const_storage.for_each([&](omega::Entity, const TestComponent& component) { total += component.value; });
+
+    EXPECT_EQ(total, 30);
 }
 
 } // namespace
