@@ -22,308 +22,132 @@ struct NewEvent
 
 } // namespace
 
-TEST(EventSystemTests, PublishAndDispatch)
+TEST(EventSystemTests, PublishAndSwap)
 {
     omega::EventSystem events;
-
-    int received_value = 0;
-
-    events.subscribe<TestEvent>([&](const TestEvent& event) { received_value = event.value; });
 
     events.publish(TestEvent{42});
 
-    EXPECT_EQ(received_value, 0);
+    // Before swapping, the processing queue must remain completely empty
+    EXPECT_TRUE(events.get_queue<TestEvent>().get_events().empty());
 
-    events.dispatch();
+    // Perform the frame buffer swap
+    events.swap_all_buffers();
 
-    EXPECT_EQ(received_value, 42);
+    // Now events must be safely available for linear data-oriented reading
+    const auto& queue = events.get_queue<TestEvent>().get_events();
+    ASSERT_EQ(queue.size(), 1);
+    EXPECT_EQ(queue[0].value, 42);
 }
 
-TEST(EventSystemTests, MultipleSubscribers)
+TEST(EventSystemTests, EventsPersistForMultipleSystems)
 {
     omega::EventSystem events;
-
-    int first_value = 0;
-    int second_value = 0;
-
-    events.subscribe<TestEvent>([&](const TestEvent& event) { first_value = event.value; });
-    events.subscribe<TestEvent>([&](const TestEvent& event) { second_value = event.value; });
 
     events.publish(TestEvent{42});
-    events.dispatch();
+    events.swap_all_buffers();
 
-    EXPECT_EQ(first_value, 42);
-    EXPECT_EQ(second_value, 42);
+    // Verify that multiple detached systems can read the same vector without destroying memory
+    const auto& system_one_view = events.get_queue<TestEvent>().get_events();
+    const auto& system_two_view = events.get_queue<TestEvent>().get_events();
 
-    // Subscriptions persist across dispatch cycles
-    events.publish(TestEvent{100});
-    events.dispatch();
+    ASSERT_EQ(system_one_view.size(), 1);
+    EXPECT_EQ(system_one_view[0].value, 42);
 
-    EXPECT_EQ(first_value, 100);
-    EXPECT_EQ(second_value, 100);
+    ASSERT_EQ(system_two_view.size(), 1);
+    EXPECT_EQ(system_two_view[0].value, 42);
 }
 
-TEST(EventSystemTests, Unsubscribe)
+TEST(EventSystemTests, BuffersAreClearedOnNextSwap)
 {
     omega::EventSystem events;
-
-    int received_value = 0;
-
-    auto subscription = events.subscribe<TestEvent>([&](const TestEvent& event) { received_value = event.value; });
 
     events.publish(TestEvent{42});
-    events.dispatch();
+    events.swap_all_buffers();
 
-    EXPECT_EQ(received_value, 42);
+    EXPECT_EQ(events.get_queue<TestEvent>().get_events().size(), 1);
 
-    events.unsubscribe(subscription);
-
-    events.publish(TestEvent{100});
-    events.dispatch();
-
-    // Unsubscribed listeners must no longer receive events
-    EXPECT_EQ(received_value, 42);
+    // A second swap sequence without any new publications must fully clear the active processing queue
+    events.swap_all_buffers();
+    EXPECT_TRUE(events.get_queue<TestEvent>().get_events().empty());
 }
 
-TEST(EventSystemTests, EventsPublishedDuringDispatchAreDeferred)
+TEST(EventSystemTests, EventsPublishedDuringProcessingAreDeferred)
 {
     omega::EventSystem events;
-
-    int received_count = 0;
-
-    events.subscribe<TestEvent>(
-        [&](const TestEvent&)
-        {
-            ++received_count;
-
-            if (received_count == 1)
-                events.publish(TestEvent{2});
-        });
 
     events.publish(TestEvent{1});
+    events.swap_all_buffers();
 
-    events.dispatch();
+    // Simulate an isolated system processing the frozen queue for Frame 1
+    const auto& processing_queue = events.get_queue<TestEvent>().get_events();
+    ASSERT_EQ(processing_queue.size(), 1);
 
-    // The newly published event must wait for the next cycle
-    EXPECT_EQ(received_count, 1);
+    // Reacting to Event 1 publishes Event 2 (this must go straight to the incoming buffer)
+    if (processing_queue[0].value == 1)
+    {
+        events.publish(TestEvent{2});
+    }
 
-    events.dispatch();
+    // Event 2 must NOT bleed into the current processing queue of the active frame execution loop
+    EXPECT_EQ(events.get_queue<TestEvent>().get_events().size(), 1);
 
-    EXPECT_EQ(received_count, 2);
+    // Progress to the next simulation frame tick
+    events.swap_all_buffers();
+
+    // The deferred secondary event now securely shifts into the active processing queue
+    const auto& next_processing_queue = events.get_queue<TestEvent>().get_events();
+    ASSERT_EQ(next_processing_queue.size(), 1);
+    EXPECT_EQ(next_processing_queue[0].value, 2);
 }
 
-TEST(EventSystemTests, DifferentEventTypesAreDeferred)
+TEST(EventSystemTests, DifferentEventTypesAreIndependent)
 {
     omega::EventSystem events;
 
-    int received_count = 0;
+    events.publish(TestEvent{10});
+    events.publish(AnotherEvent{20});
 
-    events.subscribe<TestEvent>([&](const TestEvent&) { events.publish(AnotherEvent{42}); });
-    events.subscribe<AnotherEvent>([&](const AnotherEvent&) { ++received_count; });
+    events.swap_all_buffers();
 
-    events.publish(TestEvent{1});
+    const auto& test_queue = events.get_queue<TestEvent>().get_events();
+    const auto& another_queue = events.get_queue<AnotherEvent>().get_events();
 
-    events.dispatch();
+    ASSERT_EQ(test_queue.size(), 1);
+    EXPECT_EQ(test_queue[0].value, 10);
 
-    // Events of other types published during dispatch are deferred too
-    EXPECT_EQ(received_count, 0);
-
-    events.dispatch();
-
-    EXPECT_EQ(received_count, 1);
+    ASSERT_EQ(another_queue.size(), 1);
+    EXPECT_EQ(another_queue[0].value, 20);
 }
 
-TEST(EventSystemTests, UnsubscribeDuringDispatch)
+TEST(EventSystemTests, NewEventTypesAreCreatedDynamically)
 {
     omega::EventSystem events;
 
-    int received_count = 0;
+    // Force the dynamic compilation infrastructure to generate a completely new type pool at runtime
+    events.publish(NewEvent{99});
+    events.swap_all_buffers();
 
-    uint64_t subscription = 0;
-
-    subscription = events.subscribe<TestEvent>(
-        [&](const TestEvent&)
-        {
-            ++received_count;
-
-            // Unsubscribe after receiving the first event
-            events.unsubscribe(subscription);
-        });
-
-    events.publish(TestEvent{1});
-    events.publish(TestEvent{2});
-
-    events.dispatch();
-
-    // The second event must not reach the unsubscribed listener
-    EXPECT_EQ(received_count, 1);
+    const auto& new_queue = events.get_queue<NewEvent>().get_events();
+    ASSERT_EQ(new_queue.size(), 1);
+    EXPECT_EQ(new_queue[0].value, 99);
 }
 
-TEST(EventSystemTests, SubscriptionsDuringDispatchAreDeferred)
+TEST(EventSystemTests, EventsArePreservedInOrder)
 {
     omega::EventSystem events;
-
-    int first_count = 0;
-    int second_count = 0;
-
-    events.subscribe<TestEvent>(
-        [&](const TestEvent&)
-        {
-            ++first_count;
-
-            if (first_count == 1)
-            {
-                events.subscribe<TestEvent>([&](const TestEvent&) { ++second_count; });
-
-                events.publish(TestEvent{2});
-            }
-        });
-
-    events.publish(TestEvent{1});
-    events.dispatch();
-
-    EXPECT_EQ(first_count, 1);
-    EXPECT_EQ(second_count, 0);
-
-    events.dispatch();
-
-    EXPECT_EQ(first_count, 2);
-    EXPECT_EQ(second_count, 1);
-}
-
-TEST(EventSystemTests, RecursiveDispatchIsIgnored)
-{
-    omega::EventSystem events;
-
-    int received_count = 0;
-
-    events.subscribe<TestEvent>(
-        [&](const TestEvent& event)
-        {
-            ++received_count;
-
-            if (event.value == 1)
-            {
-                events.publish(TestEvent{2});
-                events.dispatch();
-            }
-        });
-
-    events.publish(TestEvent{1});
-    events.dispatch();
-
-    // Recursive dispatch must not process the newly published event
-    EXPECT_EQ(received_count, 1);
-
-    events.dispatch();
-
-    EXPECT_EQ(received_count, 2);
-}
-
-TEST(EventSystemTests, NewEventTypesAreDeferred)
-{
-    omega::EventSystem events;
-
-    int received_value = 0;
-
-    events.subscribe<TestEvent>(
-        [&](const TestEvent&)
-        {
-            // Creates a new event queue during dispatch
-            events.publish(NewEvent{42});
-        });
-
-    events.publish(TestEvent{1});
-    events.dispatch();
-
-    // Subscribe after the new event has been queued
-    events.subscribe<NewEvent>([&](const NewEvent& event) { received_value = event.value; });
-
-    EXPECT_EQ(received_value, 0);
-
-    events.dispatch();
-
-    EXPECT_EQ(received_value, 42);
-}
-
-TEST(EventSystemTests, EventsAreDispatchedInOrder)
-{
-    omega::EventSystem events;
-
-    std::vector<int> received_values;
-
-    events.subscribe<TestEvent>([&](const TestEvent& event) { received_values.push_back(event.value); });
 
     events.publish(TestEvent{1});
     events.publish(TestEvent{2});
     events.publish(TestEvent{3});
 
-    events.dispatch();
+    events.swap_all_buffers();
 
-    ASSERT_EQ(received_values.size(), 3);
-    EXPECT_EQ(received_values[0], 1);
-    EXPECT_EQ(received_values[1], 2);
-    EXPECT_EQ(received_values[2], 3);
-}
+    const auto& queue = events.get_queue<TestEvent>().get_events();
 
-TEST(EventSystemTests, MultipleEventTypes)
-{
-    omega::EventSystem events;
-
-    int test_value = 0;
-    int another_value = 0;
-
-    events.subscribe<TestEvent>([&](const TestEvent& event) { test_value = event.value; });
-
-    events.subscribe<AnotherEvent>([&](const AnotherEvent& event) { another_value = event.value; });
-
-    events.publish(TestEvent{10});
-    events.publish(AnotherEvent{20});
-
-    events.dispatch();
-
-    EXPECT_EQ(test_value, 10);
-    EXPECT_EQ(another_value, 20);
-}
-
-TEST(EventSystemTests, UnsubscribeAnotherListenerDuringDispatch)
-{
-    omega::EventSystem events;
-
-    int first_count = 0;
-    int second_count = 0;
-
-    uint64_t second_subscription = 0;
-
-    events.subscribe<TestEvent>(
-        [&](const TestEvent&)
-        {
-            ++first_count;
-            events.unsubscribe(second_subscription);
-        });
-
-    second_subscription = events.subscribe<TestEvent>([&](const TestEvent&) { ++second_count; });
-
-    events.publish(TestEvent{1});
-    events.dispatch();
-
-    EXPECT_EQ(first_count, 1);
-    EXPECT_EQ(second_count, 0);
-}
-
-TEST(EventSystemTests, EventsWithoutListenersAreDiscarded)
-{
-    omega::EventSystem events;
-
-    events.publish(TestEvent{42});
-    events.dispatch();
-
-    int received_value = 0;
-
-    events.subscribe<TestEvent>([&](const TestEvent& event) { received_value = event.value; });
-
-    events.dispatch();
-
-    // A listener registered later must not receive an already-dispatched event
-    EXPECT_EQ(received_value, 0);
+    // Order must match ingestion exactly
+    ASSERT_EQ(queue.size(), 3);
+    EXPECT_EQ(queue[0].value, 1);
+    EXPECT_EQ(queue[1].value, 2);
+    EXPECT_EQ(queue[2].value, 3);
 }

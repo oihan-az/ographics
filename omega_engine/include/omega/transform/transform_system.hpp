@@ -17,24 +17,19 @@ class TransformSystem
 {
   public:
     explicit TransformSystem(Scene& scene, EventSystem& events);
-    ~TransformSystem();
+
+    void update();
 
     Matrix4 get_world_matrix(Entity entity);
 
   private:
-
     void invalidate(Entity entity);
-    void on_component_event(const ComponentEvent<Transform>& event);
-    void on_hierarchy_event(const HierarchyEvent& event);
 
   private:
     EntityDataCache<Matrix4> m_cache;
 
     Scene& m_scene;
     EventSystem& m_events;
-
-    uint64_t m_component_subscription = 0;
-    uint64_t m_hierarchy_subscription = 0;
 };
 
 } // namespace omega

@@ -1,4 +1,3 @@
-
 #include <gtest/gtest.h>
 
 #include <omega/camera/camera.hpp>
@@ -51,9 +50,12 @@ class CameraSystemTests : public testing::Test
         return entity;
     }
 
+    // Process the deterministic frame timeline sequence for all subsystems
     void dispatch_events()
     {
-        events.dispatch();
+        events.swap_all_buffers();
+        transforms.update();
+        cameras.update();
     }
 };
 
@@ -94,7 +96,7 @@ TEST_F(CameraSystemTests, PerspectiveCameraCalculatesProjection)
 
     omega::CameraData data = cameras.get_camera_data(entity);
 
-    EXPECT_TRUE(matrix_near(data.projection, omega::perspective_projection(camera.proj)));
+    EXPECT_TRUE(matrix_near(data.projection, omega::mtx_perspective_projection(camera)));
 }
 
 TEST_F(CameraSystemTests, OrthogonalCameraCalculatesProjection)
@@ -310,6 +312,8 @@ TEST_F(CameraSystemTests, ReparentingInvalidatesCameraCache)
     omega::CameraData first_data = cameras.get_camera_data(camera_entity);
 
     ASSERT_TRUE(scene.set_parent(camera_entity, parent_b));
+
+    // Process the structural hierarchy change event through the data-driven systems
     dispatch_events();
 
     omega::CameraData second_data = cameras.get_camera_data(camera_entity);
@@ -332,6 +336,8 @@ TEST_F(CameraSystemTests, DestroyingCameraEntityReturnsIdentityData)
 
     scene.destroy_entity(entity);
     scene.flush_commands();
+
+    // Batch process entity destruction and component removal events across all pipelines
     dispatch_events();
 
     omega::CameraData second_data = cameras.get_camera_data(entity);
@@ -340,5 +346,6 @@ TEST_F(CameraSystemTests, DestroyingCameraEntityReturnsIdentityData)
     EXPECT_TRUE(matrix_near(second_data.projection, omega::Matrix4(1.0f)));
     EXPECT_TRUE(matrix_near(second_data.view_projection, omega::Matrix4(1.0f)));
 }
+
 
 } // namespace

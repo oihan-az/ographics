@@ -6,37 +6,48 @@ namespace omega
 
 CameraSystem::CameraSystem(Scene& scene, EventSystem& events, TransformSystem& transforms)
     : m_scene(scene), m_events(events), m_transforms(transforms)
+{}
+
+void CameraSystem::update() 
 {
-    m_perspective_camera_subscription = m_events.subscribe<ComponentEvent<PerspectiveCamera>>
-    (
-        [this](const ComponentEvent<PerspectiveCamera>& event) 
-        { 
-                on_perspective_camera_event(event); 
+    // Process perspective camera events
+    const auto& perspective_events = m_events.get_queue<ComponentEvent<PerspectiveCamera>>().get_events();
+    for (const auto& event : perspective_events)
+    {
+        switch (event.type)
+        {
+        case ComponentEventType::Added:
+        case ComponentEventType::Changed:
+            invalidate(event.entity);
+            break;
+        case ComponentEventType::Removed:
+            m_cache.erase(event.entity);
+            break;
         }
-    );
+    }
 
-    m_orthogonal_camera_subscription = m_events.subscribe<ComponentEvent<OrthogonalCamera>>
-    (
-        [this](const ComponentEvent<OrthogonalCamera>& event) 
-        { 
-            on_orthogonal_camera_event(event); 
+    // Process orthogonal camera events
+    const auto& orthogonal_events = m_events.get_queue<ComponentEvent<OrthogonalCamera>>().get_events();
+    for (const auto& event : orthogonal_events)
+    {
+        switch (event.type)
+        {
+        case ComponentEventType::Added:
+        case ComponentEventType::Changed:
+            invalidate(event.entity);
+            break;
+        case ComponentEventType::Removed:
+            m_cache.erase(event.entity);
+            break;
         }
-    );
+    }
 
-    m_world_transform_subscription = m_events.subscribe<WorldTransformChangedEvent>
-    (
-        [this](const WorldTransformChangedEvent& event) 
-        { 
-            on_world_transform_changed(event); 
-        }
-    );
-}
-
-CameraSystem::~CameraSystem()
-{
-    m_events.unsubscribe(m_perspective_camera_subscription);
-    m_events.unsubscribe(m_orthogonal_camera_subscription);
-    m_events.unsubscribe(m_world_transform_subscription);
+    // Process world transform events
+    const auto& transform_events = m_events.get_queue<WorldTransformChangedEvent>().get_events();
+    for (const auto& event : transform_events)
+    {
+        invalidate(event.entity);
+    }
 }
 
 CameraData CameraSystem::get_camera_data(Entity entity)
@@ -82,41 +93,6 @@ CameraData CameraSystem::get_camera_data(Entity entity)
 void CameraSystem::invalidate(Entity entity)
 {
     m_cache.invalidate(entity);
-}
-
-void CameraSystem::on_perspective_camera_event(const ComponentEvent<PerspectiveCamera>& event)
-{
-    switch (event.type)
-    {
-    case ComponentEventType::Added:
-    case ComponentEventType::Changed:
-        invalidate(event.entity);
-        break;
-
-    case ComponentEventType::Removed:
-        m_cache.erase(event.entity);
-        break;
-    }
-}
-
-void CameraSystem::on_orthogonal_camera_event(const ComponentEvent<OrthogonalCamera>& event)
-{
-    switch (event.type)
-    {
-    case ComponentEventType::Added:
-    case ComponentEventType::Changed:
-        invalidate(event.entity);
-        break;
-
-    case ComponentEventType::Removed:
-        m_cache.erase(event.entity);
-        break;
-    }
-}
-
-void CameraSystem::on_world_transform_changed(const WorldTransformChangedEvent& event)
-{
-    invalidate(event.entity);
 }
 
 } // namespace omega

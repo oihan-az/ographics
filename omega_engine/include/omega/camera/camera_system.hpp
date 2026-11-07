@@ -24,15 +24,13 @@ class CameraSystem
 {
   public:
     explicit CameraSystem(Scene& scene, EventSystem& events, TransformSystem& transforms);
-    ~CameraSystem();
+
+    void update();
 
     CameraData get_camera_data(Entity entity);
 
   private:
     void invalidate(Entity entity);
-    void on_perspective_camera_event(const ComponentEvent<PerspectiveCamera>& event);
-    void on_orthogonal_camera_event(const ComponentEvent<OrthogonalCamera>& event);
-    void on_world_transform_changed(const WorldTransformChangedEvent& event);
 
   private:
     EntityDataCache<CameraData> m_cache;
@@ -40,10 +38,6 @@ class CameraSystem
     Scene& m_scene;
     TransformSystem& m_transforms;
     EventSystem& m_events;
-
-    uint64_t m_perspective_camera_subscription;
-    uint64_t m_orthogonal_camera_subscription;
-    uint64_t m_world_transform_subscription;
 };
 
 } // namespace omega

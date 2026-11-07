@@ -2,38 +2,30 @@
 #define OMEGA_EVENT_QUEUE_HPP
 
 #include <cstdint>
-#include <functional>
 #include <vector>
 
 namespace omega
 {
 
-struct IEventQueue
+class IEventQueue
 {
+  public:
     virtual ~IEventQueue() = default;
-    virtual void prepare_dispatch() = 0;
-    virtual void dispatch() = 0;
-    virtual void unsubscribe(uint64_t subscription) = 0;
+    virtual void swap_buffers() = 0;
 };
 
 template <typename Event> 
-struct EventQueue : IEventQueue
+class EventQueue : public IEventQueue
 {
-    struct Listener
-    {
-        uint64_t id;
-        std::function<void(const Event&)> callback;
-    };
+  public:
+    void swap_buffers() override;
 
-    std::vector<Listener> listeners;
-    std::vector<Event> pending_events;
+    void push(Event&& event);
+    const std::vector<Event>& get_events() const;
 
-    std::vector<Event> dispatch_events;
-    std::vector<uint64_t> dispatch_listener_ids;
-
-    void prepare_dispatch() override;
-    void dispatch() override;
-    void unsubscribe(uint64_t subscription) override;
+  private:
+    std::vector<Event> buffer_incoming;
+    std::vector<Event> buffer_processing;
 };
 
 } // namespace omega

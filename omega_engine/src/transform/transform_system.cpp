@@ -6,28 +6,36 @@ namespace omega
 {
 
 TransformSystem::TransformSystem(Scene& scene, EventSystem& events) : m_scene(scene), m_events(events)
-{
-    m_component_subscription = m_events.subscribe<ComponentEvent<Transform>>
-    (
-        [this](const ComponentEvent<Transform>& event) 
-        { 
-            on_component_event(event); 
-        }
-    );
+{}
 
-    m_hierarchy_subscription =m_events.subscribe<HierarchyEvent>
-    (
-        [this](const HierarchyEvent& event) 
-        { 
-            on_hierarchy_event(event); 
-        }
-    );
-}
-
-TransformSystem::~TransformSystem()
+void TransformSystem::update()
 {
-    m_events.unsubscribe(m_component_subscription);
-    m_events.unsubscribe(m_hierarchy_subscription);
+    // Process transform events
+    const auto& component_events = m_events.get_queue<ComponentEvent<Transform>>().get_events();
+    for (const auto& event : component_events)
+    {
+        switch (event.type)
+        {
+        case ComponentEventType::Added:
+        case ComponentEventType::Changed:
+            // Recalculate this entity and its descendants on next access
+            invalidate(event.entity);
+            break;
+
+        case ComponentEventType::Removed:
+            // Remove the cached matrix and invalidate descendants
+            invalidate(event.entity);
+            m_cache.erase(event.entity);
+            break;
+        }
+    }
+
+    // Process hierarchy events
+    const auto& hierarchy_events = m_events.get_queue<HierarchyEvent>().get_events();
+    for (const auto& event : hierarchy_events)
+    {
+        invalidate(event.entity);
+    }
 }
 
 Matrix4 TransformSystem::get_world_matrix(Entity entity)
@@ -72,29 +80,6 @@ void TransformSystem::invalidate(Entity entity)
     // Invalidate descendants because their world transforms depend on this entity
     for (Entity child : m_scene.get_children(entity))
         invalidate(child);
-}
-
-void TransformSystem::on_component_event(const ComponentEvent<Transform>& event)
-{
-    switch (event.type)
-    {
-    case ComponentEventType::Added:
-    case ComponentEventType::Changed:
-        // Recalculate this entity and its descendants on next access
-        invalidate(event.entity);
-        break;
-
-    case ComponentEventType::Removed:
-        // Remove the cached matrix and invalidate descendants
-        invalidate(event.entity);
-        m_cache.erase(event.entity);
-        break;
-    }
-}
-
-void TransformSystem::on_hierarchy_event(const HierarchyEvent& event)
-{
-    invalidate(event.entity);
 }
 
 } // namespace omega
