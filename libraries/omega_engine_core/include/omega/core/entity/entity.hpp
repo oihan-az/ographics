@@ -21,16 +21,6 @@ struct Entity
     bool operator==(const Entity&) const = default;
 };
 
-struct EntityHash
-{
-    size_t operator()(const Entity& entity) const
-    {
-        size_t seed = std::hash<uint32_t>{}(entity.index);
-        seed ^= std::hash<uint32_t>{}(entity.generation) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-        return seed;
-    }
-};
-
 } // namespace omega
 
 #endif // OMEGA_ENTITY_HPP

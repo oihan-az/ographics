@@ -2,6 +2,8 @@
 #define OMEGA_ENTITY_DATA_CACHE_HPP
 
 #include <omega/core/entity/entity.hpp>
+#include <omega/core/entity/entity_indexer.hpp>
+#include <omega/core/container/sparse_set.hpp>
 
 #include <unordered_map>
 
@@ -31,7 +33,7 @@ class EntityDataCache
         bool dirty = true;
     };
 
-    std::unordered_map<Entity, CacheEntry, EntityHash> m_entries;
+    SparseSetContainer<CacheEntry, Entity> m_set;
 };
 
 } // namespace omega

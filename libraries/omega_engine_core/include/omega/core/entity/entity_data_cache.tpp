@@ -7,56 +7,64 @@ namespace omega
 template <typename T>
 bool EntityDataCache<T>::contains(Entity entity) const
 {
-    return m_entries.contains(entity);
+    return m_set.contains(entity);
 }
 
 template <typename T>
 bool EntityDataCache<T>::is_dirty(Entity entity) const
 {
-    auto it = m_entries.find(entity);
-    return it == m_entries.end() || it->second.dirty;
+    if (const auto* entry = m_set.get(entity))
+        return entry->dirty;
+    return true;
 }
 
 template <typename T>
 T* EntityDataCache<T>::get(Entity entity)
 {
-    auto it = m_entries.find(entity);
-    return it != m_entries.end() ? &it->second.data : nullptr;
+    if (auto* entry = m_set.get(entity))
+        return &entry->data;
+    return nullptr;
 }
 
 template <typename T>
 const T* EntityDataCache<T>::get(Entity entity) const
 {
-    auto it = m_entries.find(entity);
-    return it != m_entries.end() ? &it->second.data : nullptr;
+    if (auto* entry = m_set.get(entity))
+        return &entry->data;
+    return nullptr;
 }
 
 template <typename T>
 void EntityDataCache<T>::set(Entity entity, T data)
 {
-    auto& entry = m_entries[entity];
-    entry.data = std::move(data);
-    entry.dirty = false;
+    if (auto* entry = m_set.get(entity))
+    {
+        entry->data = std::move(data);
+        entry->dirty = false;
+    }
+    else
+    {
+        m_set.insert(entity, CacheEntry{std::move(data), false});
+    }
 }
 
 template <typename T>
 void EntityDataCache<T>::invalidate(Entity entity)
 {
-    auto it = m_entries.find(entity);
-    if (it != m_entries.end())
-        it->second.dirty = true;
+    if (auto* entry = m_set.get(entity))
+        entry->dirty = true;
 }
 
 template <typename T>
 void EntityDataCache<T>::erase(Entity entity)
 {
-    m_entries.erase(entity);
+    m_set.erase(entity);
 }
 
 template <typename T>
 void EntityDataCache<T>::clear()
 {
-    m_entries.clear();
+    m_set.clear();
 }
 
 } // namespace omega

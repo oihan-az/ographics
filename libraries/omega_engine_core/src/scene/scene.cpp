@@ -82,20 +82,37 @@ void Scene::flush_commands()
             clear_parent(command.entity);
 
             // Reparent its children to the preserved parent
-            auto children_it = m_children.find(command.entity);
-            if (children_it != m_children.end())
+            if (auto* children_ptr = m_children.get(command.entity))
             {
-                // Move the children out before modifying the hierarchy map
-                std::vector<Entity> children = std::move(children_it->second);
-                m_children.erase(children_it);
+                // Move the children out to a local vector before erasing
+                std::vector<Entity> children = std::move(*children_ptr);
+                m_children.erase(command.entity);
 
                 for (Entity child : children)
                 {
                     // Reparent children to the destroyed entity's parent
                     if (parent.is_valid())
                     {
-                        m_parents[child] = parent;
-                        m_children[parent].push_back(child);
+                        if (m_parents.contains(child))
+                        {
+                            *m_parents.get(child) = parent;
+                        }
+                        else
+                        {
+                            m_parents.insert(child, parent);
+                        }
+
+                        // Append the child to the preserved parent
+                        if (auto* parent_siblings = m_children.get(parent))
+                        {
+                            parent_siblings->push_back(child);
+                        }
+                        else
+                        {
+                            std::vector<Entity> new_children;
+                            new_children.push_back(child);
+                            m_children.insert(parent, std::move(new_children));
+                        }
                     }
                     else
                     {
@@ -184,7 +201,7 @@ bool Scene::set_parent(Entity child, Entity parent)
     Entity ancestor = parent;
     while (m_parents.contains(ancestor))
     {
-        ancestor = m_parents.at(ancestor);
+        ancestor = *m_parents.get(ancestor);
 
         if (ancestor == child)
             return false;
@@ -194,18 +211,40 @@ bool Scene::set_parent(Entity child, Entity parent)
     }
 
     // Remove the child from its previous parent's child list
-    auto previous_parent = m_parents.find(child);
-    if (previous_parent != m_parents.end())
+    if (m_parents.contains(child))
     {
-        auto& siblings = m_children[previous_parent->second];
-        std::erase(siblings, child);
-        if (siblings.empty())
-            m_children.erase(previous_parent->second);
+        Entity previous_parent = *m_parents.get(child);
+        if (auto* siblings = m_children.get(previous_parent))
+        {
+            std::erase(*siblings, child);
+            if (siblings->empty())
+            {
+                m_children.erase(previous_parent);
+            }
+        }
     }
 
-    // Assign the new parent and update its child list
-    m_parents[child] = parent;
-    m_children[parent].push_back(child);
+    // Assign the new parent
+    if (m_parents.contains(child))
+    {
+        *m_parents.get(child) = parent;
+    }
+    else
+    {
+        m_parents.insert(child, parent);
+    }
+
+    // Update the child list of the new parent
+    if (auto* siblings = m_children.get(parent))
+    {
+        siblings->push_back(child);
+    }
+    else
+    {
+        std::vector<Entity> new_children;
+        new_children.push_back(child);
+        m_children.insert(parent, std::move(new_children));
+    }
 
     // Notify listeners that the hierarchy changed
     if (m_events)
@@ -221,22 +260,24 @@ bool Scene::clear_parent(Entity child)
         return false;
 
     // Nothing to clear if the entity is already a root
-    auto parent = m_parents.find(child);
-    if (parent == m_parents.end())
+    if (!m_parents.contains(child))
         return true;
 
-    // Remove the child from its parent's child list
-    auto children = m_children.find(parent->second);
-    if (children != m_children.end())
-    {
-        std::erase(children->second, child);
+    Entity parent = *m_parents.get(child);
 
-        if (children->second.empty())
-            m_children.erase(children);
+    // Remove the child from its parent's child list
+    if (auto* siblings = m_children.get(parent))
+    {
+        std::erase(*siblings, child);
+
+        if (siblings->empty())
+        {
+            m_children.erase(parent);
+        }
     }
 
     // Remove the parent relationship
-    m_parents.erase(parent);
+    m_parents.erase(child);
 
     // Notify listeners that the hierarchy changed
     if (m_events)
@@ -253,11 +294,11 @@ bool Scene::has_parent(Entity entity) const
 Entity Scene::get_parent(Entity entity) const
 {
     // Return an invalid entity when there is no parent
-    auto it = m_parents.find(entity);
-    if (it == m_parents.end())
+    const auto* parent = m_parents.get(entity);
+    if (!parent)
         return Entity::invalid();
 
-    return it->second;
+    return *parent;
 }
 
 const std::vector<Entity>& Scene::get_children(Entity entity) const
@@ -265,11 +306,11 @@ const std::vector<Entity>& Scene::get_children(Entity entity) const
     // Return an empty list when the entity has no children
     static const std::vector<Entity> empty;
 
-    auto it = m_children.find(entity);
-    if (it == m_children.end())
+    const auto* siblings = m_children.get(entity);
+    if (!siblings)
         return empty;
 
-    return it->second;
+    return *siblings;
 }
 
 } // namespace omega

@@ -2,11 +2,13 @@
 #define OMEGA_SCENE_HPP
 
 #include <omega/core/entity/entity.hpp>
+#include <omega/core/entity/entity_indexer.hpp>
 #include <omega/core/entity/entity_slot.hpp>
 #include <omega/core/entity/entity_iterator.hpp>
 #include <omega/core/entity/entity_commad.hpp>
 #include <omega/core/component/component_manager.hpp>
 #include <omega/core/event/event_system.hpp>
+#include <omega/core/container/sparse_set.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -65,8 +67,8 @@ class Scene
 
     std::vector<EntityCommand> m_pending_commands;
 
-    std::unordered_map<Entity, Entity, EntityHash> m_parents;
-    std::unordered_map<Entity, std::vector<Entity>, EntityHash> m_children;
+    SparseSetContainer<Entity, Entity> m_parents;
+    SparseSetContainer<std::vector<Entity>, Entity> m_children;
 
     friend class EntityIterator;
 
