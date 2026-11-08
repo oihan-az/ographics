@@ -39,10 +39,13 @@ target_sources(
         "src/math/matrix_transform.cpp"
         "src/math/matrix_projection.cpp"
         "src/math/matrix4.cpp"
+
         "src/entity/entity_iterator.cpp"
+        "src/entity/entity_system.cpp"
+
         "src/event/event_system.cpp"
+
         "src/component/component_manager.cpp"
-        "src/scene/scene.cpp"
 )
 
 find_package(glm CONFIG REQUIRED)

@@ -16,10 +16,8 @@ target_sources(
     omega_engine
     PRIVATE
         src/transform/matrix_transform.cpp
-        src/transform/transform_system.cpp
 
         src/camera/matrix_camera.cpp
-        src/camera/camera_system.cpp
 
  )
 

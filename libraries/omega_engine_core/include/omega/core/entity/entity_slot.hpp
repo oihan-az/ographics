@@ -9,8 +9,10 @@ namespace omega
 enum class EntityState
 {
     Free,
-    PendingCreation,
     Alive,
+    PendingCreation,
+    PendingDestruction,
+    PendingCreationDestruction,
     Retired
 };
 
