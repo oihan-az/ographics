@@ -6,7 +6,13 @@
 namespace omega
 {
 
-struct HierarchyEvent
+struct HierarchyParentChangedEvent
+{
+    Entity child;
+    Entity parent;
+};
+
+struct HierarchyModifiedEvent
 {
     Entity entity;
 };
