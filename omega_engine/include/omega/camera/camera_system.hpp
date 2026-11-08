@@ -2,9 +2,8 @@
 #define OMEGA_CAMERA_SYSTEM_HPP
 
 #include <omega/core/container/dense_indexed_cache.hpp>
-#include <omega/core/event/event_system.hpp>
-#include <omega/core/component/component_event.hpp>
-#include <omega/core/scene/scene.hpp>
+#include <omega/core/entity/entity.hpp>
+#include <omega/core/math/matrix4.hpp>
 
 #include <omega/camera/camera.hpp>
 #include <omega/transform/transform_system.hpp>
@@ -12,6 +11,12 @@
 
 namespace omega
 {
+
+class EventSystem;
+class ComponentSystem;
+class HierarchySystem;
+class EntitySystem;
+class TransformSystem;
 
 struct CameraData
 {
@@ -23,7 +28,9 @@ struct CameraData
 class CameraSystem
 {
   public:
-    explicit CameraSystem(Scene& scene, EventSystem& events, TransformSystem& transforms);
+    explicit CameraSystem(EventSystem& events, ComponentSystem& components, 
+                          HierarchySystem& hierarchy, EntitySystem& entities,
+                          TransformSystem& transforms);
 
     void update();
 
@@ -36,8 +43,10 @@ class CameraSystem
     DenseIndexedCache<CameraData> m_perspective_cache;
     DenseIndexedCache<CameraData> m_orthogonal_cache;
 
-    Scene& m_scene;
     TransformSystem& m_transforms;
+    ComponentSystem& m_components;
+    HierarchySystem& m_hierarchy;
+    EntitySystem& m_entitites;
     EventSystem& m_events;
 };
 

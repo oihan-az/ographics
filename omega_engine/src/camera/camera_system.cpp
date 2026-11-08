@@ -1,17 +1,26 @@
 #include <omega/camera/camera_system.hpp>
 #include <omega/camera/matrix_camera.hpp>
 
+#include <omega/core/event/event_system.hpp>
+#include <omega/core/component/component_event.hpp>
+#include <omega/core/component/component_system.hpp>
+#include <omega/core/hierarchy/hierarchy_event.hpp>
+#include <omega/core/hierarchy/hierarchy_system.hpp>
+
 namespace omega
 {
 
-CameraSystem::CameraSystem(Scene& scene, EventSystem& events, TransformSystem& transforms)
-    : m_scene(scene), m_events(events), m_transforms(transforms)
-{}
+CameraSystem::CameraSystem(EventSystem& events, ComponentSystem& components, 
+                           HierarchySystem& hierarchy, EntitySystem& entities,
+                           TransformSystem& transforms)
+    : m_events(events), m_components(components), m_hierarchy(hierarchy), m_entitites(entities), m_transforms(transforms)
+{
+}
 
 void CameraSystem::update() 
 {
-    auto& perspective_storage = m_scene.component_manager().get_storage<PerspectiveCamera>();
-    auto& orthogonal_storage = m_scene.component_manager().get_storage<OrthogonalCamera>();
+    auto& perspective_storage = m_components.get_storage<PerspectiveCamera>();
+    auto& orthogonal_storage = m_components.get_storage<OrthogonalCamera>();
 
     // Process added
     const auto& perspective_added = m_events.get_queue<ComponentAddedEvent<PerspectiveCamera>>().get_events();
@@ -84,18 +93,18 @@ CameraData CameraSystem::get_camera_data(Entity entity)
 {
 
     // Return default data for entities that are no longer alive
-    if (!m_scene.is_alive(entity))
+    if (!m_entitites.is_alive(entity))
         return CameraData{};
 
-    const PerspectiveCamera* perspective_camera = m_scene.get<PerspectiveCamera>(entity);
-    const OrthogonalCamera* orthogonal_camera = m_scene.get<OrthogonalCamera>(entity);
+    const PerspectiveCamera* perspective_camera = m_components.get<PerspectiveCamera>(entity);
+    const OrthogonalCamera* orthogonal_camera = m_components.get<OrthogonalCamera>(entity);
 
     // A camera entity must have exactly one camera component
     if ((perspective_camera == nullptr) == (orthogonal_camera == nullptr))
         return CameraData{};
 
-    auto& perspective_storage = m_scene.component_manager().get_storage<PerspectiveCamera>();
-    auto& orthogonal_storage = m_scene.component_manager().get_storage<OrthogonalCamera>();
+    auto& perspective_storage = m_components.get_storage<PerspectiveCamera>();
+    auto& orthogonal_storage = m_components.get_storage<OrthogonalCamera>();
 
     // Reuse cached data when it is still valid
     uint32_t dense_idx = 0;
@@ -141,14 +150,14 @@ CameraData CameraSystem::get_camera_data(Entity entity)
 
 void CameraSystem::invalidate(Entity entity)
 {
-    if (m_scene.has<PerspectiveCamera>(entity))
+    if (m_components.has<PerspectiveCamera>(entity))
     {
-        auto& storage = m_scene.component_manager().get_storage<PerspectiveCamera>();
+        auto& storage = m_components.get_storage<PerspectiveCamera>();
         m_perspective_cache.invalidate(storage.get_index(entity));
     }
-    else if (m_scene.has<OrthogonalCamera>(entity))
+    else if (m_components.has<OrthogonalCamera>(entity))
     {
-        auto& storage = m_scene.component_manager().get_storage<OrthogonalCamera>();
+        auto& storage = m_components.get_storage<OrthogonalCamera>();
         m_orthogonal_cache.invalidate(storage.get_index(entity));
     }
 }

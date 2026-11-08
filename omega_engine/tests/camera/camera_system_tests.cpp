@@ -4,11 +4,11 @@
 #include <omega/camera/matrix_camera.hpp>
 #include <omega/camera/camera_system.hpp>
 
-#include <omega/core/math/matrix4.hpp>
-#include <omega/core/math/matrix_projection.hpp>
-
 #include <omega/core/event/event_system.hpp>
-#include <omega/core/scene/scene.hpp>
+#include <omega/core/math/matrix_projection.hpp>
+#include <omega/core/entity/entity_system.hpp>
+#include <omega/core/component/component_system.hpp>
+#include <omega/core/hierarchy/hierarchy_system.hpp>
 
 #include <omega/transform/transform.hpp>
 #include <omega/transform/transform_system.hpp>
@@ -39,14 +39,17 @@ class CameraSystemTests : public testing::Test
 {
   protected:
     omega::EventSystem events;
-    omega::Scene scene{events};
-    omega::TransformSystem transforms{scene, events};
-    omega::CameraSystem cameras{scene, events, transforms};
+    omega::EntitySystem entities{events};
+    omega::ComponentSystem components{events, entities};
+    omega::HierarchySystem hierarchy{events, entities};
+    omega::TransformSystem transforms{events, components, hierarchy, entities};
+    omega::CameraSystem cameras{events, components, hierarchy, entities, transforms};
 
     omega::Entity create_entity()
     {
-        omega::Entity entity = scene.create_entity();
-        scene.flush_commands();
+        omega::Entity entity = entities.create_entity();
+        events.swap_all_buffers();
+        entities.update();
         return entity;
     }
 
@@ -54,6 +57,8 @@ class CameraSystemTests : public testing::Test
     void dispatch_events()
     {
         events.swap_all_buffers();
+        components.update();
+        hierarchy.update();
         transforms.update();
         cameras.update();
     }
@@ -91,7 +96,7 @@ TEST_F(CameraSystemTests, PerspectiveCameraCalculatesProjection)
     camera.proj.near_plane = 0.5f;
     camera.proj.far_plane = 500.0f;
 
-    ASSERT_TRUE(scene.add(entity, camera));
+    ASSERT_TRUE(components.add(entity, camera));
     dispatch_events();
 
     omega::CameraData data = cameras.get_camera_data(entity);
@@ -111,7 +116,7 @@ TEST_F(CameraSystemTests, OrthogonalCameraCalculatesProjection)
     camera.proj.near_plane = 0.5f;
     camera.proj.far_plane = 200.0f;
 
-    ASSERT_TRUE(scene.add(entity, camera));
+    ASSERT_TRUE(components.add(entity, camera));
     dispatch_events();
 
     omega::CameraData data = cameras.get_camera_data(entity);
@@ -123,7 +128,7 @@ TEST_F(CameraSystemTests, ViewMatrixIsIdentityWithoutTransform)
 {
     omega::Entity entity = create_entity();
 
-    ASSERT_TRUE(scene.add(entity, omega::PerspectiveCamera{}));
+    ASSERT_TRUE(components.add(entity, omega::PerspectiveCamera{}));
     dispatch_events();
 
     omega::CameraData data = cameras.get_camera_data(entity);
@@ -138,8 +143,8 @@ TEST_F(CameraSystemTests, ViewMatrixIsInverseOfWorldTransform)
     omega::Transform transform;
     transform.position = omega::Vector3(5.0f, 3.0f, -8.0f);
 
-    ASSERT_TRUE(scene.add(entity, transform));
-    ASSERT_TRUE(scene.add(entity, omega::PerspectiveCamera{}));
+    ASSERT_TRUE(components.add(entity, transform));
+    ASSERT_TRUE(components.add(entity, omega::PerspectiveCamera{}));
     dispatch_events();
 
     omega::CameraData data = cameras.get_camera_data(entity);
@@ -158,8 +163,8 @@ TEST_F(CameraSystemTests, ViewProjectionIsProjectionTimesView)
 
     omega::PerspectiveCamera camera;
 
-    ASSERT_TRUE(scene.add(entity, transform));
-    ASSERT_TRUE(scene.add(entity, camera));
+    ASSERT_TRUE(components.add(entity, transform));
+    ASSERT_TRUE(components.add(entity, camera));
     dispatch_events();
 
     omega::CameraData data = cameras.get_camera_data(entity);
@@ -175,9 +180,9 @@ TEST_F(CameraSystemTests, CameraUsesParentWorldTransform)
     omega::Transform parent_transform;
     parent_transform.position = omega::Vector3(10.0f, 0.0f, 0.0f);
 
-    ASSERT_TRUE(scene.add(parent, parent_transform));
-    ASSERT_TRUE(scene.add(camera_entity, omega::PerspectiveCamera{}));
-    ASSERT_TRUE(scene.set_parent(camera_entity, parent));
+    ASSERT_TRUE(components.add(parent, parent_transform));
+    ASSERT_TRUE(components.add(camera_entity, omega::PerspectiveCamera{}));
+    ASSERT_TRUE(hierarchy.set_parent(camera_entity, parent));
 
     dispatch_events();
 
@@ -196,20 +201,20 @@ TEST_F(CameraSystemTests, ParentTransformChangeInvalidatesCameraCache)
     omega::Transform parent_transform;
     parent_transform.position = omega::Vector3(5.0f, 0.0f, 0.0f);
 
-    ASSERT_TRUE(scene.add(parent, parent_transform));
-    ASSERT_TRUE(scene.add(camera_entity, omega::PerspectiveCamera{}));
-    ASSERT_TRUE(scene.set_parent(camera_entity, parent));
+    ASSERT_TRUE(components.add(parent, parent_transform));
+    ASSERT_TRUE(components.add(camera_entity, omega::PerspectiveCamera{}));
+    ASSERT_TRUE(hierarchy.set_parent(camera_entity, parent));
 
     dispatch_events();
 
     omega::CameraData first_data = cameras.get_camera_data(camera_entity);
 
-    omega::Transform* stored_transform = scene.get<omega::Transform>(parent);
+    omega::Transform* stored_transform = components.get<omega::Transform>(parent);
     ASSERT_NE(stored_transform, nullptr);
 
     stored_transform->position.x = 15.0f;
 
-    ASSERT_TRUE(scene.mark_dirty<omega::Transform>(parent));
+    ASSERT_TRUE(components.mark_dirty<omega::Transform>(parent));
     dispatch_events();
 
     omega::CameraData second_data = cameras.get_camera_data(camera_entity);
@@ -227,18 +232,18 @@ TEST_F(CameraSystemTests, CameraTransformChangeInvalidatesCache)
 
     omega::Transform transform;
 
-    ASSERT_TRUE(scene.add(entity, transform));
-    ASSERT_TRUE(scene.add(entity, omega::PerspectiveCamera{}));
+    ASSERT_TRUE(components.add(entity, transform));
+    ASSERT_TRUE(components.add(entity, omega::PerspectiveCamera{}));
     dispatch_events();
 
     omega::CameraData first_data = cameras.get_camera_data(entity);
 
-    omega::Transform* stored_transform = scene.get<omega::Transform>(entity);
+    omega::Transform* stored_transform = components.get<omega::Transform>(entity);
     ASSERT_NE(stored_transform, nullptr);
 
     stored_transform->position.x = 10.0f;
 
-    ASSERT_TRUE(scene.mark_dirty<omega::Transform>(entity));
+    ASSERT_TRUE(components.mark_dirty<omega::Transform>(entity));
     dispatch_events();
 
     omega::CameraData second_data = cameras.get_camera_data(entity);
@@ -250,18 +255,18 @@ TEST_F(CameraSystemTests, CameraProjectionChangeInvalidatesCache)
 {
     omega::Entity entity = create_entity();
 
-    ASSERT_TRUE(scene.add(entity, omega::PerspectiveCamera{}));
+    ASSERT_TRUE(components.add(entity, omega::PerspectiveCamera{}));
     dispatch_events();
 
     omega::CameraData first_data = cameras.get_camera_data(entity);
 
-    omega::PerspectiveCamera* camera = scene.get<omega::PerspectiveCamera>(entity);
+    omega::PerspectiveCamera* camera = components.get<omega::PerspectiveCamera>(entity);
 
     ASSERT_NE(camera, nullptr);
 
     camera->proj.field_of_view = omega::radians(90.0f);
 
-    ASSERT_TRUE(scene.mark_dirty<omega::PerspectiveCamera>(entity));
+    ASSERT_TRUE(components.mark_dirty<omega::PerspectiveCamera>(entity));
     dispatch_events();
 
     omega::CameraData second_data = cameras.get_camera_data(entity);
@@ -273,14 +278,14 @@ TEST_F(CameraSystemTests, CameraRemovalInvalidatesCachedData)
 {
     omega::Entity entity = create_entity();
 
-    ASSERT_TRUE(scene.add(entity, omega::PerspectiveCamera{}));
+    ASSERT_TRUE(components.add(entity, omega::PerspectiveCamera{}));
     dispatch_events();
 
     omega::CameraData first_data = cameras.get_camera_data(entity);
 
     EXPECT_FALSE(matrix_near(first_data.projection, omega::Matrix4(1.0f)));
 
-    ASSERT_TRUE(scene.remove<omega::PerspectiveCamera>(entity));
+    ASSERT_TRUE(components.remove<omega::PerspectiveCamera>(entity));
     dispatch_events();
 
     omega::CameraData second_data = cameras.get_camera_data(entity);
@@ -302,16 +307,16 @@ TEST_F(CameraSystemTests, ReparentingInvalidatesCameraCache)
     omega::Transform transform_b;
     transform_b.position = omega::Vector3(20.0f, 0.0f, 0.0f);
 
-    ASSERT_TRUE(scene.add(parent_a, transform_a));
-    ASSERT_TRUE(scene.add(parent_b, transform_b));
-    ASSERT_TRUE(scene.add(camera_entity, omega::PerspectiveCamera{}));
+    ASSERT_TRUE(components.add(parent_a, transform_a));
+    ASSERT_TRUE(components.add(parent_b, transform_b));
+    ASSERT_TRUE(components.add(camera_entity, omega::PerspectiveCamera{}));
 
-    ASSERT_TRUE(scene.set_parent(camera_entity, parent_a));
+    ASSERT_TRUE(hierarchy.set_parent(camera_entity, parent_a));
     dispatch_events();
 
     omega::CameraData first_data = cameras.get_camera_data(camera_entity);
 
-    ASSERT_TRUE(scene.set_parent(camera_entity, parent_b));
+    ASSERT_TRUE(hierarchy.set_parent(camera_entity, parent_b));
 
     // Process the structural hierarchy change event through the data-driven systems
     dispatch_events();
@@ -327,15 +332,15 @@ TEST_F(CameraSystemTests, DestroyingCameraEntityReturnsIdentityData)
 {
     omega::Entity entity = create_entity();
 
-    ASSERT_TRUE(scene.add(entity, omega::PerspectiveCamera{}));
+    ASSERT_TRUE(components.add(entity, omega::PerspectiveCamera{}));
     dispatch_events();
 
     omega::CameraData first_data = cameras.get_camera_data(entity);
 
     EXPECT_FALSE(matrix_near(first_data.projection, omega::Matrix4(1.0f)));
 
-    scene.destroy_entity(entity);
-    scene.flush_commands();
+    entities.destroy_entity(entity);
+    entities.update();
 
     // Batch process entity destruction and component removal events across all pipelines
     dispatch_events();

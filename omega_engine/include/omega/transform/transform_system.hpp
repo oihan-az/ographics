@@ -2,10 +2,7 @@
 #define OMEGA_TRANSFORM_SYSTEM_HPP
 
 #include <omega/core/container/dense_indexed_cache.hpp>
-#include <omega/core/event/event_system.hpp>
-#include <omega/core/component/component_event.hpp>
-#include <omega/core/scene/scene.hpp>
-#include <omega/core/scene/hierarchy_event.hpp>
+#include <omega/core/entity/entity.hpp>
 #include <omega/core/math/matrix4.hpp>
 
 #include <omega/transform/transform.hpp>
@@ -13,10 +10,15 @@
 namespace omega
 {
 
+class EventSystem;
+class ComponentSystem;
+class HierarchySystem;
+class EntitySystem;
+
 class TransformSystem
 {
   public:
-    explicit TransformSystem(Scene& scene, EventSystem& events);
+    TransformSystem(EventSystem& events, ComponentSystem& components, HierarchySystem& hierarchy, EntitySystem& entities);
 
     void update();
 
@@ -28,7 +30,9 @@ class TransformSystem
   private:
     DenseIndexedCache<Matrix4> m_cache;
 
-    Scene& m_scene;
+    ComponentSystem& m_components;
+    HierarchySystem& m_hierarchy;
+    EntitySystem& m_entitites;
     EventSystem& m_events;
 };
 

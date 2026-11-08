@@ -2,7 +2,9 @@
 
 #include <omega/core/event/event_system.hpp>
 #include <omega/core/math/matrix4.hpp>
-#include <omega/core/scene/scene.hpp>
+#include <omega/core/entity/entity_system.hpp>
+#include <omega/core/component/component_system.hpp>
+#include <omega/core/hierarchy/hierarchy_system.hpp>
 #include <omega/transform/transform.hpp>
 #include <omega/transform/matrix_transform.hpp>
 #include <omega/transform/transform_system.hpp>
@@ -28,17 +30,20 @@ void ExpectMatrixNear(const omega::Matrix4& actual, const omega::Matrix4& expect
 TEST(TransformSystemTests, RootWorldMatrixEqualsLocalMatrix)
 {
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto entity = scene.create_entity();
-    scene.flush_commands();
+    auto entity = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
     omega::Transform transform;
     transform.position = omega::Vector3(1.0f, 2.0f, 3.0f);
 
-    ASSERT_TRUE(scene.add(entity, transform));
+    ASSERT_TRUE(components.add(entity, transform));
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
 
     // Swap the data-driven double buffers and update the transform processing pipeline
     events.swap_all_buffers();
@@ -51,11 +56,14 @@ TEST(TransformSystemTests, RootWorldMatrixEqualsLocalMatrix)
 TEST(TransformSystemTests, ChildWorldMatrixIncludesParentTransform)
 {
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto parent = scene.create_entity();
-    auto child = scene.create_entity();
-    scene.flush_commands();
+    auto parent = entities.create_entity();
+    auto child = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
     omega::Transform parent_transform;
     parent_transform.position = omega::Vector3(10.0f, 0.0f, 0.0f);
@@ -63,14 +71,15 @@ TEST(TransformSystemTests, ChildWorldMatrixIncludesParentTransform)
     omega::Transform child_transform;
     child_transform.position = omega::Vector3(0.0f, 5.0f, 0.0f);
 
-    ASSERT_TRUE(scene.add(parent, parent_transform));
-    ASSERT_TRUE(scene.add(child, child_transform));
-    ASSERT_TRUE(scene.set_parent(child, parent));
+    ASSERT_TRUE(components.add(parent, parent_transform));
+    ASSERT_TRUE(components.add(child, child_transform));
+    ASSERT_TRUE(hierarchy.set_parent(child, parent));
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
 
     // Discharging pending addition and structural hierarchy events sequentially
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     auto expected = mtx_transform(parent_transform) * mtx_transform(child_transform);
@@ -82,12 +91,15 @@ TEST(TransformSystemTests, ChildWorldMatrixIncludesParentTransform)
 TEST(TransformSystemTests, NestedChildWorldMatrixIncludesAllAncestors)
 {
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto grandparent = scene.create_entity();
-    auto parent = scene.create_entity();
-    auto child = scene.create_entity();
-    scene.flush_commands();
+    auto grandparent = entities.create_entity();
+    auto parent = entities.create_entity();
+    auto child = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
     omega::Transform grandparent_transform;
     grandparent_transform.position = omega::Vector3(10.0f, 0.0f, 0.0f);
@@ -98,17 +110,18 @@ TEST(TransformSystemTests, NestedChildWorldMatrixIncludesAllAncestors)
     omega::Transform child_transform;
     child_transform.position = omega::Vector3(0.0f, 0.0f, 3.0f);
 
-    ASSERT_TRUE(scene.add(grandparent, grandparent_transform));
-    ASSERT_TRUE(scene.add(parent, parent_transform));
-    ASSERT_TRUE(scene.add(child, child_transform));
+    ASSERT_TRUE(components.add(grandparent, grandparent_transform));
+    ASSERT_TRUE(components.add(parent, parent_transform));
+    ASSERT_TRUE(components.add(child, child_transform));
 
-    ASSERT_TRUE(scene.set_parent(parent, grandparent));
-    ASSERT_TRUE(scene.set_parent(child, parent));
+    ASSERT_TRUE(hierarchy.set_parent(parent, grandparent));
+    ASSERT_TRUE(hierarchy.set_parent(child, parent));
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
 
     // Ingest data state from previous frame pipeline
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     auto expected =
@@ -121,30 +134,34 @@ TEST(TransformSystemTests, NestedChildWorldMatrixIncludesAllAncestors)
 TEST(TransformSystemTests, ChangedTransformInvalidatesWorldMatrix)
 {
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto entity = scene.create_entity();
-    scene.flush_commands();
+    auto entity = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
     omega::Transform transform;
-    ASSERT_TRUE(scene.add(entity, transform));
+    ASSERT_TRUE(components.add(entity, transform));
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
 
     events.swap_all_buffers();
     transforms.update();
 
     auto initial = transforms.get_world_matrix(entity);
 
-    auto* stored_transform = scene.get<omega::Transform>(entity);
+    auto* stored_transform = components.get<omega::Transform>(entity);
     ASSERT_NE(stored_transform, nullptr);
 
     stored_transform->position = omega::Vector3(5.0f, 2.0f, 1.0f);
 
-    ASSERT_TRUE(scene.mark_dirty<omega::Transform>(entity));
+    ASSERT_TRUE(components.mark_dirty<omega::Transform>(entity));
 
     // Batch process modification and mutation events on demand
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     auto updated = transforms.get_world_matrix(entity);
@@ -157,37 +174,42 @@ TEST(TransformSystemTests, ChangedTransformInvalidatesWorldMatrix)
 TEST(TransformSystemTests, ChangedParentTransformInvalidatesChildren)
 {
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto parent = scene.create_entity();
-    auto child = scene.create_entity();
-    scene.flush_commands();
+    auto parent = entities.create_entity();
+    auto child = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
     omega::Transform parent_transform;
     omega::Transform child_transform;
 
     child_transform.position = omega::Vector3(0.0f, 5.0f, 0.0f);
 
-    ASSERT_TRUE(scene.add(parent, parent_transform));
-    ASSERT_TRUE(scene.add(child, child_transform));
-    ASSERT_TRUE(scene.set_parent(child, parent));
+    ASSERT_TRUE(components.add(parent, parent_transform));
+    ASSERT_TRUE(components.add(child, child_transform));
+    ASSERT_TRUE(hierarchy.set_parent(child, parent));
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
     
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     auto initial = transforms.get_world_matrix(child);
 
-    auto* stored_parent = scene.get<omega::Transform>(parent);
+    auto* stored_parent = components.get<omega::Transform>(parent);
     ASSERT_NE(stored_parent, nullptr);
 
     stored_parent->position = omega::Vector3(10.0f, 0.0f, 0.0f);
 
-    ASSERT_TRUE(scene.mark_dirty<omega::Transform>(parent));
+    ASSERT_TRUE(components.mark_dirty<omega::Transform>(parent));
     
     // Push the mutation event and process it linearly through the system
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     auto updated = transforms.get_world_matrix(child);
@@ -201,12 +223,15 @@ TEST(TransformSystemTests, ChangedParentTransformInvalidatesChildren)
 TEST(TransformSystemTests, ReparentingInvalidatesWorldMatrix)
 {
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto first_parent = scene.create_entity();
-    auto second_parent = scene.create_entity();
-    auto child = scene.create_entity();
-    scene.flush_commands();
+    auto first_parent = entities.create_entity();
+    auto second_parent = entities.create_entity();
+    auto child = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
     omega::Transform first_transform;
     first_transform.position = omega::Vector3(10.0f, 0.0f, 0.0f);
@@ -217,23 +242,25 @@ TEST(TransformSystemTests, ReparentingInvalidatesWorldMatrix)
     omega::Transform child_transform;
     child_transform.position = omega::Vector3(0.0f, 5.0f, 0.0f);
 
-    ASSERT_TRUE(scene.add(first_parent, first_transform));
-    ASSERT_TRUE(scene.add(second_parent, second_transform));
-    ASSERT_TRUE(scene.add(child, child_transform));
+    ASSERT_TRUE(components.add(first_parent, first_transform));
+    ASSERT_TRUE(components.add(second_parent, second_transform));
+    ASSERT_TRUE(components.add(child, child_transform));
 
-    ASSERT_TRUE(scene.set_parent(child, first_parent));
+    ASSERT_TRUE(hierarchy.set_parent(child, first_parent));
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
 
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     auto initial = transforms.get_world_matrix(child);
 
-    ASSERT_TRUE(scene.set_parent(child, second_parent));
+    ASSERT_TRUE(hierarchy.set_parent(child, second_parent));
 
     // Expose structural change events via the new framework dispatch paradigm
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     auto updated = transforms.get_world_matrix(child);
@@ -247,11 +274,14 @@ TEST(TransformSystemTests, ReparentingInvalidatesWorldMatrix)
 TEST(TransformSystemTests, ClearingParentInvalidatesWorldMatrix)
 {
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto parent = scene.create_entity();
-    auto child = scene.create_entity();
-    scene.flush_commands();
+    auto parent = entities.create_entity();
+    auto child = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
     omega::Transform parent_transform;
     parent_transform.position = omega::Vector3(10.0f, 0.0f, 0.0f);
@@ -259,21 +289,23 @@ TEST(TransformSystemTests, ClearingParentInvalidatesWorldMatrix)
     omega::Transform child_transform;
     child_transform.position = omega::Vector3(0.0f, 5.0f, 0.0f);
 
-    ASSERT_TRUE(scene.add(parent, parent_transform));
-    ASSERT_TRUE(scene.add(child, child_transform));
-    ASSERT_TRUE(scene.set_parent(child, parent));
+    ASSERT_TRUE(components.add(parent, parent_transform));
+    ASSERT_TRUE(components.add(child, child_transform));
+    ASSERT_TRUE(hierarchy.set_parent(child, parent));
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
 
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     transforms.get_world_matrix(child);
 
-    ASSERT_TRUE(scene.clear_parent(child));
+    ASSERT_TRUE(hierarchy.clear_parent(child));
 
     // Flush detaching structural events to execute cache invalidations
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     ExpectMatrixNear(transforms.get_world_matrix(child), mtx_transform(child_transform));
@@ -282,29 +314,33 @@ TEST(TransformSystemTests, ClearingParentInvalidatesWorldMatrix)
 // Checks that removing a Transform invalidates its cached matrix
 TEST(TransformSystemTests, RemovingTransformResetsWorldMatrix)
 {
-    omega::EventSystem allocations;
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto entity = scene.create_entity();
-    scene.flush_commands();
+    auto entity = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
     omega::Transform transform;
     transform.position = omega::Vector3(5.0f, 0.0f, 0.0f);
 
-    ASSERT_TRUE(scene.add(entity, transform));
+    ASSERT_TRUE(components.add(entity, transform));
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
 
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     transforms.get_world_matrix(entity);
 
-    ASSERT_TRUE(scene.remove<omega::Transform>(entity));
+    ASSERT_TRUE(components.remove<omega::Transform>(entity));
 
     // Purge cached transforms during systemic lifecycle removal batching
     events.swap_all_buffers();
+    hierarchy.update();
     transforms.update();
 
     ExpectMatrixNear(transforms.get_world_matrix(entity), omega::Matrix4(1.0f));
@@ -314,12 +350,15 @@ TEST(TransformSystemTests, RemovingTransformResetsWorldMatrix)
 TEST(TransformSystemTests, EntityWithoutTransformUsesIdentityMatrix)
 {
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto entity = scene.create_entity();
-    scene.flush_commands();
+    auto entity = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
 
     // Swap the data buffers and execute the frame synchronization pass
     events.swap_all_buffers();
@@ -332,11 +371,14 @@ TEST(TransformSystemTests, EntityWithoutTransformUsesIdentityMatrix)
 TEST(TransformSystemTests, DestroyingParentInvalidatesChildWorldMatrix)
 {
     omega::EventSystem events;
-    omega::Scene scene(events);
+    omega::EntitySystem entities(events);
+    omega::ComponentSystem components(events, entities);
+    omega::HierarchySystem hierarchy(events, entities);
 
-    auto parent = scene.create_entity();
-    auto child = scene.create_entity();
-    scene.flush_commands();
+    auto parent = entities.create_entity();
+    auto child = entities.create_entity();
+    events.swap_all_buffers();
+    entities.update();
 
     omega::Transform parent_transform;
     parent_transform.position = omega::Vector3(10.0f, 0.0f, 0.0f);
@@ -344,11 +386,11 @@ TEST(TransformSystemTests, DestroyingParentInvalidatesChildWorldMatrix)
     omega::Transform child_transform;
     child_transform.position = omega::Vector3(0.0f, 5.0f, 0.0f);
 
-    ASSERT_TRUE(scene.add(parent, parent_transform));
-    ASSERT_TRUE(scene.add(child, child_transform));
-    ASSERT_TRUE(scene.set_parent(child, parent));
+    ASSERT_TRUE(components.add(parent, parent_transform));
+    ASSERT_TRUE(components.add(child, child_transform));
+    ASSERT_TRUE(hierarchy.set_parent(child, parent));
 
-    omega::TransformSystem transforms(scene, events);
+    omega::TransformSystem transforms(events, components, hierarchy, entities);
 
     // Process the initial creation and hierarchy setups
     events.swap_all_buffers();
@@ -357,14 +399,14 @@ TEST(TransformSystemTests, DestroyingParentInvalidatesChildWorldMatrix)
     transforms.get_world_matrix(child);
 
     // Destroy the parent entity and flush structural command streams
-    scene.destroy_entity(parent);
-    scene.flush_commands();
+    entities.destroy_entity(parent);
+    entities.update();
 
     // Process component removal and hierarchy detachment events in batch
     events.swap_all_buffers();
     transforms.update();
 
-    EXPECT_TRUE(scene.is_alive(child));
+    EXPECT_TRUE(entities.is_alive(child));
 
     // The child should now fallback onto its standalone local matrix since the parent is gone
     ExpectMatrixNear(transforms.get_world_matrix(child), mtx_transform(child_transform));
