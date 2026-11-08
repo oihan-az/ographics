@@ -1,4 +1,3 @@
-
 #include <gtest/gtest.h>
 
 #include <omega/core/entity/entity_system.hpp>

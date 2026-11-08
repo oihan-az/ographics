@@ -47,7 +47,7 @@ target_sources(
 
         "src/hierarchy/hierarchy_system.cpp"
 
-        "src/component/component_manager.cpp"
+        "src/component/component_system.cpp"
 )
 
 find_package(glm CONFIG REQUIRED)

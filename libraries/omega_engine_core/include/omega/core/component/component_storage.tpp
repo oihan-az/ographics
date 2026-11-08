@@ -10,15 +10,18 @@ namespace omega
 {
 
 template<typename T>
+ComponentStorage<T>::ComponentStorage(EventSystem& events) : m_events(events) {}
+
+template<typename T>
 bool ComponentStorage<T>::add(Entity entity, T component)
 {
-    if (!entity.is_valid())
-        return false;
-
     if (m_set.contains_key(entity))
         return false;
 
     m_set.insert(entity, std::move(component));
+
+    m_events.publish(ComponentAddedEvent<T>{entity});
+
     return true;
 }
 
@@ -28,17 +31,21 @@ bool ComponentStorage<T>::remove(Entity entity)
     if (!m_set.contains(entity))
         return false;
 
-    m_set.erase(entity);
+    SparseSetSwapInfo<Entity> swap_info = m_set.erase(entity);
+
+    m_events.publish(ComponentRemovedEvent<T>{entity, swap_info});
+
     return true;
 }
 
-template<typename T>
-bool ComponentStorage<T>::remove(Entity entity, SparseSetSwapInfo<Entity>& swap_info)
+template <typename T> 
+bool ComponentStorage<T>::mark_dirty(Entity entity)
 {
     if (!m_set.contains(entity))
         return false;
 
-    swap_info = m_set.erase(entity);
+    m_events.publish(ComponentModifiedEvent<T>{entity});
+
     return true;
 }
 
@@ -47,12 +54,6 @@ bool ComponentStorage<T>::contains(Entity entity) const
 {
     return m_set.contains(entity);
 };
-
-template <typename T> 
-void ComponentStorage<T>::clear()
-{
-    m_set.clear();
-}
 
 template<typename T>
 uint32_t ComponentStorage<T>::get_index(Entity entity)
@@ -84,23 +85,16 @@ Entity ComponentStorage<T>::entity_at(uint32_t index) const
     return m_set.key_at(index);
 }
 
-template <typename T>
-void ComponentStorage<T>::publish_added(Entity entity, EventSystem& events)
+template <typename T> 
+std::vector<Entity> ComponentStorage<T>::entities() const
 {
-    events.publish(ComponentAddedEvent<T>{entity});
-}
+    std::vector<Entity> result;
+    result.reserve(m_set.size());
 
-template <typename T>
-void ComponentStorage<T>::publish_removed(Entity entity, const SparseSetSwapInfo<Entity>& swap_info, EventSystem& events)
-{
-    events.publish(ComponentRemovedEvent<T>{entity, swap_info});
-}
+    for (uint32_t i = 0; i < m_set.size(); ++i)
+        result.push_back(m_set.key_at(i));
 
-template <typename T>
-void ComponentStorage<T>::publish_changed(Entity entity, EventSystem& events)
-{
-
-    events.publish(ComponentModifiedEvent<T>{entity});
+    return result;
 }
 
 } // namespace omega
