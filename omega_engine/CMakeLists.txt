@@ -21,6 +21,12 @@ target_sources(
         src/camera/matrix_camera.cpp
         src/camera/camera_system.cpp
 
+        src/mesh/mesh_asset.cpp
+        src/mesh/vertex_layout_registry.cpp
+        src/mesh/mesh_page.cpp
+        src/mesh/mesh_layout_group.cpp
+        src/mesh/mesh_system.cpp
+
  )
 
 if(BUILD_TESTING)

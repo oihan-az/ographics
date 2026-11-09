@@ -48,6 +48,8 @@ target_sources(
         "src/hierarchy/hierarchy_system.cpp"
 
         "src/component/component_system.cpp"
+
+        "src/memory/range_allocator.cpp"
 )
 
 find_package(glm CONFIG REQUIRED)
