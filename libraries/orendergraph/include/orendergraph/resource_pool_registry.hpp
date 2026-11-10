@@ -35,6 +35,9 @@ class ResourcePoolRegistry
                                       const ogfx::Device& device, 
                                       typename ResourceTraits<T>::DescType& desc);
 
+    template <typename T>
+    bool release_resource(ResourceHandle<T> handle);
+
     template <typename T> 
     ResourceHandle<T> import_resource(T* resource);
 

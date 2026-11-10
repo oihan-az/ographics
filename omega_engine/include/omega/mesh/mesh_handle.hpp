@@ -1,6 +1,9 @@
 #ifndef OMEGA_MESH_HANDLE_HPP
 #define OMEGA_MESH_HANDLE_HPP
 
+#include <cstdint>
+#include <limits>
+
 namespace omega
 {
 

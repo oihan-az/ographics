@@ -1,11 +1,14 @@
 #include <omega/mesh/mesh_system.hpp>
+#include <omega/mesh/mesh_event.hpp>
+
+#include <omega/core/event/event_system.hpp>
 
 #include <utility>
 
 namespace omega
 {
 
-MeshSystem::MeshSystem(const MeshSystemDesc& desc) : m_desc(desc) {}
+MeshSystem::MeshSystem(EventSystem& events, const MeshSystemDesc& desc) : m_events(events), m_desc(desc) {}
 
 bool MeshSystem::create_mesh(const MeshAsset& asset, MeshHandle& out_handle)
 {
@@ -54,8 +57,19 @@ bool MeshSystem::create_mesh(const MeshAsset& asset, MeshHandle& out_handle)
         return false;
     }
 
-    // Copy the asset data into the page
-    if (!group.write(allocation, asset.vertex_data, asset.indices))
+    // Create non-owning views of the asset's streams
+    std::vector<std::span<const std::byte>> vertex_data;
+    vertex_data.reserve(asset.vertex_data.size());
+
+    for (const auto& stream : asset.vertex_data)
+    {
+        vertex_data.emplace_back(stream);
+    }
+
+    const std::span<const uint32_t> indices{asset.indices};
+
+    // Copy directly from the asset into the allocated page.
+    if (!group.write(allocation, vertex_data, indices))
     {
         group.release(allocation);
         return false;
@@ -83,6 +97,8 @@ bool MeshSystem::create_mesh(const MeshAsset& asset, MeshHandle& out_handle)
 
     ++m_mesh_count;
     out_handle = handle;
+
+    m_events.publish(MeshCreatedEvent{handle});
 
     return true;
 }
@@ -117,6 +133,8 @@ bool MeshSystem::release_mesh(MeshHandle handle)
 
     m_free_mesh_indices.push_back(handle.index);
     --m_mesh_count;
+
+    m_events.publish(MeshReleasedEvent{handle});
 
     return true;
 }
@@ -156,6 +174,24 @@ const MeshData* MeshSystem::get(MeshHandle handle) const
 uint32_t MeshSystem::mesh_count() const
 {
     return m_mesh_count;
+}
+
+uint32_t MeshSystem::layout_group_count() const
+{
+    return static_cast<uint32_t>(m_layout_groups.size());
+}
+
+const MeshLayoutGroup* MeshSystem::layout_group(VertexLayoutId layout) const
+{
+    if (!layout.is_valid() || layout.value >= m_layout_groups.size())
+        return nullptr;
+
+    return &m_layout_groups[layout.value];
+}
+
+const VertexLayout* MeshSystem::vertex_layout(VertexLayoutId layout) const
+{
+    return m_layout_registry.get(layout);
 }
 
 } // namespace omega

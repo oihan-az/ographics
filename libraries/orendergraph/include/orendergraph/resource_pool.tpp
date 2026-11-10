@@ -37,6 +37,27 @@ typename ResourceHandle<T> ResourcePool<T>::add_slot(T* resource, bool is_import
 }
 
 template <typename T>
+bool ResourcePool<T>::remove_slot(ResourceHandle<T> handle)
+{
+    if (!handle.is_valid() || handle.id >= m_slots.size())
+        return false;
+
+    auto& resource_slot = m_slots[handle.id];
+
+    if (resource_slot.physical_resource == nullptr)
+        return false;
+
+    if (!resource_slot.is_imported)
+        delete resource_slot.physical_resource;
+
+    resource_slot.physical_resource = nullptr;
+    resource_slot.is_imported = false;
+    resource_slot.current_state = {};
+
+    return true;
+}
+
+template <typename T>
 void ResourcePool<T>::replace_resource(typename ResourceHandle<T> handle, T* new_resource)
 {
     if (!handle.is_valid())

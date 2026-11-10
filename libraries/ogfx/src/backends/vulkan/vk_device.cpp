@@ -284,7 +284,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
 
     // Get the queues
     {
-        if (indices.transfer_family.has_value())
+        if (request_transfer && indices.transfer_family.has_value())
         {
             Queue& queue = this->queue(QueueType::Transfer);
             queue.m_impl->m_family_index = indices.transfer_family.value();
@@ -293,7 +293,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
             OGFX_LOG("Retrieved transfer queue (family " + std::to_string(indices.transfer_family.value()) + ")");
         }
 
-        if (indices.graphics_family.has_value())
+        if (request_graphics && indices.graphics_family.has_value())
         {
             Queue& queue = this->queue(QueueType::Graphics);
             queue.m_impl->m_family_index = indices.graphics_family.value();
@@ -302,7 +302,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
             OGFX_LOG("Retrieved graphics queue (family " + std::to_string(indices.graphics_family.value()) + ")");
         }
 
-        if (indices.compute_family.has_value())
+        if (request_compute && indices.compute_family.has_value())
         {
             Queue& queue = this->queue(QueueType::Compute);
             queue.m_impl->m_family_index = indices.compute_family.value();
@@ -311,7 +311,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
             OGFX_LOG("Retrieved compute queue (family " + std::to_string(indices.compute_family.value()) + ")");
         }
 
-        if (indices.present_family.has_value())
+        if (request_present && indices.present_family.has_value())
         {
             Queue& queue = this->queue(QueueType::Present);
             queue.m_impl->m_family_index = indices.present_family.value();

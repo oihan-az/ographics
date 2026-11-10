@@ -23,9 +23,16 @@ target_sources(
 
         src/mesh/mesh_asset.cpp
         src/mesh/vertex_layout_registry.cpp
-        src/mesh/mesh_page.cpp
+        src/mesh/mesh_page_base.cpp
+        src/mesh/mesh_page.cpp  
         src/mesh/mesh_layout_group.cpp
         src/mesh/mesh_system.cpp
+        src/mesh/gpu_mesh_page.cpp
+        src/mesh/gpu_mesh_layout_group.cpp
+        src/mesh/gpu_mesh_system.cpp
+
+        src/pipelines/geometry_pipeline/geometry_pipeline.cpp
+        src/pipelines/geometry_pipeline/features/geometry_feature.cpp
 
  )
 

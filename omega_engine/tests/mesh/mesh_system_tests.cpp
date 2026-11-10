@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <omega/mesh/mesh_system.hpp>
+#include <omega/core/event/event_system.hpp>
 
 namespace
 {
@@ -36,7 +37,8 @@ omega::MeshAsset make_mesh_asset(uint32_t vertex_count = 3)
 
 TEST(MeshSystemTests, CreatesMesh)
 {
-    omega::MeshSystem system;
+    omega::EventSystem events;
+    omega::MeshSystem system(events);
 
     omega::MeshHandle handle;
 
@@ -55,7 +57,8 @@ TEST(MeshSystemTests, CreatesMesh)
 
 TEST(MeshSystemTests, RejectsInvalidAsset)
 {
-    omega::MeshSystem system;
+    omega::EventSystem events;
+    omega::MeshSystem system(events);
 
     omega::MeshAsset asset;
 
@@ -67,7 +70,8 @@ TEST(MeshSystemTests, RejectsInvalidAsset)
 
 TEST(MeshSystemTests, CreatesMultipleMeshesWithSameLayout)
 {
-    omega::MeshSystem system;
+    omega::EventSystem events;
+    omega::MeshSystem system(events);
 
     omega::MeshHandle first;
     omega::MeshHandle second;
@@ -87,7 +91,8 @@ TEST(MeshSystemTests, CreatesMultipleMeshesWithSameLayout)
 
 TEST(MeshSystemTests, ReusesMeshSlotWithNewGeneration)
 {
-    omega::MeshSystem system;
+    omega::EventSystem events;
+    omega::MeshSystem system(events);
 
     omega::MeshHandle first;
     ASSERT_TRUE(system.create_mesh(make_mesh_asset(), first));
@@ -105,7 +110,8 @@ TEST(MeshSystemTests, ReusesMeshSlotWithNewGeneration)
 
 TEST(MeshSystemTests, RejectsDoubleRelease)
 {
-    omega::MeshSystem system;
+    omega::EventSystem events;
+    omega::MeshSystem system(events);
 
     omega::MeshHandle handle;
     ASSERT_TRUE(system.create_mesh(make_mesh_asset(), handle));
@@ -117,7 +123,8 @@ TEST(MeshSystemTests, RejectsDoubleRelease)
 
 TEST(MeshSystemTests, RejectsStaleHandle)
 {
-    omega::MeshSystem system;
+    omega::EventSystem events;
+    omega::MeshSystem system(events);
 
     omega::MeshHandle first;
     ASSERT_TRUE(system.create_mesh(make_mesh_asset(), first));
@@ -133,7 +140,8 @@ TEST(MeshSystemTests, RejectsStaleHandle)
 
 TEST(MeshSystemTests, SupportsNonIndexedMesh)
 {
-    omega::MeshSystem system;
+    omega::EventSystem events;
+    omega::MeshSystem system(events);
 
     omega::MeshAsset asset = make_mesh_asset();
     asset.indices.clear();
@@ -151,7 +159,8 @@ TEST(MeshSystemTests, SupportsNonIndexedMesh)
 
 TEST(MeshSystemTests, RejectsInvalidHandle)
 {
-    omega::MeshSystem system;
+    omega::EventSystem events;
+    omega::MeshSystem system(events);
 
     EXPECT_EQ(system.get({}), nullptr);
     EXPECT_FALSE(system.release_mesh({}));

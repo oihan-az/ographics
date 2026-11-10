@@ -52,6 +52,21 @@ ResourceHandle<T> ResourcePoolRegistry::create_resource(const ogfx::PhysicalDevi
 }
 
 template <typename T> 
+bool ResourcePoolRegistry::release_resource(ResourceHandle<T> handle)
+{
+    if (!handle.is_valid())
+        return false;
+
+    const auto type_idx = std::type_index(typeid(T));
+    auto it = m_pools.find(type_idx);
+    if (it == m_pools.end())
+        return false;
+
+    auto* pool = static_cast<ResourcePool<T>*>(it->second.get());
+    return pool->remove_slot(handle);
+}
+
+template <typename T> 
 ResourceHandle<T> ResourcePoolRegistry::import_resource(T* resource)
 {
     auto* pool = get_pool<T>();

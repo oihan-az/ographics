@@ -13,6 +13,7 @@ add_executable(omega_tests
     #"mesh/mesh_page_tests.cpp"
     #"mesh/mesh_layout_group_tests.cpp"
     "mesh/mesh_system_tests.cpp"
+    "mesh/gpu_mesh_system_tests.cpp"
     
 )
 
