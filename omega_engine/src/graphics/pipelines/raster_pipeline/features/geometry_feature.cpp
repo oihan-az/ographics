@@ -245,57 +245,36 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
                 // GPU mesh
                 if (!m_desc.gpu_meshes.is_resident(renderable->mesh))
-                    continue;
-
-                const MeshData* mesh = m_desc.gpu_meshes.get(renderable->mesh);
-                if (!mesh)
-                    continue;
-
-                // GPU layout group
-                const GpuMeshLayoutGroup* group = m_desc.gpu_meshes.layout_group(mesh->layout);
-                if (!group)
-                    continue;
-
-                // GPU page
-                const GpuMeshPage* page = group->page(mesh->allocation.page_index);
-                if (!page)
-                    continue;
-
-                // Vertex buffer
                 {
-                    // Binding 0
-                    const ogfx::Buffer* vertex_buffer = page->vertex_buffer(0);
-                    if (!vertex_buffer)
-                        continue;
+                    m_desc.gpu_meshes.make_resident(renderable->mesh);
+                    continue;
+                }
 
-                    const VertexLayout* layout = m_desc.gpu_meshes.vertex_layout(mesh->layout);
-                    if (!layout || layout->desc.bindings.empty())
-                        continue;
+                // Draw data
+                const GpuMeshDrawData draw_data = m_desc.gpu_meshes.get_draw_data(renderable->mesh);
+                if (!draw_data.is_valid())
+                    continue;
 
-                    const uint32_t vertex_stride = layout->desc.bindings[0].stride;
-                    const uint64_t vertex_offset = static_cast<uint64_t>(mesh->allocation.allocation.vertex_offsets[0]) * vertex_stride;
+                // Bind vertex buffers
+                for (const GpuMeshVertexBinding& binding : draw_data.vertex_bindings)
+                {
+                    ogfx::VertexBufferBindInfo bind_info{};
+                    bind_info.buffer = binding.buffer;
+                    bind_info.binding = binding.binding;
+                    bind_info.offset = binding.offset;
 
-                    ogfx::VertexBufferBindInfo vertex_bind_info{};
-                    vertex_bind_info.buffer = vertex_buffer;
-                    vertex_bind_info.binding = 0;
-                    vertex_bind_info.offset = vertex_offset;
-
-                    cmd.bind_vertex_buffer(vertex_bind_info);
+                    cmd.bind_vertex_buffer(bind_info);
                 }
 
                 // Index buffer
-                if (mesh->is_indexed())
+                if (draw_data.is_indexed())
                 {
-                    const ogfx::Buffer* index_buffer = page->index_buffer();
-                    if (!index_buffer)
-                        continue;
+                    ogfx::IndexBufferBindInfo bind_info{};
+                    bind_info.buffer = draw_data.index_buffer;
+                    bind_info.offset = draw_data.index_offset;
+                    bind_info.index_type = draw_data.index_type;
 
-                    ogfx::IndexBufferBindInfo index_bind_info{};
-                    index_bind_info.buffer = index_buffer;
-                    index_bind_info.offset = static_cast<uint64_t>(mesh->allocation.allocation.index_offset) * sizeof(uint32_t);
-                    index_bind_info.index_type = ogfx::IndexType::UInt32;
-
-                    cmd.bind_index_buffer(index_bind_info);
+                    cmd.bind_index_buffer(bind_info);
                 }
 
                 // Draw constants
@@ -314,10 +293,10 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 cmd.set_inline_constants(constants_info);
 
                 // Draw
-                if (mesh->is_indexed())
+                if (draw_data.is_indexed())
                 {
                     ogfx::DrawIndexedInfo draw_info{};
-                    draw_info.index_count = mesh->index_count;
+                    draw_info.index_count = draw_data.index_count;
                     draw_info.first_index = 0;
 
                     cmd.draw_indexed(draw_info);
@@ -325,7 +304,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 else
                 {
                     ogfx::DrawInfo draw_info{};
-                    draw_info.vertex_count = mesh->vertex_count;
+                    draw_info.vertex_count = draw_data.vertex_count;
                     draw_info.first_vertex = 0;
 
                     cmd.draw(draw_info);

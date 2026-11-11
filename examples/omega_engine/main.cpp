@@ -156,9 +156,6 @@ int main()
 
         if (!meshes.create_mesh(mesh_asset, triangle_mesh))
             return -1;
-
-        gpu_meshes.make_resident(triangle_mesh);
-        gpu_meshes.synchronize();
     }
 
     // Create scene
@@ -184,7 +181,7 @@ int main()
 
             omega::Renderable renderable;
             renderable.mesh = triangle_mesh;
-            renderable.color = {1.0f, 0.2f, 0.1f};
+            renderable.color = {1.0f, 1.0f, 0.1f};
             components.add(renderable_entity, renderable);
         }
     }

@@ -8,6 +8,8 @@
 #include <omega/mesh/vertex_layout_registry.hpp>
 #include <omega/mesh/mesh_system_desc.hpp>
 
+#include <ogfx/index_type.hpp>
+
 namespace ogfx
 {
 
@@ -28,6 +30,28 @@ namespace omega
 
 class MeshSystem;
 class EventSystem;
+
+struct GpuMeshVertexBinding
+{
+    const ogfx::Buffer* buffer = nullptr;
+    uint32_t binding = 0;
+    uint64_t offset = 0;
+};
+
+struct GpuMeshDrawData
+{
+    std::vector<GpuMeshVertexBinding> vertex_bindings;
+
+    const ogfx::Buffer* index_buffer = nullptr;
+    uint64_t index_offset = 0;
+    ogfx::IndexType index_type = ogfx::IndexType::UInt32;
+
+    uint32_t vertex_count = 0;
+    uint32_t index_count = 0;
+
+    bool is_indexed() const { return index_count > 0; }
+    bool is_valid() const { return !vertex_bindings.empty() && (!is_indexed() || index_buffer != nullptr); }
+};
 
 class GpuMeshSystem
 {
@@ -52,8 +76,7 @@ class GpuMeshSystem
     uint32_t resident_mesh_count() const;
     uint32_t layout_group_count() const;
 
-    const GpuMeshLayoutGroup* layout_group(VertexLayoutId layout) const;
-    const VertexLayout* vertex_layout(VertexLayoutId layout) const;
+    GpuMeshDrawData get_draw_data(MeshHandle mesh) const;
 
   private:
     struct MeshSlot
@@ -64,6 +87,9 @@ class GpuMeshSystem
         bool pending = false;
         MeshData data{};
     };
+
+    const GpuMeshLayoutGroup* layout_group(VertexLayoutId layout) const;
+    const VertexLayout* vertex_layout(VertexLayoutId layout) const;
 
     bool upload_mesh(MeshHandle handle);
     bool release_gpu_mesh(MeshHandle handle);

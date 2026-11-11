@@ -136,6 +136,66 @@ const VertexLayout* GpuMeshSystem::vertex_layout(VertexLayoutId layout) const
     return m_layout_registry.get(layout);
 }
 
+GpuMeshDrawData GpuMeshSystem::get_draw_data(MeshHandle handle) const
+{
+    GpuMeshDrawData result{};
+
+    if (!is_resident(handle))
+        return result;
+
+    const MeshData* mesh = get(handle);
+    if (!mesh)
+        return result;
+
+    const GpuMeshLayoutGroup* group = layout_group(mesh->layout);
+    if (!group)
+        return result;
+
+    const GpuMeshPage* page = group->page(mesh->allocation.page_index);
+    if (!page)
+        return result;
+
+    const VertexLayout* layout = vertex_layout(mesh->layout);
+    if (!layout)
+        return result;
+
+    const auto& layout_bindings = layout->desc.bindings;
+    const auto& vertex_offsets = mesh->allocation.allocation.vertex_offsets;
+
+    if (layout_bindings.size() != vertex_offsets.size())
+        return result;
+
+    result.vertex_bindings.reserve(layout_bindings.size());
+
+    for (uint32_t i = 0; i < layout_bindings.size(); ++i)
+    {
+        const ogfx::Buffer* buffer = page->vertex_buffer(i);
+        if (!buffer)
+            return {};
+
+        GpuMeshVertexBinding binding{};
+        binding.buffer = buffer;
+        binding.binding = layout_bindings[i].binding;
+        binding.offset = static_cast<uint64_t>(vertex_offsets[i]) * layout_bindings[i].stride;
+
+        result.vertex_bindings.push_back(binding);
+    }
+
+    result.vertex_count = mesh->vertex_count;
+    result.index_count = mesh->index_count;
+
+    if (mesh->is_indexed())
+    {
+        result.index_buffer = page->index_buffer();
+        if (!result.index_buffer)
+            return {};
+
+        result.index_offset = static_cast<uint64_t>(mesh->allocation.allocation.index_offset) * sizeof(uint32_t);
+    }
+
+    return result;
+}
+
 bool GpuMeshSystem::upload_mesh(MeshHandle handle)
 {
     const MeshData* cpu_mesh = m_mesh_system.get(handle);
