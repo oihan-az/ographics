@@ -23,7 +23,7 @@ class EntitySystem
     bool destroy_entity(Entity entity);
 
     bool is_alive(Entity entity) const;
-    bool is_destructible(Entity entity) const;
+    bool is_valid(Entity entity) const;
 
     uint32_t entity_count() const;
 

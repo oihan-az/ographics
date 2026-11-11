@@ -31,8 +31,11 @@ target_sources(
         src/mesh/gpu_mesh_layout_group.cpp
         src/mesh/gpu_mesh_system.cpp
 
-        src/pipelines/geometry_pipeline/geometry_pipeline.cpp
-        src/pipelines/geometry_pipeline/features/geometry_feature.cpp
+        src/graphics/pipelines/raster_pipeline/raster_pipeline.cpp
+        src/graphics/pipelines/raster_pipeline/features/geometry_feature.cpp
+        src/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.cpp
+
+        src/loader/loader.cpp
 
  )
 

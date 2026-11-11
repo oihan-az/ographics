@@ -131,6 +131,11 @@ const GpuMeshLayoutGroup* GpuMeshSystem::layout_group(VertexLayoutId layout) con
     return &m_layout_groups[layout.value];
 }
 
+const VertexLayout* GpuMeshSystem::vertex_layout(VertexLayoutId layout) const
+{
+    return m_layout_registry.get(layout);
+}
+
 bool GpuMeshSystem::upload_mesh(MeshHandle handle)
 {
     const MeshData* cpu_mesh = m_mesh_system.get(handle);

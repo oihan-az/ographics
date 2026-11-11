@@ -53,6 +53,7 @@ class GpuMeshSystem
     uint32_t layout_group_count() const;
 
     const GpuMeshLayoutGroup* layout_group(VertexLayoutId layout) const;
+    const VertexLayout* vertex_layout(VertexLayoutId layout) const;
 
   private:
     struct MeshSlot

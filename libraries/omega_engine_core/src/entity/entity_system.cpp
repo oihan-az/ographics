@@ -93,7 +93,7 @@ Entity EntitySystem::create_entity()
 
 bool EntitySystem::destroy_entity(Entity entity)
 {
-    if (!is_destructible(entity))
+    if (!is_valid(entity))
         return false;
 
     EntitySlot& slot = m_entity_slots[entity.index];
@@ -118,7 +118,7 @@ bool EntitySystem::is_alive(Entity entity) const
             slot.generation == entity.generation;
 }
 
-bool EntitySystem::is_destructible(Entity entity) const
+bool EntitySystem::is_valid(Entity entity) const
 {
     if (entity.index >= m_entity_slots.size())
         return false;

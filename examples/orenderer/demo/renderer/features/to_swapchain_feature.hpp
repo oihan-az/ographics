@@ -42,4 +42,4 @@ class ToSwapchain : public orenderer::IRenderFeature
     void add_blit_node(orendergraph::RenderGraph& rg);
 };
 
-#endif // DEFERRED_FEATURE_HPP
+#endif // TO_SWAPCHAIN_FEATURE_HPP

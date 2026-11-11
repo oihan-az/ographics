@@ -43,7 +43,7 @@ bool ComponentSystem::has_storage() const
 template <typename T> 
 bool ComponentSystem::add(Entity entity, T component)
 {
-    if (!m_entities.is_alive(entity))
+    if (!m_entities.is_valid(entity))
         return false;
 
     return get_storage<T>().add(entity, std::move(component));
@@ -61,7 +61,7 @@ bool ComponentSystem::remove(Entity entity)
 template <typename T> 
 bool ComponentSystem::mark_dirty(Entity entity)
 {
-    if (!m_entities.is_alive(entity))
+    if (!m_entities.is_valid(entity))
         return false;
 
     return get_storage<T>().mark_dirty(entity);

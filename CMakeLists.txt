@@ -64,5 +64,6 @@ add_subdirectory(examples/orendergraph/ray_tracing_triangles)
 add_subdirectory(examples/orenderer/demo)
 
 add_subdirectory(omega_engine)
+add_subdirectory(examples/omega_engine)
 
 include(CTest)
