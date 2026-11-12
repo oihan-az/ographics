@@ -4,6 +4,7 @@
 #include <orendergraph/render_graph.hpp>
 #include <ogfx/image.hpp>
 #include <ogfx/image_view.hpp>
+#include <ogfx/resource_allocator.hpp>
 
 #include <omega/core/math/matrix4.hpp>
 #include <omega/core/math/vector4.hpp>
@@ -17,6 +18,7 @@
 #include <omega/mesh/vertex.hpp>
 
 #include <omega/renderable/renderable.hpp>
+#include <omega/lighting/gpu_light_data.hpp>
 
 #include <filesystem>
 
@@ -30,16 +32,43 @@ struct DrawConstants
     Vector4 color;
 };
 
+struct LightingConstants
+{
+    uint32_t directional_light_count = 0;
+    uint32_t point_light_count = 0;
+    uint32_t spot_light_count = 0;
+    uint32_t padding = 0;
+};
+
 GeometryRenderFeature::GeometryRenderFeature(const GeometryRenderFeatureDesc& desc) : m_desc(desc) 
 {}
 
 void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx) 
 {
-    orendergraph::RenderGraph& graph = ctx.render_graph();
+    orendergraph::RenderGraph& rg = ctx.render_graph();
 
-    create_resources(graph);
+    m_frames.resize(m_desc.frames_in_flight);
 
-    add_node(graph);
+    const uint64_t directional_size =
+    m_desc.components.get_storage<DirectionalLight>().size() * sizeof(GpuLightData<DirectionalLight>);
+    const uint64_t point_size = m_desc.components.get_storage<PointLight>().size() * sizeof(GpuLightData<PointLight>);
+    const uint64_t spot_size = m_desc.components.get_storage<SpotLight>().size() * sizeof(GpuLightData<SpotLight>);
+    for (FrameResources& frame : m_frames)
+    {
+        create_light_buffers<DirectionalLight>(frame.directional, directional_size, rg);
+        create_light_buffers<PointLight>(frame.point, point_size, rg);
+        create_light_buffers<SpotLight>(frame.spot, spot_size, rg);
+    }
+
+    constexpr uint32_t light_type_count = 3;
+
+    ogfx::DescriptorPoolDesc pool_desc;
+    pool_desc.max_sets = m_desc.frames_in_flight;
+    pool_desc.sizes = {{ogfx::ResourceType::StorageBuffer, m_desc.frames_in_flight * light_type_count}};
+    rg.get_resource_allocator().create_pool(pool_desc);
+
+    create_resources(rg);
+    add_node(rg);
 }
 
 void GeometryRenderFeature::create_resources(orendergraph::RenderGraph& rg)
@@ -159,11 +188,86 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             desc.viewport.scissors = {scissor};
 
-            // Inline constants
-            ogfx::InlineConstantRange inline_constant_range;
-            inline_constant_range.size = sizeof(DrawConstants);
-            inline_constant_range.stages = ogfx::ShaderStageFlags::Vertex | ogfx::ShaderStageFlags::Fragment;
-            desc.inline_constants_ranges.push_back(inline_constant_range);
+            // Vertex shader constants
+            ogfx::InlineConstantRange vertex_constants_range;
+            vertex_constants_range.offset = 0;
+            vertex_constants_range.size = sizeof(DrawConstants);
+            vertex_constants_range.stages = ogfx::ShaderStageFlags::Vertex;
+
+            desc.inline_constants_ranges.push_back(vertex_constants_range);
+
+            // Fragment shader constants
+            ogfx::InlineConstantRange fragment_constants_range;
+            fragment_constants_range.offset = sizeof(DrawConstants);
+            fragment_constants_range.size = sizeof(LightingConstants);
+            fragment_constants_range.stages = ogfx::ShaderStageFlags::Fragment;
+
+            desc.inline_constants_ranges.push_back(fragment_constants_range);
+
+            // Resource set bindings
+            ogfx::ResourceSetLayoutDesc set_layout_desc;
+
+            ogfx::ResourceBindingDesc directional_light_binding;
+            directional_light_binding.binding = 0;
+            directional_light_binding.type = ogfx::ResourceType::StorageBuffer;
+            directional_light_binding.stages = ogfx::ShaderStageFlags::Fragment;
+            set_layout_desc.bindings.push_back(directional_light_binding);
+
+            ogfx::ResourceBindingDesc point_light_binding;
+            point_light_binding.binding = 1;
+            point_light_binding.type = ogfx::ResourceType::StorageBuffer;
+            point_light_binding.stages = ogfx::ShaderStageFlags::Fragment;
+            set_layout_desc.bindings.push_back(point_light_binding);
+
+            ogfx::ResourceBindingDesc spot_light_binding;
+            spot_light_binding.binding = 2;
+            spot_light_binding.type = ogfx::ResourceType::StorageBuffer;
+            spot_light_binding.stages = ogfx::ShaderStageFlags::Fragment;
+            set_layout_desc.bindings.push_back(spot_light_binding);
+
+            desc.resource_set_layouts_desc.push_back(set_layout_desc);
+
+            // One resource set and one write description per frame
+            for (uint32_t i = 0; i < m_frames.size(); ++i)
+            {
+                FrameResources& frame = m_frames[i];
+
+                orendergraph::ResourceSetDesc resource_set_desc;
+                resource_set_desc.resource_set_layout_idx = 0;
+
+                desc.resource_sets_desc.push_back(resource_set_desc);
+
+                orendergraph::BufferBinding directional_binding;
+                directional_binding.binding = 0;
+                directional_binding.buffer = frame.directional.buffer.get_handle();
+                directional_binding.offset = 0;
+                directional_binding.range = frame.directional.buffer.get_capacity();
+
+                orendergraph::BufferBinding point_binding;
+                point_binding.binding = 1;
+                point_binding.buffer = frame.point.buffer.get_handle();
+                point_binding.offset = 0;
+                point_binding.range = frame.point.buffer.get_capacity();
+
+                orendergraph::BufferBinding spot_binding;
+                spot_binding.binding = 2;
+                spot_binding.buffer = frame.spot.buffer.get_handle();
+                spot_binding.offset = 0;
+                spot_binding.range = frame.spot.buffer.get_capacity();
+
+                frame.directional.buffer_write.resource_set_idx = i;
+                frame.directional.buffer_write.write_info.buffers = {directional_binding};
+                frame.point.buffer_write.resource_set_idx = i;
+                frame.point.buffer_write.write_info.buffers = {point_binding};
+                frame.spot.buffer_write.resource_set_idx = i;
+                frame.spot.buffer_write.write_info.buffers = {spot_binding};
+
+                orendergraph::ResourceWriteDesc write_desc;
+                write_desc.resource_set_idx = i;
+                write_desc.write_info.buffers = {directional_binding, point_binding, spot_binding};
+
+                desc.resource_writes_desc.push_back(write_desc);
+            }
 
             // Vertex input
             desc.vertex_input = standard_vertex_layout();
@@ -214,12 +318,50 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
         }
     );
 
+    geometry_node->set_pre_execute
+    (
+        [this](orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd,
+            orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
+        {
+            capture_light_events<DirectionalLight>();
+            capture_light_events<PointLight>();
+            capture_light_events<SpotLight>();
+
+            const uint32_t frame_index = *m_desc.current_frame;
+            process_light_events<DirectionalLight>(frame_index, cmd, rg);
+            process_light_events<PointLight>(frame_index, cmd, rg);
+            process_light_events<SpotLight>(frame_index, cmd, rg);
+
+            orendergraph::NodePreExecute<orendergraph::RasterContext>::execute(rg, cmd, node);
+        }
+    );
+
     geometry_node->set_execute
     (
         [this](orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd,
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
         {
             orendergraph::RasterContext& ctx = node.context();
+
+            const uint32_t frame_index = *m_desc.current_frame;
+            update_light_resource_set<DirectionalLight>(m_frames[frame_index].directional, rg, node);
+            update_light_resource_set<PointLight>(m_frames[frame_index].point, rg, node);
+            update_light_resource_set<SpotLight>(m_frames[frame_index].spot, rg, node);
+
+            // Fragment constants
+            LightingConstants lighting_constants{};
+            lighting_constants.directional_light_count = static_cast<uint32_t>(m_desc.components.get_storage<DirectionalLight>().size());
+            lighting_constants.point_light_count = static_cast<uint32_t>(m_desc.components.get_storage<PointLight>().size());
+            lighting_constants.spot_light_count = static_cast<uint32_t>(m_desc.components.get_storage<SpotLight>().size());
+
+            ogfx::InlineConstantsInfo lighting_constants_info{};
+            lighting_constants_info.layout = ctx.pipeline_layout;
+            lighting_constants_info.stages = ogfx::ShaderStageFlags::Fragment;
+            lighting_constants_info.offset = sizeof(DrawConstants);
+            lighting_constants_info.size = sizeof(LightingConstants);
+            lighting_constants_info.data = &lighting_constants;
+
+            cmd.set_inline_constants(lighting_constants_info);
 
             // Camera
             const CameraData camera = m_desc.cameras.get_camera_data(m_desc.camera);
@@ -273,12 +415,21 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
                 ogfx::InlineConstantsInfo constants_info{};
                 constants_info.layout = ctx.pipeline_layout;
-                constants_info.stages = ogfx::ShaderStageFlags::Vertex | ogfx::ShaderStageFlags::Fragment;
+                constants_info.stages = ogfx::ShaderStageFlags::Vertex;
                 constants_info.offset = 0;
                 constants_info.size = sizeof(DrawConstants);
                 constants_info.data = &constants;
 
                 cmd.set_inline_constants(constants_info);
+
+                // Resource sets
+                ogfx::ResourceSetBindInfo resource_set_info{};
+                resource_set_info.layout = ctx.pipeline_layout;
+                resource_set_info.pipeline_type = ogfx::PipelineType::Graphics;
+                resource_set_info.set_index = 0;
+                resource_set_info.resource_set = ctx.resource_sets[*m_desc.current_frame];
+
+                cmd.bind_resource_set(resource_set_info);
 
                 // Draw
                 if (draw_data.is_indexed())

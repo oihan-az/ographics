@@ -23,6 +23,9 @@
 #include <omega/renderable/renderable.hpp>
 #include <omega/assets/model_importer.hpp>
 #include <omega/model/model_system.hpp>
+#include <omega/lighting/directional_light.hpp>
+#include <omega/lighting/point_light.hpp>
+#include <omega/lighting/spot_light.hpp>
 
 #include <omega/graphics/pipelines/raster_pipeline/raster_pipeline.hpp>
 
@@ -157,6 +160,50 @@ int main()
         components.add(camera_entity, perspective_camera);
     }
 
+    // Create directional light
+    omega::Entity directional_light_entity = entities.create_entity();
+    {
+        omega::Transform transform;
+        transform.rotation = omega::Quaternion{0.70710678f, -0.2, 0.0f, 0.0f};
+        components.add(directional_light_entity, transform);
+    
+        omega::DirectionalLight directional_light;
+        directional_light.color = {0.2f, 1.0f, 0.2f};
+        directional_light.intensity = 0.6f;
+        components.add(directional_light_entity, directional_light);
+    }
+
+    // Create point light
+    omega::Entity point_light_entity = entities.create_entity();
+    {
+        omega::Transform transform;
+        transform.position = {6.0f, 1.0f, 0.0f};
+        components.add(point_light_entity, transform);
+    
+        omega::PointLight point_light;
+        point_light.color = {1.0f, 0.2f, 0.2f};
+        point_light.intensity = 5.0f;
+        point_light.range = 8.0f;
+        components.add(point_light_entity, point_light);
+    }
+
+    // Create spot light
+    omega::Entity spot_light_entity = entities.create_entity();
+    {
+        omega::Transform transform;
+        transform.position = {5.0f, 1.4f, 0.0f};
+        transform.rotation = omega::Quaternion{1.0f, 0.0f, 0.0f, 0.0f};
+        components.add(spot_light_entity, transform);
+    
+        omega::SpotLight spot_light;
+        spot_light.color = {0.2f, 0.2f, 1.0f};
+        spot_light.intensity = 8.0f;
+        spot_light.range = 100.0f;
+        spot_light.inner_angle = omega::radians(20.0f);
+        spot_light.outer_angle = omega::radians(35.0f);
+        components.add(spot_light_entity, spot_light);
+    }
+
     // Renderer
     {
         // Pipelines
@@ -171,9 +218,12 @@ int main()
                 camera_entity, 
                 swapchain_desc.width,
                 swapchain_desc.height,
+                MAX_FRAMES_IN_FLIGHT,
+                &current_frame,
                 swapchain_images,
                 &swapchainImageIndex,
                 components,
+                events,
                 transforms,
                 cameras,
                 gpu_meshes,
@@ -185,6 +235,8 @@ int main()
             renderer.compile();
         }
     }
+
+    const auto start_time = std::chrono::steady_clock::now();
 
     while (!window.should_close())
     {

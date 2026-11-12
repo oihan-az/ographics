@@ -9,6 +9,16 @@ namespace ogfx
 class Buffer;
 class Image;
 
+struct BufferToBufferCopyInfo
+{
+    Buffer* src_buffer = nullptr;
+    Buffer* dst_buffer = nullptr;
+
+    uint64_t src_offset = 0;
+    uint64_t dst_offset = 0;
+    uint64_t size = 0;
+};
+
 struct BufferToImageCopyInfo
 {
     const Buffer* buffer = nullptr;

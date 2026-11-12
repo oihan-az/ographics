@@ -66,6 +66,7 @@ public:
     const TDesc& descriptor() const;
 
     void compile(RenderGraph& graph);
+
     void set_pre_execute(ExecuteCallback callback);
     void set_execute(ExecuteCallback callback);
     void set_post_execute(ExecuteCallback callback);

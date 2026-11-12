@@ -47,6 +47,8 @@ class Buffer
 
     uint64_t device_address() const;
 
+    uint32_t size() const { return m_desc.size; }
+
   private:
     friend class CommandBuffer;
     friend class ResourceSet;

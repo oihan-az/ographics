@@ -15,6 +15,50 @@
 namespace ogfx
 {
 
+void CommandBuffer::copy_buffer_to_buffer(const BufferToBufferCopyInfo& info)
+{
+    if (!m_impl || !info.src_buffer || !info.dst_buffer || info.size == 0)
+    {
+        OGFX_LOG_ERROR("Cannot copy buffer to buffer: invalid copy info");
+        return;
+    }
+
+    const uint64_t src_size = info.src_buffer->m_desc.size;
+    const uint64_t dst_size = info.dst_buffer->m_desc.size;
+
+    if (info.src_offset > src_size || info.size > src_size - info.src_offset || info.dst_offset > dst_size ||
+        info.size > dst_size - info.dst_offset)
+    {
+        OGFX_LOG_ERROR("Cannot copy buffer to buffer: copy range is out of bounds");
+        return;
+    }
+
+    if (info.src_buffer == info.dst_buffer)
+    {
+        const uint64_t src_end = info.src_offset + info.size;
+        const uint64_t dst_end = info.dst_offset + info.size;
+
+        if (info.src_offset < dst_end && info.dst_offset < src_end)
+        {
+            OGFX_LOG_ERROR("Cannot copy buffer to buffer: source and destination ranges overlap");
+            return;
+        }
+    }
+
+    VkBufferCopy copy_region{};
+    copy_region.srcOffset = info.src_offset;
+    copy_region.dstOffset = info.dst_offset;
+    copy_region.size = info.size;
+
+    vkCmdCopyBuffer(m_impl->m_command_buffer, info.src_buffer->m_impl->m_buffer, info.dst_buffer->m_impl->m_buffer, 1,
+                    &copy_region);
+
+    OGFX_LOG("Recorded Vulkan buffer-to-buffer copy:");
+    OGFX_LOG("  Source offset: " + std::to_string(info.src_offset));
+    OGFX_LOG("  Destination offset: " + std::to_string(info.dst_offset));
+    OGFX_LOG("  Size: " + std::to_string(info.size));
+}
+
 void CommandBuffer::copy_buffer_to_image(const BufferToImageCopyInfo& info)
 {
     if (!m_impl || !info.buffer || !info.image || info.width == 0 || info.height == 0 || info.depth == 0 ||

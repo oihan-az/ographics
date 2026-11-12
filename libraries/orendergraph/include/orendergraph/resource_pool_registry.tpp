@@ -73,6 +73,22 @@ ResourceHandle<T> ResourcePoolRegistry::import_resource(T* resource)
     return pool->add_slot(resource, true);
 }
 
+template <typename T> 
+bool ResourcePoolRegistry::replace_resource(ResourceHandle<T> handle, T* new_resource)
+{
+    if (!handle.is_valid() || !new_resource)
+        return false;
+
+    const auto type_idx = std::type_index(typeid(T));
+    auto it = m_pools.find(type_idx);
+
+    if (it == m_pools.end())
+        return false;
+
+    auto* pool = static_cast<ResourcePool<T>*>(it->second.get());
+    return pool->replace_resource(handle, new_resource);
+}
+
 } // namespace orendergraph
 
 #endif

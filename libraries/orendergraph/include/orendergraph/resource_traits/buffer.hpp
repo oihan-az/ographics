@@ -24,7 +24,7 @@ struct ResourceTraits<ogfx::Buffer> : DefaultResourceTraits<ogfx::Buffer>
     struct StateType
     {
         ogfx::AccessFlags access = ogfx::AccessFlags::None;
-        ogfx::PipelineStage stage = ogfx::PipelineStage::None;
+        ogfx::PipelineStage stage = ogfx::PipelineStage::TopOfPipe;
     };
 
     struct DataType
@@ -56,7 +56,7 @@ struct ResourceTraits<ogfx::Buffer> : DefaultResourceTraits<ogfx::Buffer>
         barrier.memory_barrier_info.src_access = old_state.access;
         barrier.memory_barrier_info.dst_access = new_state.access;
         barrier.offset = data.offset;
-        barrier.size = data.size;
+        barrier.size = data.size == 0 ? resource->size() - data.offset : data.size;
 
         cmd.buffer_barrier(barrier);
     }

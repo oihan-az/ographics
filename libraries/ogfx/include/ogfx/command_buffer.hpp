@@ -51,6 +51,7 @@ class CommandBuffer
 
     void set_inline_constants(const InlineConstantsInfo& info);
 
+    void copy_buffer_to_buffer(const BufferToBufferCopyInfo& info);
     void copy_buffer_to_image(const BufferToImageCopyInfo& info);
     void copy_image_to_image(const ImageToImageCopyInfo& info);
     void blit_image(const ImageToImageCopyInfo& info);

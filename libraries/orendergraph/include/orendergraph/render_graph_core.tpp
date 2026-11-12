@@ -14,16 +14,36 @@ ResourceHandle<TResource> RenderGraph::create_resource(ResourceTraits<TResource>
 }
 
 template <typename TResource> 
+void RenderGraph::release_resource(ResourceHandle<TResource> handle)
+{
+    m_registry.release_resource<TResource>(handle);
+}
+
+template <typename TResource> 
 ResourceHandle<TResource> RenderGraph::import_resource(TResource* resource)
 {
     return m_registry.import_resource<TResource>(resource);
 }
 
 template <typename TResource> 
-void RenderGraph::replace_resource(ResourceHandle<TResource> handle, TResource* new_resource)
+bool RenderGraph::replace_resource(ResourceHandle<TResource> handle, TResource* new_resource)
 {
-    auto* pool = m_registry.get_pool<TResource>();
-    pool->replace_resource(handle, new_resource);
+    return m_registry.replace_resource(handle, new_resource);
+}
+
+template <typename TResource>
+bool RenderGraph::replace_resource(ResourceHandle<TResource> handle, typename ResourceTraits<TResource>::DescType desc)
+{
+    if (!handle.is_valid())
+        return false;
+
+    TResource* new_resource = ResourceTraits<TResource>::create(*m_physical_device, *m_device, desc);
+    if (!new_resource)
+        return false;
+
+    ResourceTraits<TResource>::allocate(new_resource);
+
+    return replace_resource(handle, new_resource);;
 }
 
 template <typename TResource> 

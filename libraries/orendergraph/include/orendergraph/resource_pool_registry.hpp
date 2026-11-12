@@ -24,22 +24,15 @@ class ResourcePoolRegistry
 {
   public:
 
-    template <typename T> 
-    ResourcePool<T>* get_pool();
+    template <typename T> ResourcePool<T>* get_pool();
+    template <typename T> T* get_resource(ResourceHandle<T> handle);
 
-    template <typename T> 
-    T* get_resource(ResourceHandle<T> handle);
-
-    template <typename T>
-    ResourceHandle<T> create_resource(const ogfx::PhysicalDevice& physical_device,
-                                      const ogfx::Device& device, 
-                                      typename ResourceTraits<T>::DescType& desc);
-
-    template <typename T>
-    bool release_resource(ResourceHandle<T> handle);
-
-    template <typename T> 
-    ResourceHandle<T> import_resource(T* resource);
+    template <typename T> ResourceHandle<T> create_resource(const ogfx::PhysicalDevice& physical_device,
+                                                            const ogfx::Device& device, 
+                                                            typename ResourceTraits<T>::DescType& desc);
+    template <typename T> bool release_resource(ResourceHandle<T> handle);
+    template <typename T> ResourceHandle<T> import_resource(T* resource);
+    template <typename T> bool replace_resource(ResourceHandle<T> handle, T* new_resource);
 
     void reset();
 

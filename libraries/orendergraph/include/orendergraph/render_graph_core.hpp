@@ -21,8 +21,10 @@ class RenderGraph
     ~RenderGraph();
 
     template <typename TResource> ResourceHandle<TResource> create_resource(ResourceTraits<TResource>::DescType desc);
+    template <typename TResource> void release_resource(ResourceHandle<TResource> handle);
     template <typename TResource> ResourceHandle<TResource> import_resource(TResource* resource);
-    template <typename TResource> void replace_resource(ResourceHandle<TResource> handle, TResource* new_resource);
+    template <typename TResource> bool replace_resource(ResourceHandle<TResource> handle, TResource* new_resource);
+    template <typename TResource> bool replace_resource(ResourceHandle<TResource> handle, typename ResourceTraits<TResource>::DescType desc);
 
     template <typename TResource> TResource* get_resource(ResourceHandle<TResource> handle);
 

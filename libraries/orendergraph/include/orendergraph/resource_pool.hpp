@@ -35,7 +35,7 @@ class ResourcePool : public IResourcePool
 
     ResourceHandle<T> add_slot(T* resource, bool is_imported);
     bool remove_slot(ResourceHandle<T> handle);
-    void replace_resource(ResourceHandle<T> handle, T* new_resource);
+    bool replace_resource(ResourceHandle<T> handle, T* new_resource);
 
     ResourceSlot& slot(uint32_t resource_id);
     const ResourceSlot& slot(uint32_t resource_id) const;

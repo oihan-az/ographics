@@ -33,6 +33,7 @@ struct PipelineContext
     };
 
     void create(RenderGraph& graph, const Desc& desc);
+    void update_resource_set(RenderGraph& graph, const ResourceWriteDesc& desc);
     void clear();
 
     ogfx::PipelineLayout* pipeline_layout = nullptr;

@@ -58,20 +58,22 @@ bool ResourcePool<T>::remove_slot(ResourceHandle<T> handle)
 }
 
 template <typename T>
-void ResourcePool<T>::replace_resource(typename ResourceHandle<T> handle, T* new_resource)
+bool ResourcePool<T>::replace_resource(typename ResourceHandle<T> handle, T* new_resource)
 {
     if (!handle.is_valid())
-        return;
+        return false;
 
     auto& resource_slot = m_slots.at(handle.id);
 
     if (resource_slot.physical_resource == new_resource)
-        return;
+        return false;
 
     if (!resource_slot.is_imported)
         delete resource_slot.physical_resource;
 
     resource_slot.physical_resource = new_resource;
+
+    return true;
 }
 
 template <typename T>

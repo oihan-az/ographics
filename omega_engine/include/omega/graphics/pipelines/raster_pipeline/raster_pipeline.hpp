@@ -9,6 +9,7 @@ namespace omega
 {
 
 class ComponentSystem;
+class EventSystem;
 class TransformSystem;
 class CameraSystem;
 class GpuMeshSystem;
@@ -19,10 +20,14 @@ struct RasterPipelineDesc
     uint32_t width = 0;
     uint32_t height = 0;
 
+    uint32_t frames_in_flight = 0;
+    uint32_t* current_frame = nullptr;
+
     std::vector<orendergraph::ResourceHandle<ogfx::Image>> swapchain_images;
     uint32_t* swapchain_image_index = nullptr;
 
     ComponentSystem& components;
+    EventSystem& events;
     TransformSystem& transforms;
     CameraSystem& cameras;
     GpuMeshSystem& gpu_meshes;

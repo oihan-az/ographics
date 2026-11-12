@@ -36,6 +36,8 @@ target_sources(
         src/graphics/pipelines/raster_pipeline/features/geometry_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.cpp
 
+        src/graphics/resources/dynamic_buffer.cpp
+
         src/loader/loader.cpp
         src/assets/assimp/assimp_model_importer.cpp
 
