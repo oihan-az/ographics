@@ -18,6 +18,12 @@ class MeshPageBase
 
     virtual ~MeshPageBase() = default;
 
+    MeshPageBase(const MeshPageBase&) = delete;
+    MeshPageBase& operator=(const MeshPageBase&) = delete;
+
+    MeshPageBase(MeshPageBase&&) = default;
+    MeshPageBase& operator=(MeshPageBase&&) = default;
+
     bool allocate(uint32_t vertex_count, uint32_t index_count, MeshAllocation& allocation);
     bool release(const MeshAllocation& allocation);
 

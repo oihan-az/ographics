@@ -75,3 +75,5 @@ Testing/
 *.user
 *.userosscache
 *.sln.docstates
+
+**/models/

@@ -42,6 +42,14 @@ GpuMeshPage::GpuMeshPage(uint32_t vertex_capacity, uint32_t index_capacity, cons
         throw std::runtime_error("Failed to create GPU index buffer");
 }
 
+GpuMeshPage::GpuMeshPage(GpuMeshPage&& other)
+    : MeshPageBase(std::move(other)), m_vertex_buffers(std::move(other.m_vertex_buffers)),
+      m_index_buffer(std::exchange(other.m_index_buffer, orendergraph::ResourceHandle<ogfx::Buffer>{})),
+      m_physical_device(other.m_physical_device), m_device(other.m_device), m_resources(other.m_resources)
+{
+    other.m_vertex_buffers.clear();
+}
+
 GpuMeshPage::~GpuMeshPage()
 {
     for (auto handle : m_vertex_buffers)

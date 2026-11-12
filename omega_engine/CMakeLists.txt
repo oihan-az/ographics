@@ -30,18 +30,24 @@ target_sources(
         src/mesh/gpu_mesh_page.cpp
         src/mesh/gpu_mesh_layout_group.cpp
         src/mesh/gpu_mesh_system.cpp
+        src/mesh/vertex.cpp
 
         src/graphics/pipelines/raster_pipeline/raster_pipeline.cpp
         src/graphics/pipelines/raster_pipeline/features/geometry_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.cpp
 
         src/loader/loader.cpp
+        src/assets/assimp/assimp_model_importer.cpp
+
+        src/model/model_system.cpp
 
  )
 
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
+
+find_package(assimp CONFIG REQUIRED)
 
 target_link_libraries(
     omega_engine
@@ -51,6 +57,9 @@ target_link_libraries(
         ographics::orendergraph
         ographics::orenderer
         ographics::omega_engine_core
+
+    PRIVATE
+        assimp::assimp
 )
 
 include(

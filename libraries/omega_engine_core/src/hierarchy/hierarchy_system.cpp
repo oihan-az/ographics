@@ -89,7 +89,7 @@ void HierarchySystem::update()
 
 bool HierarchySystem::set_parent(Entity child, Entity parent)
 {
-    if (!m_entities.is_alive(child) || !m_entities.is_alive(parent))
+    if (!m_entities.is_valid(child) || !m_entities.is_valid(parent))
         return false;
 
     if (child == parent)
@@ -175,7 +175,7 @@ bool HierarchySystem::would_create_cycle(Entity child, Entity parent) const
         if (!visited.insert(entity_unique_key(ancestor)).second)
             return true;
 
-        if (!m_entities.is_alive(ancestor))
+        if (!m_entities.is_valid(ancestor))
             return true;
 
         ancestor = get_effective_parent(ancestor);

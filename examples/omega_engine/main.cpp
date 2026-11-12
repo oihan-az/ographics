@@ -21,6 +21,8 @@
 #include <omega/mesh/mesh_system.hpp>
 #include <omega/mesh/gpu_mesh_system.hpp>
 #include <omega/renderable/renderable.hpp>
+#include <omega/assets/model_importer.hpp>
+#include <omega/model/model_system.hpp>
 
 #include <omega/graphics/pipelines/raster_pipeline/raster_pipeline.hpp>
 
@@ -123,73 +125,40 @@ int main()
     omega::CameraSystem cameras(events, components, hierarchy, entities, transforms);
 
     orenderer::Renderer renderer(physical_device, device, resource_allocator);
+    orendergraph::ResourcePoolRegistry& registry = renderer.resource_registry();
 
     omega::MeshSystem meshes(events);
-    omega::GpuMeshSystem gpu_meshes(physical_device, device, renderer.resource_registry(), meshes, events);
+    omega::GpuMeshSystem gpu_meshes(physical_device, device, registry, meshes, events);
 
-    // Load meshes
-    omega::MeshHandle triangle_mesh;
-    {
-        omega::MeshAsset mesh_asset{};
+    // Load scene
+    omega::ModelImporter importer;
+    omega::ModelSystem models(entities, hierarchy, components, meshes, importer);
+    const std::filesystem::path asset_dir = OMEGA_ASSET_DIR;
+    const std::filesystem::path model_path = asset_dir / "models/sponza_glTF/Sponza.gltf";
+    const omega::ModelHandle model = models.load(model_path);
+    omega::Entity sponza;
 
-        ogfx::VertexBindingDesc vertex_binding{};
-        vertex_binding.binding = 0;
-        vertex_binding.stride = sizeof(omega::Vector3);
-        vertex_binding.input_rate = ogfx::VertexInputRate::Vertex;
+    if (!models.instantiate(model, sponza))
+        throw std::runtime_error("Failed to instantiate");
 
-        ogfx::VertexAttributeDesc position_attribute{};
-        position_attribute.location = 0;
-        position_attribute.binding = 0;
-        position_attribute.format = ogfx::Format::RGB32_FLOAT;
-        position_attribute.offset = 0;
-
-        mesh_asset.vertex_input.bindings = {vertex_binding};
-        mesh_asset.vertex_input.attributes = {position_attribute};
-
-        const std::vector<omega::Vector3> vertices = {{-0.5f, -0.5f, 0.0f}, {0.5f, -0.5f, 0.0f}, {0.0f, 0.5f, 0.0f}};
-
-        mesh_asset.vertex_count = static_cast<uint32_t>(vertices.size());
-
-        const auto* vertex_bytes = reinterpret_cast<const std::byte*>(vertices.data());
-
-        mesh_asset.vertex_data.emplace_back(vertex_bytes, vertex_bytes + vertices.size() * sizeof(omega::Vector3));
-
-        if (!meshes.create_mesh(mesh_asset, triangle_mesh))
-            return -1;
-    }
-
-    // Create scene
+    // Create camera
     omega::Entity camera_entity = entities.create_entity();
-    omega::Entity renderable_entity = entities.create_entity();
     {
-        {
-            omega::Transform transform;
-            transform.position = {0.0f, 0.0f, 3.0f};
-            components.add(camera_entity, transform);
+        omega::Transform transform;
+        transform.position = {0.0f, 2.0f, 0.0f};
+        transform.rotation = omega::Quaternion{0.70710678f, 0.0f, -0.70710678f, 0.0f};
+        components.add(camera_entity, transform);
 
-            omega::PerspectiveCamera perspective_camera;
-            perspective_camera.proj.aspect_ratio = static_cast<float>(swapchain_desc.width) / static_cast<float>(swapchain_desc.height);
-            perspective_camera.proj.field_of_view = omega::radians(60.0f);
-            perspective_camera.proj.near_plane = 0.1f;
-            perspective_camera.proj.far_plane = 100.0f;
-            components.add(camera_entity, perspective_camera);
-        }
-
-        {
-            omega::Transform transform;
-            components.add(renderable_entity, transform);
-
-            omega::Renderable renderable;
-            renderable.mesh = triangle_mesh;
-            renderable.color = {1.0f, 1.0f, 0.1f};
-            components.add(renderable_entity, renderable);
-        }
+        omega::PerspectiveCamera perspective_camera;
+        perspective_camera.proj.aspect_ratio = static_cast<float>(swapchain_desc.width) / static_cast<float>(swapchain_desc.height);
+        perspective_camera.proj.field_of_view = omega::radians(60.0f);
+        perspective_camera.proj.near_plane = 0.1f;
+        perspective_camera.proj.far_plane = 100.0f;
+        components.add(camera_entity, perspective_camera);
     }
 
     // Renderer
     {
-        orendergraph::ResourcePoolRegistry& registry = renderer.resource_registry();
-
         // Pipelines
         {
             std::vector<orendergraph::ResourceHandle<ogfx::Image>> swapchain_images;

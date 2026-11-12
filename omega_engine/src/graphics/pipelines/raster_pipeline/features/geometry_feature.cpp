@@ -14,6 +14,7 @@
 #include <omega/transform/transform_system.hpp>
 #include <omega/camera/camera_system.hpp>
 #include <omega/mesh/gpu_mesh_system.hpp>
+#include <omega/mesh/vertex.hpp>
 
 #include <omega/renderable/renderable.hpp>
 
@@ -165,20 +166,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             desc.inline_constants_ranges.push_back(inline_constant_range);
 
             // Vertex input
-            ogfx::VertexBindingDesc vertex_binding;
-            vertex_binding.binding = 0;
-            vertex_binding.stride = sizeof(Vector3);
-            vertex_binding.input_rate = ogfx::VertexInputRate::Vertex;
-
-            desc.vertex_input.bindings = {vertex_binding};
-
-            ogfx::VertexAttributeDesc position_attribute{};
-            position_attribute.location = 0;
-            position_attribute.binding = 0;
-            position_attribute.format = ogfx::Format::RGB32_FLOAT;
-            position_attribute.offset = 0;
-
-            desc.vertex_input.attributes = {position_attribute};
+            desc.vertex_input = standard_vertex_layout();
 
             // Input assembly
             desc.input_assembly.topology = ogfx::PrimitiveTopology::TriangleList;

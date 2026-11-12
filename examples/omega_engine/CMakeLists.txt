@@ -1,5 +1,11 @@
 add_executable(omega_egine_demo)
 
+target_compile_definitions(
+    omega_egine_demo 
+    PRIVATE
+        OMEGA_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+)
+
 target_sources(
     omega_egine_demo
     PRIVATE

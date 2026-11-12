@@ -34,6 +34,12 @@ class GpuMeshPage : public MeshPageBase
 
     ~GpuMeshPage();
 
+    GpuMeshPage(const GpuMeshPage&) = delete;
+    GpuMeshPage& operator=(const GpuMeshPage&) = delete;
+
+    GpuMeshPage(GpuMeshPage&& other);
+    GpuMeshPage& operator=(GpuMeshPage&& other) = delete;
+
     bool write(const MeshAllocation& allocation, 
                const std::vector<std::span<const std::byte>>& vertex_data,
                const std::span<const uint32_t> indices);

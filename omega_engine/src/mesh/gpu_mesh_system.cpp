@@ -216,7 +216,7 @@ bool GpuMeshSystem::upload_mesh(MeshHandle handle)
     if (cpu_allocation.vertex_offsets.size() != binding_count)
         return false;
 
-    // Reference  only this mesh's vertex ranges from the CPU page
+    // Reference only this mesh's vertex ranges from the CPU page
     std::vector<std::span<const std::byte>> vertex_data;
     vertex_data.reserve(binding_count);
     for (size_t i = 0; i < binding_count; ++i)
