@@ -14,6 +14,8 @@
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
 
+#include <omega/graphics/gpu_component/component_gpu_buffer.hpp>
+
 #include <cstdint>
 
 namespace ogfx
@@ -69,42 +71,21 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
   private:
     GeometryRenderFeatureDesc m_desc;
 
-    template <typename T>
-    struct LightFrameResources
+    ComponentGpuBuffer<DirectionalLight> m_directional_lights;
+    ComponentGpuBuffer<PointLight> m_point_lights;
+    ComponentGpuBuffer<SpotLight> m_spot_lights;
+
+    void update_resource_set(DynamicBuffer& buffer, orendergraph::ResourceWriteDesc& write_desc,
+                             orendergraph::RenderGraph& rg, orendergraph::RenderGraphNode<orendergraph::RasterContext>& node);
+
+    struct FrameResource
     {
-        DynamicBuffer buffer;
-    
-        orendergraph::ResourceWriteDesc buffer_write;
-
-        std::vector<ComponentAddedEvent<T>> pending_added;
-        std::vector<ComponentRemovedEvent<T>> pending_removed;
-        std::vector<ComponentModifiedEvent<T>> pending_modified;
-
-        bool descriptor_update_pending = false;
+        orendergraph::ResourceWriteDesc directional_buffer_write;
+        orendergraph::ResourceWriteDesc point_buffer_write;
+        orendergraph::ResourceWriteDesc spot_buffer_write;
     };
     
-    struct FrameResources
-    {
-        LightFrameResources<DirectionalLight> directional;
-        LightFrameResources<PointLight> point;
-        LightFrameResources<SpotLight> spot;
-
-        template <typename T> LightFrameResources<T>& get();
-    };
-
-    std::vector<FrameResources> m_frames;
-
-    template <typename T> void capture_light_events();
-    template <typename T> void process_light_events(uint32_t frame_index, ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg);
-    template <typename T> void process_light_events(LightFrameResources<T>& resources, ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg);
-
-    template <typename T> bool create_light_buffers(LightFrameResources<T>& resources, uint64_t required_size, orendergraph::RenderGraph& rg);
-    template <typename T> void upload_all_lights(ComponentStorage<T>& storage, LightFrameResources<T>& resources, orendergraph::RenderGraph& rg);
-    template <typename T> void process_added_lights(ComponentStorage<T>& storage, LightFrameResources<T>& resources, orendergraph::RenderGraph& rg);
-    template <typename T> void process_removed_lights(ComponentStorage<T>& storage, LightFrameResources<T>& resources, ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg);
-    template <typename T> void process_modified_lights(ComponentStorage<T>& storage, LightFrameResources<T>& resources, orendergraph::RenderGraph& rg);
-
-    template <typename T> void update_light_resource_set(LightFrameResources<T>& resources, orendergraph::RenderGraph& rg, orendergraph::RenderGraphNode<orendergraph::RasterContext>& node);
+    std::vector<FrameResource> m_frames;
 
     void create_resources(orendergraph::RenderGraph& rg);
     void add_node(orendergraph::RenderGraph& rg);
@@ -117,7 +98,5 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
 };
 
 } // namespace omege
-
-#include "geometry_feature.tpp"
 
 #endif // GEOMETRY_RENDER_FEATURE_HPP

@@ -40,7 +40,10 @@ struct LightingConstants
     uint32_t padding = 0;
 };
 
-GeometryRenderFeature::GeometryRenderFeature(const GeometryRenderFeatureDesc& desc) : m_desc(desc) 
+GeometryRenderFeature::GeometryRenderFeature(const GeometryRenderFeatureDesc& desc)
+    : m_desc(desc), m_directional_lights(desc.components, desc.events, desc.frames_in_flight),
+      m_point_lights(desc.components, desc.events, desc.frames_in_flight),
+      m_spot_lights(desc.components, desc.events, desc.frames_in_flight)
 {}
 
 void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx) 
@@ -48,17 +51,9 @@ void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx)
     orendergraph::RenderGraph& rg = ctx.render_graph();
 
     m_frames.resize(m_desc.frames_in_flight);
-
-    const uint64_t directional_size =
-    m_desc.components.get_storage<DirectionalLight>().size() * sizeof(GpuLightData<DirectionalLight>);
-    const uint64_t point_size = m_desc.components.get_storage<PointLight>().size() * sizeof(GpuLightData<PointLight>);
-    const uint64_t spot_size = m_desc.components.get_storage<SpotLight>().size() * sizeof(GpuLightData<SpotLight>);
-    for (FrameResources& frame : m_frames)
-    {
-        create_light_buffers<DirectionalLight>(frame.directional, directional_size, rg);
-        create_light_buffers<PointLight>(frame.point, point_size, rg);
-        create_light_buffers<SpotLight>(frame.spot, spot_size, rg);
-    }
+    m_directional_lights.create(rg);
+    m_point_lights.create(rg);
+    m_spot_lights.create(rg);
 
     constexpr uint32_t light_type_count = 3;
 
@@ -230,7 +225,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             // One resource set and one write description per frame
             for (uint32_t i = 0; i < m_frames.size(); ++i)
             {
-                FrameResources& frame = m_frames[i];
+                FrameResource& frame = m_frames[i];
 
                 orendergraph::ResourceSetDesc resource_set_desc;
                 resource_set_desc.resource_set_layout_idx = 0;
@@ -239,28 +234,28 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
                 orendergraph::BufferBinding directional_binding;
                 directional_binding.binding = 0;
-                directional_binding.buffer = frame.directional.buffer.get_handle();
+                directional_binding.buffer = m_directional_lights.get_buffer(i).get_handle();
                 directional_binding.offset = 0;
-                directional_binding.range = frame.directional.buffer.get_capacity();
+                directional_binding.range = m_directional_lights.get_buffer(i).get_capacity();
 
                 orendergraph::BufferBinding point_binding;
                 point_binding.binding = 1;
-                point_binding.buffer = frame.point.buffer.get_handle();
+                point_binding.buffer = m_point_lights.get_buffer(i).get_handle();
                 point_binding.offset = 0;
-                point_binding.range = frame.point.buffer.get_capacity();
+                point_binding.range = m_point_lights.get_buffer(i).get_capacity();
 
                 orendergraph::BufferBinding spot_binding;
                 spot_binding.binding = 2;
-                spot_binding.buffer = frame.spot.buffer.get_handle();
+                spot_binding.buffer = m_spot_lights.get_buffer(i).get_handle();
                 spot_binding.offset = 0;
-                spot_binding.range = frame.spot.buffer.get_capacity();
+                spot_binding.range = m_spot_lights.get_buffer(i).get_capacity();
 
-                frame.directional.buffer_write.resource_set_idx = i;
-                frame.directional.buffer_write.write_info.buffers = {directional_binding};
-                frame.point.buffer_write.resource_set_idx = i;
-                frame.point.buffer_write.write_info.buffers = {point_binding};
-                frame.spot.buffer_write.resource_set_idx = i;
-                frame.spot.buffer_write.write_info.buffers = {spot_binding};
+                frame.directional_buffer_write.resource_set_idx = i;
+                frame.directional_buffer_write.write_info.buffers = {directional_binding};
+                frame.point_buffer_write.resource_set_idx = i;
+                frame.point_buffer_write.write_info.buffers = {point_binding};
+                frame.spot_buffer_write.resource_set_idx = i;
+                frame.spot_buffer_write.write_info.buffers = {spot_binding};
 
                 orendergraph::ResourceWriteDesc write_desc;
                 write_desc.resource_set_idx = i;
@@ -323,14 +318,26 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
         [this](orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd,
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
         {
-            capture_light_events<DirectionalLight>();
-            capture_light_events<PointLight>();
-            capture_light_events<SpotLight>();
+            m_directional_lights.capture_events();
+            m_point_lights.capture_events();
+            m_spot_lights.capture_events();
 
             const uint32_t frame_index = *m_desc.current_frame;
-            process_light_events<DirectionalLight>(frame_index, cmd, rg);
-            process_light_events<PointLight>(frame_index, cmd, rg);
-            process_light_events<SpotLight>(frame_index, cmd, rg);
+
+            if (m_directional_lights.process_frame(frame_index, cmd, rg, m_desc.transforms))
+            {
+                update_resource_set(m_directional_lights.get_buffer(frame_index), m_frames[frame_index].directional_buffer_write, rg, node);
+            }
+
+            if (m_point_lights.process_frame(frame_index, cmd, rg, m_desc.transforms))
+            {
+                update_resource_set(m_directional_lights.get_buffer(frame_index), m_frames[frame_index].point_buffer_write, rg, node);
+            }
+
+            if (m_spot_lights.process_frame(frame_index, cmd, rg, m_desc.transforms))
+            {
+                update_resource_set(m_directional_lights.get_buffer(frame_index), m_frames[frame_index].spot_buffer_write, rg, node);
+            }
 
             orendergraph::NodePreExecute<orendergraph::RasterContext>::execute(rg, cmd, node);
         }
@@ -342,11 +349,6 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
         {
             orendergraph::RasterContext& ctx = node.context();
-
-            const uint32_t frame_index = *m_desc.current_frame;
-            update_light_resource_set<DirectionalLight>(m_frames[frame_index].directional, rg, node);
-            update_light_resource_set<PointLight>(m_frames[frame_index].point, rg, node);
-            update_light_resource_set<SpotLight>(m_frames[frame_index].spot, rg, node);
 
             // Fragment constants
             LightingConstants lighting_constants{};
@@ -451,6 +453,14 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             }
         }
     );
+}
+
+void GeometryRenderFeature::update_resource_set(DynamicBuffer& buffer, orendergraph::ResourceWriteDesc& write_desc,
+                                                orendergraph::RenderGraph& rg,
+                                                orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
+{
+    write_desc.write_info.buffers[0].range = buffer.get_capacity();
+    node.context().update_resource_set(rg, write_desc);
 }
 
 }
