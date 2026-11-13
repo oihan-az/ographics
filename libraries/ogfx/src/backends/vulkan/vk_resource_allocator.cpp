@@ -9,6 +9,7 @@
 
 #include <array>
 #include <string>
+#include <map>
 
 namespace ogfx
 {
@@ -16,68 +17,47 @@ namespace ogfx
 namespace
 {
 
-constexpr std::array<VkDescriptorType, 6> types = 
-{
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 
-    VK_DESCRIPTOR_TYPE_SAMPLER,
-    VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR
-};
-
 struct DescriptorPoolSizes
 {
-    std::array<uint32_t, 6> counts{};
+    std::map<VkDescriptorType, uint32_t> counts;
 
     bool add(VkDescriptorType type, uint32_t count)
     {
-        size_t index = 0;
+        if (count == 0)
+            return true;
 
-        switch (type)
-        {
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-            index = 0;
-            break;
+        uint32_t& current = counts[type];
 
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-            index = 1;
-            break;
-
-        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-            index = 2;
-            break;
-
-        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-            index = 3;
-            break;
-
-        case VK_DESCRIPTOR_TYPE_SAMPLER:
-            index = 4;
-            break;
-
-        case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
-            index = 5;
-            break;
-
-        default:
+        if (count > std::numeric_limits<uint32_t>::max() - current)
             return false;
+
+        current += count;
+        return true;
+    }
+
+    std::vector<VkDescriptorPoolSize> get_sizes() const
+    {
+        std::vector<VkDescriptorPoolSize> result;
+        result.reserve(counts.size());
+
+        for (const auto& [type, count] : counts)
+        {
+            result.push_back({.type = type, .descriptorCount = count});
         }
 
-        counts[index] += count;
-        return true;
+        return result;
     }
 };
 
 } // namespace
 
-ResourceAllocator::ResourceAllocator(const Device& device)
-    : m_impl(std::make_unique<Impl>())
+ResourceAllocator::ResourceAllocator(const Device& device, uint32_t max_sets_per_pool)
+    : m_impl(std::make_unique<Impl>()), m_max_sets_per_pool(max_sets_per_pool)
 {
     m_impl->m_device = device.m_impl->m_device;
 
     OGFX_LOG("Resource allocator created");
+    OGFX_LOG("  Max sets per pool: " + std::to_string(max_sets_per_pool));
 }
 
 ResourceAllocator::~ResourceAllocator()
@@ -131,17 +111,7 @@ void ResourceAllocator::create_pool(const DescriptorPoolDesc& desc)
         OGFX_LOG("  " + to_string_enum(size.type) + ": " + std::to_string(size.descriptor_count));
     }
 
-    std::vector<VkDescriptorPoolSize> pool_sizes;
-    pool_sizes.reserve(types.size());
-    for (size_t i = 0; i < types.size(); ++i)
-    {
-        if (sizes.counts[i] == 0)
-        {
-            continue;
-        }
-
-        pool_sizes.push_back({.type = types[i], .descriptorCount = sizes.counts[i]});
-    }
+    const std::vector<VkDescriptorPoolSize> pool_sizes = sizes.get_sizes();
 
     const VkDescriptorPoolCreateInfo create_info{.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
                                                  .pNext = nullptr,
@@ -162,6 +132,7 @@ void ResourceAllocator::create_pool(const DescriptorPoolDesc& desc)
     m_impl->m_descriptor_pools.push_back(pool);
 
     OGFX_LOG("Descriptor pool created:");
+    OGFX_LOG("  Max sets: " + std::to_string(desc.max_sets));
     OGFX_LOG("  Pool count: " + std::to_string(m_impl->m_descriptor_pools.size()));
 }
 
@@ -178,37 +149,86 @@ void ResourceAllocator::allocate(ResourceSet& resource_set)
     OGFX_LOG("Allocating resource set:");
     OGFX_LOG("  Descriptor pool count: " + std::to_string(m_impl->m_descriptor_pools.size()));
 
-    for (size_t i = 0; i < m_impl->m_descriptor_pools.size(); ++i)
+    auto try_allocate = [&]() -> bool
     {
-        const VkDescriptorPool pool = m_impl->m_descriptor_pools[i];
-
-        OGFX_LOG("Trying descriptor pool index " + std::to_string(i));
-
-        const VkDescriptorSetAllocateInfo allocate_info{.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                                                        .pNext = nullptr,
-                                                        .descriptorPool = m_impl->m_descriptor_pools[i],
-                                                        .descriptorSetCount = 1,
-                                                        .pSetLayouts = &layout.m_impl->m_descriptor_set_layout};
-
-        VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-        if (vkAllocateDescriptorSets(m_impl->m_device, &allocate_info, &descriptor_set) != VK_SUCCESS)
+        for (VkDescriptorPool pool : m_impl->m_descriptor_pools)
         {
-            OGFX_LOG("Allocation failed for pool index " + std::to_string(i));
-            continue;
-        }
+            OGFX_LOG("Trying descriptor pool index " + std::to_string(i));
 
-        resource_set.m_impl->m_descriptor_set = descriptor_set;
-        resource_set.m_impl->m_device = m_impl->m_device;
+            const VkDescriptorSetAllocateInfo allocate_info{.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                                                            .pNext = nullptr,
+                                                            .descriptorPool = pool,
+                                                            .descriptorSetCount = 1,
+                                                            .pSetLayouts = &layout.m_impl->m_descriptor_set_layout};
 
-        m_impl->m_set_pools.emplace(descriptor_set, pool);
+            VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+            if (vkAllocateDescriptorSets(m_impl->m_device, &allocate_info, &descriptor_set) != VK_SUCCESS)
+            {
+                OGFX_LOG("Allocation failed for pool index " + std::to_string(i));
+                continue;
+            }
 
-        OGFX_LOG("Resource set allocated successfully:");
+            resource_set.m_impl->m_descriptor_set = descriptor_set;
+            resource_set.m_impl->m_device = m_impl->m_device;
+
+            m_impl->m_set_pools.emplace(descriptor_set, pool);
+
+            OGFX_LOG("Resource set allocated successfully:");
             OGFX_LOG("  Pool index: " + std::to_string(i));
 
+            return true;
+        }
+
+        return false;
+    };
+
+    // Try all existing pools
+    bool allocated = try_allocate();
+    if (allocated)
         return;
-    }
 
     OGFX_LOG("No existing pool could allocate the descriptor set");
+
+    // Create a pool sized for this layout and the configured number of sets
+    DescriptorPoolDesc pool_desc;
+    pool_desc.max_sets = m_max_sets_per_pool;
+
+    DescriptorPoolSizes required_sizes;
+    for (const ResourceBindingDesc& binding : layout.m_desc.bindings)
+    {
+        const VkDescriptorType type = to_vk_descriptor_type(binding.type);
+
+        const uint64_t descriptor_count = static_cast<uint64_t>(binding.array_count) * pool_desc.max_sets;
+
+        if (descriptor_count > std::numeric_limits<uint32_t>::max() ||
+            !required_sizes.add(type, static_cast<uint32_t>(descriptor_count)))
+        {
+            throw std::runtime_error("Descriptor pool size exceeds supported capacity");
+        }
+    }
+
+    for (const auto& [type, count] : required_sizes.counts)
+    {
+        ogfx::DescriptorPoolSize pool_size;
+        pool_size.type = from_vk_descriptor_type(type);
+        pool_size.descriptor_count = count;
+
+        pool_desc.sizes.push_back(pool_size);
+    }
+
+    create_pool(pool_desc);
+
+    OGFX_LOG("Automatically created descriptor pool:");
+    OGFX_LOG("  Max sets: " + std::to_string(pool_desc.max_sets));
+    OGFX_LOG("  Pool count: " + std::to_string(m_impl->m_descriptor_pools.size()));
+
+    allocated = try_allocate();
+
+    if (!allocated)
+    {
+        OGFX_LOG("Failed to allocate descriptor set from new pool");
+        throw std::runtime_error("Failed to allocate descriptor set from new pool");
+    }
 }
 
 void ResourceAllocator::free(ResourceSet& resource_set)

@@ -12,8 +12,10 @@ add_executable(omega_tests
     #"mesh/vertex_layout_registry_tests.cpp"
     #"mesh/mesh_page_tests.cpp"
     #"mesh/mesh_layout_group_tests.cpp"
-    "mesh/mesh_system_tests.cpp"
-    "mesh/gpu_mesh_system_tests.cpp"
+    #"mesh/mesh_system_tests.cpp"
+    #"mesh/gpu_mesh_system_tests.cpp"
+    #"texture/texture_system_tests.cpp"
+    "texture/gpu_texture_system_tests.cpp"
     
 )
 

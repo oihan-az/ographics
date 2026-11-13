@@ -79,7 +79,7 @@ const ImportedModel* ModelSystem::get(ModelHandle model) const
     return &m_models[model.index].model;
 }
 
-bool ModelSystem::instantiate(ModelHandle model, Entity& root)
+bool ModelSystem::instantiate(ModelHandle model, TextureHandle texture, Entity& root)
 {
     const ImportedModel* imported_model = get(model);
     if (!imported_model)
@@ -196,6 +196,7 @@ bool ModelSystem::instantiate(ModelHandle model, Entity& root)
 
                 Renderable renderable{};
                 renderable.mesh = handle;
+                renderable.texture = texture;
 
                 if (!m_components.add<Renderable>(renderable_entity, renderable))
                 {

@@ -20,6 +20,8 @@
 #include <omega/camera/camera_system.hpp>
 #include <omega/mesh/mesh_system.hpp>
 #include <omega/mesh/gpu_mesh_system.hpp>
+#include <omega/texture/texture_system.hpp>
+#include <omega/texture/gpu_texture_system.hpp>
 #include <omega/renderable/renderable.hpp>
 #include <omega/assets/model_importer.hpp>
 #include <omega/model/model_system.hpp>
@@ -37,10 +39,50 @@ struct Frame
 {
     std::unique_ptr<ogfx::CommandPool> command_pool;
     std::unique_ptr<ogfx::CommandBuffer> command_buffer;
+    std::unique_ptr<ogfx::CommandBuffer> upload_command_buffer;
 
     std::unique_ptr<ogfx::Semaphore> image_available;
     std::unique_ptr<ogfx::Fence> in_flight;
+
+    omega::TextureUploadBatch upload_batch{};
 };
+
+omega::TextureAsset make_missing_texture_asset()
+{
+    constexpr uint32_t width = 256;
+    constexpr uint32_t height = 256;
+    constexpr uint32_t tile_size = 16;
+
+    constexpr std::array<uint8_t, 4> purple = {255, 0, 255, 255};
+    constexpr std::array<uint8_t, 4> black = {0, 0, 0, 255};
+
+    omega::TextureAsset asset;
+    asset.type = ogfx::ImageType::Image2D;
+    asset.width = width;
+    asset.height = height;
+    asset.depth = 1;
+    asset.mip_levels = 1;
+    asset.array_layers = 1;
+    asset.format = ogfx::Format::RGBA8_UNORM;
+
+    omega::TextureSubresource subresource;
+    subresource.mip_level = 0;
+    subresource.array_layer = 0;
+    subresource.data.resize(width * height * 4);
+
+    for (uint32_t y = 0; y < height; ++y)
+    {
+        for (uint32_t x = 0; x < width; ++x)
+        {
+            const auto& color = ((x / tile_size + y / tile_size) % 2 == 0) ? purple : black;
+            const size_t offset = (static_cast<size_t>(y) * width + x) * 4;
+            std::memcpy(subresource.data.data() + offset, color.data(), color.size());
+        }
+    }
+
+    asset.subresources.push_back(std::move(subresource));
+    return asset;
+}
 
 int main()
 {
@@ -107,6 +149,7 @@ int main()
 
         frame.command_pool = std::make_unique<ogfx::CommandPool>(device, graphicsQueue, pool_desc);
         frame.command_buffer = std::make_unique<ogfx::CommandBuffer>(*frame.command_pool);
+        frame.upload_command_buffer = std::make_unique<ogfx::CommandBuffer>(*frame.command_pool);
         frame.image_available = std::make_unique<ogfx::Semaphore>(device);
         frame.in_flight = std::make_unique<ogfx::Fence>(device, true);
     }
@@ -132,6 +175,14 @@ int main()
 
     omega::MeshSystem meshes(events);
     omega::GpuMeshSystem gpu_meshes(physical_device, device, registry, meshes, events);
+    omega::TextureSystem textures(events);
+    omega::GpuTextureSystem gpu_textures(physical_device, device, registry, textures, events);
+
+    // Create the procedural checkerboard texture
+    omega::TextureHandle missing_texture;
+    const omega::TextureAsset missing_texture_asset = make_missing_texture_asset();
+    if (!textures.create_texture(missing_texture_asset, missing_texture))
+        throw std::runtime_error("Failed to create missing texture");
 
     // Load scene
     omega::ModelImporter importer;
@@ -141,7 +192,7 @@ int main()
     const omega::ModelHandle model = models.load(model_path);
     omega::Entity sponza;
 
-    if (!models.instantiate(model, sponza))
+    if (!models.instantiate(model, missing_texture, sponza))
         throw std::runtime_error("Failed to instantiate");
 
     // Create camera
@@ -169,7 +220,7 @@ int main()
     
         omega::DirectionalLight directional_light;
         directional_light.color = {0.2f, 1.0f, 0.2f};
-        directional_light.intensity = 0.6f;
+        directional_light.intensity = 1.0f;
         components.add(directional_light_entity, directional_light);
     }
 
@@ -227,6 +278,7 @@ int main()
                 transforms,
                 cameras,
                 gpu_meshes,
+                gpu_textures,
             };
 
             renderer.create_pipeline<omega::RasterPipeline>();
@@ -236,14 +288,18 @@ int main()
         }
     }
 
-    const auto start_time = std::chrono::steady_clock::now();
-
     while (!window.should_close())
     {
         window.poll_events();
 
         Frame& frame = frames[current_frame];
         frame.in_flight->wait();
+
+        if (frame.upload_batch.is_valid())
+        {
+            gpu_textures.complete_uploads(frame.upload_batch);
+            frame.upload_batch = {};
+        }
 
         swapchainImageIndex = swapchain.acquire_next_image(*frame.image_available.get());
 
@@ -255,6 +311,19 @@ int main()
         transforms.update();
         cameras.update();
         gpu_meshes.synchronize();
+
+        frame.upload_command_buffer->begin();
+        const auto batch = gpu_textures.synchronize(*frame.upload_command_buffer);
+        frame.upload_command_buffer->end();
+        if (batch.is_valid())
+        {
+            ogfx::SubmitDesc upload_submit;
+            upload_submit.command_buffers.push_back(frame.upload_command_buffer.get());
+
+            graphicsQueue.submit(upload_submit);
+
+            frame.upload_batch = batch;
+        }
 
         ogfx::CommandBuffer& cmd = *frame.command_buffer;
 

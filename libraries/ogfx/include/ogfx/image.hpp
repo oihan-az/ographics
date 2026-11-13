@@ -34,6 +34,7 @@ struct ImageDesc
 
     uint32_t width = 0;
     uint32_t height = 0;
+    uint32_t depth = 1;
 
     uint32_t mip_levels = 1;
     uint32_t array_layers = 1;
@@ -63,6 +64,7 @@ class Image
 
     [[nodiscard]] uint32_t width() const { return m_desc.width; }
     [[nodiscard]] uint32_t height() const { return m_desc.height; }
+    [[nodiscard]] uint32_t depth() const { return m_desc.depth; }
     [[nodiscard]] Format format() const { return m_desc.format; }
 
   private:

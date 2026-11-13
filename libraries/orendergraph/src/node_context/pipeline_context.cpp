@@ -11,12 +11,15 @@ namespace orendergraph
 void PipelineContext::create(RenderGraph& graph, const Desc& desc)
 {
     // Pipeline layout
-    ogfx::PipelineLayoutDesc pipeline_layout_desc;
-    pipeline_layout_desc.set_layouts.reserve(desc.resource_set_layouts_desc.size());
+    resource_set_layouts.clear();
+    resource_set_layouts.reserve(desc.resource_set_layouts_desc.size());
     for (const ogfx::ResourceSetLayoutDesc& set_layout_desc : desc.resource_set_layouts_desc)
     {
-        pipeline_layout_desc.set_layouts.push_back(graph.get_or_create_object<ogfx::ResourceSetLayout>(set_layout_desc));
+        resource_set_layouts.push_back(graph.get_or_create_object<ogfx::ResourceSetLayout>(set_layout_desc));
     }
+
+    ogfx::PipelineLayoutDesc pipeline_layout_desc;
+    pipeline_layout_desc.set_layouts = resource_set_layouts;
     pipeline_layout_desc.inline_constant_ranges = desc.inline_constants_ranges;
 
     pipeline_layout = graph.get_or_create_object<ogfx::PipelineLayout>(pipeline_layout_desc);
@@ -76,6 +79,7 @@ void PipelineContext::update_resource_set(RenderGraph& graph, const ResourceWrit
 void PipelineContext::clear() 
 {
     pipeline_layout = nullptr;
+    resource_set_layouts.clear();
     resource_sets.clear();
 }
 

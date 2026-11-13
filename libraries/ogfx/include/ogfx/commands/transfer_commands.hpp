@@ -1,6 +1,8 @@
 #ifndef OGFX_TRANSFER_COMMANDS_HPP
 #define OGFX_TRANSFER_COMMANDS_HPP
 
+#include <ogfx/image_aspect.hpp>
+
 #include <cstdint>
 
 namespace ogfx
@@ -36,6 +38,8 @@ struct BufferToImageCopyInfo
     uint32_t mip_level = 0;
     uint32_t base_array_layer = 0;
     uint32_t array_layer_count = 1;
+
+    ImageAspect aspect = ImageAspect::Color;
 };
 
 struct ImageToImageCopyInfo
@@ -43,10 +47,12 @@ struct ImageToImageCopyInfo
     const Image* src_image = nullptr;
     uint32_t src_mip_level = 0;
     uint32_t src_base_array_layer = 0;
+    ImageAspect src_aspect = ImageAspect::Color;
 
     const Image* dst_image = nullptr;
     uint32_t dst_mip_level = 0;
     uint32_t dst_base_array_layer = 0;
+    ImageAspect dst_aspect = ImageAspect::Color;
 
     uint32_t width = 0;
     uint32_t height = 0;

@@ -19,7 +19,7 @@ void RasterPipeline::setup(RasterPipelineDesc& desc)
         desc.transforms,
         desc.cameras,
         desc.gpu_meshes,
-
+        desc.gpu_textures
     };
     
     GeometryRenderFeature& geometry_render_feature = add_feature<GeometryRenderFeature>(geomtry_render_desc);

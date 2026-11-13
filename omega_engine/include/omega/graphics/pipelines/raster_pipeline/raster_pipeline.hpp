@@ -13,6 +13,7 @@ class EventSystem;
 class TransformSystem;
 class CameraSystem;
 class GpuMeshSystem;
+class GpuTextureSystem;
 
 struct RasterPipelineDesc
 {
@@ -31,6 +32,7 @@ struct RasterPipelineDesc
     TransformSystem& transforms;
     CameraSystem& cameras;
     GpuMeshSystem& gpu_meshes;
+    GpuTextureSystem& gpu_textures;
 };
 
 class RasterPipeline : public orenderer::RenderPipeline

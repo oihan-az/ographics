@@ -37,6 +37,7 @@ struct PipelineContext
     void clear();
 
     ogfx::PipelineLayout* pipeline_layout = nullptr;
+    std::vector<const ogfx::ResourceSetLayout*> resource_set_layouts;
     std::vector<ogfx::ResourceSet*> resource_sets;
 };
 

@@ -11,6 +11,7 @@
 #include "../vk_format.hpp"
 #include "../vk_buffer.hpp"
 #include "../vk_image.hpp"
+#include "../vk_image_aspect.hpp"
 
 namespace ogfx
 {
@@ -77,8 +78,9 @@ void CommandBuffer::copy_buffer_to_image(const BufferToImageCopyInfo& info)
 
     const uint32_t mip_width = std::max(1u, info.image->width() >> info.mip_level);
     const uint32_t mip_height = std::max(1u, info.image->height() >> info.mip_level);
+    const uint32_t mip_depth = std::max(1u, info.image->depth() >> info.mip_level);
 
-    if (info.width > mip_width || info.height > mip_height || info.depth > 1)
+    if (info.width > mip_width || info.height > mip_height || info.depth > mip_depth)
     {
         OGFX_LOG_ERROR("Cannot copy buffer to image: copy extent exceeds mip dimensions");
         return;
@@ -89,7 +91,7 @@ void CommandBuffer::copy_buffer_to_image(const BufferToImageCopyInfo& info)
     copy_region.bufferRowLength = info.buffer_row_length;
     copy_region.bufferImageHeight = info.buffer_image_height;
 
-    copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.imageSubresource.aspectMask = to_vk_image_aspect(info.aspect);
     copy_region.imageSubresource.mipLevel = info.mip_level;
     copy_region.imageSubresource.baseArrayLayer = info.base_array_layer;
     copy_region.imageSubresource.layerCount = info.array_layer_count;
@@ -107,8 +109,8 @@ void CommandBuffer::copy_buffer_to_image(const BufferToImageCopyInfo& info)
     OGFX_LOG("  Mip level: " + std::to_string(info.mip_level));
     OGFX_LOG("  Base array layer: " + std::to_string(info.base_array_layer));
     OGFX_LOG("  Array layer count: " + std::to_string(info.array_layer_count));
-    OGFX_LOG("  Extent: " + std::to_string(info.width) + "x" + std::to_string(info.height) + "x" +
-             std::to_string(info.depth));
+    OGFX_LOG("  Extent: " + std::to_string(info.width) + "x" + std::to_string(info.height) + "x" + std::to_string(info.depth));
+    OGFX_LOG("  Aspect: " + to_string_bitmask(info.aspect));
 }
 
 void CommandBuffer::copy_image_to_image(const ImageToImageCopyInfo& info)
@@ -138,11 +140,13 @@ void CommandBuffer::copy_image_to_image(const ImageToImageCopyInfo& info)
 
     const uint32_t src_mip_width = std::max(1u, info.src_image->width() >> info.src_mip_level);
     const uint32_t src_mip_height = std::max(1u, info.src_image->height() >> info.src_mip_level);
+    const uint32_t src_mip_depth = std::max(1u, info.src_image->depth() >> info.src_mip_level);
     const uint32_t dst_mip_width = std::max(1u, info.dst_image->width() >> info.dst_mip_level);
     const uint32_t dst_mip_height = std::max(1u, info.dst_image->height() >> info.dst_mip_level);
+    const uint32_t dst_mip_depth = std::max(1u, info.dst_image->depth() >> info.dst_mip_level);
 
-    if (info.width > src_mip_width || info.height > src_mip_height || info.width > dst_mip_width ||
-        info.height > dst_mip_height || info.depth > 1)
+    if (info.width > src_mip_width || info.height > src_mip_height || info.depth > src_mip_depth ||
+        info.width > dst_mip_width || info.height > dst_mip_height || info.depth > dst_mip_depth)
     {
         OGFX_LOG_ERROR(
             "Cannot copy image to image: copy extent exceeds source or destination subresource layout dimensions");
@@ -151,13 +155,13 @@ void CommandBuffer::copy_image_to_image(const ImageToImageCopyInfo& info)
 
     VkImageCopy copy_region{};
 
-    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.aspectMask = to_vk_image_aspect(info.src_aspect);
     copy_region.srcSubresource.mipLevel = info.src_mip_level;
     copy_region.srcSubresource.baseArrayLayer = info.src_base_array_layer;
     copy_region.srcSubresource.layerCount = info.array_layer_count;
     copy_region.srcOffset = {0, 0, 0};
 
-    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.aspectMask = to_vk_image_aspect(info.dst_aspect);
     copy_region.dstSubresource.mipLevel = info.dst_mip_level;
     copy_region.dstSubresource.baseArrayLayer = info.dst_base_array_layer;
     copy_region.dstSubresource.layerCount = info.array_layer_count;
@@ -171,11 +175,12 @@ void CommandBuffer::copy_image_to_image(const ImageToImageCopyInfo& info)
     OGFX_LOG("Recorded Vulkan image-to-image copy:");
     OGFX_LOG("  Src Mip level: " + std::to_string(info.src_mip_level) +
              ", Src Base Layer: " + std::to_string(info.src_base_array_layer));
+    OGFX_LOG("  Src Aspect: " + to_string_bitmask(info.src_aspect));
     OGFX_LOG("  Dst Mip level: " + std::to_string(info.dst_mip_level) +
              ", Dst Base Layer: " + std::to_string(info.dst_base_array_layer));
+    OGFX_LOG("  Dst Aspect: " + to_string_bitmask(info.dst_aspect));
     OGFX_LOG("  Layer count:   " + std::to_string(info.array_layer_count));
-    OGFX_LOG("  Extent:        " + std::to_string(info.width) + "x" + std::to_string(info.height) + "x" +
-             std::to_string(info.depth));
+    OGFX_LOG("  Extent:        " + std::to_string(info.width) + "x" + std::to_string(info.height) + "x" + std::to_string(info.depth));
 }
 
 void CommandBuffer::blit_image(const ImageToImageCopyInfo& info)
@@ -205,12 +210,13 @@ void CommandBuffer::blit_image(const ImageToImageCopyInfo& info)
 
     const uint32_t src_mip_width = std::max(1u, info.src_image->width() >> info.src_mip_level);
     const uint32_t src_mip_height = std::max(1u, info.src_image->height() >> info.src_mip_level);
-
+    const uint32_t src_mip_depth = std::max(1u, info.src_image->depth() >> info.src_mip_level);
     const uint32_t dst_mip_width = std::max(1u, info.dst_image->width() >> info.dst_mip_level);
     const uint32_t dst_mip_height = std::max(1u, info.dst_image->height() >> info.dst_mip_level);
+    const uint32_t dst_mip_depth = std::max(1u, info.dst_image->depth() >> info.dst_mip_level);
 
-    if (info.width > src_mip_width || info.height > src_mip_height || info.width > dst_mip_width ||
-        info.height > dst_mip_height)
+    if (info.width > src_mip_width || info.height > src_mip_height || info.depth > src_mip_height ||
+        info.width > dst_mip_width || info.height > dst_mip_height || info.depth > dst_mip_height)
     {
         OGFX_LOG_ERROR("Cannot blit image: blit extent exceeds mip dimensions of source or destination");
         return;
@@ -218,31 +224,33 @@ void CommandBuffer::blit_image(const ImageToImageCopyInfo& info)
 
     VkImageBlit region{};
 
-    region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.aspectMask = to_vk_image_aspect(info.src_aspect);
     region.srcSubresource.mipLevel = info.src_mip_level;
     region.srcSubresource.baseArrayLayer = info.src_base_array_layer;
     region.srcSubresource.layerCount = info.array_layer_count;
     region.srcOffsets[0] = {0, 0, 0};
-    region.srcOffsets[1] = {static_cast<int32_t>(info.width), static_cast<int32_t>(info.height), 1};
+    region.srcOffsets[1] = {static_cast<int32_t>(info.width), static_cast<int32_t>(info.height), static_cast<int32_t>(info.depth)};
 
-    region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.aspectMask = to_vk_image_aspect(info.dst_aspect);
     region.dstSubresource.mipLevel = info.dst_mip_level;
     region.dstSubresource.baseArrayLayer = info.dst_base_array_layer;
     region.dstSubresource.layerCount = info.array_layer_count;
     region.dstOffsets[0] = {0, 0, 0};
-    region.dstOffsets[1] = {static_cast<int32_t>(info.width), static_cast<int32_t>(info.height), 1};
+    region.dstOffsets[1] = {static_cast<int32_t>(info.width), static_cast<int32_t>(info.height), static_cast<int32_t>(info.depth)};
 
     vkCmdBlitImage(m_impl->m_command_buffer, info.src_image->m_impl->m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                    info.dst_image->m_impl->m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
                    VK_FILTER_NEAREST);
 
     OGFX_LOG("Recorded Vulkan image-to-image blit:");
-    OGFX_LOG("  Source mip level: " + std::to_string(info.src_mip_level));
-    OGFX_LOG("  Source base array layer: " + std::to_string(info.src_base_array_layer));
-    OGFX_LOG("  Destination mip level: " + std::to_string(info.dst_mip_level));
-    OGFX_LOG("  Destination base array layer: " + std::to_string(info.dst_base_array_layer));
+    OGFX_LOG("  Src mip level: " + std::to_string(info.src_mip_level));
+    OGFX_LOG("  Src base array layer: " + std::to_string(info.src_base_array_layer));
+    OGFX_LOG("  Src aspect: " + to_string_bitmask(info.src_aspect));
+    OGFX_LOG("  Dst mip level: " + std::to_string(info.dst_mip_level));
+    OGFX_LOG("  Dst base array layer: " + std::to_string(info.dst_base_array_layer));
+    OGFX_LOG("  Dst aspect: " + to_string_bitmask(info.dst_aspect));
     OGFX_LOG("  Array layer count: " + std::to_string(info.array_layer_count));
-    OGFX_LOG("  Extent: " + std::to_string(info.width) + "x" + std::to_string(info.height));
+    OGFX_LOG("  Extent: " + std::to_string(info.width) + "x" + std::to_string(info.height) + "x" + std::to_string(info.depth));
 }
 
 
@@ -288,7 +296,7 @@ void CommandBuffer::generate_mipmaps(const GenerateMipmapsInfo& info)
 
     for (uint32_t level = 1; level < mip_levels; ++level)
     {
-        // The previous level was written as a transfer destination.
+        // The previous level was written as a transfer destination
         ImageTransitionInfo source_transition{};
         source_transition.image = &image;
         source_transition.old_state = ImageState::TransferDst;
@@ -300,7 +308,7 @@ void CommandBuffer::generate_mipmaps(const GenerateMipmapsInfo& info)
 
         transition_image(source_transition);
 
-        // Prepare the next mip level to receive the blit.
+        // Prepare the next mip level to receive the blit
         ImageTransitionInfo destination_transition{};
         destination_transition.image = &image;
         destination_transition.old_state = ImageState::Undefined;
@@ -336,12 +344,12 @@ void CommandBuffer::generate_mipmaps(const GenerateMipmapsInfo& info)
         OGFX_LOG("  Generated mip " + std::to_string(level) + ": " + std::to_string(next_width) + "x" +
                  std::to_string(next_height));
 
-        // The current source level can now become the next blit's source.
+        // The current source level can now become the next blit's source
         mip_width = next_width;
         mip_height = next_height;
     }
 
-    // The final mip level is still a transfer destination.
+    // The final mip level is still a transfer destination
     ImageTransitionInfo last_transition{};
     last_transition.image = &image;
     last_transition.old_state = ImageState::TransferDst;
@@ -353,7 +361,7 @@ void CommandBuffer::generate_mipmaps(const GenerateMipmapsInfo& info)
 
     transition_image(last_transition);
 
-    // All earlier levels are transfer sources.
+    // All earlier levels are transfer sources
     ImageTransitionInfo source_levels_transition{};
     source_levels_transition.image = &image;
     source_levels_transition.old_state = ImageState::TransferSrc;

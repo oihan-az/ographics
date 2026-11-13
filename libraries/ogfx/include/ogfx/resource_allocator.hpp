@@ -26,7 +26,7 @@ struct DescriptorPoolDesc
 class ResourceAllocator
 {
   public:
-    ResourceAllocator(const Device& device);
+    ResourceAllocator(const Device& device, uint32_t max_sets_per_pool = 64);
     ~ResourceAllocator();
 
     ResourceAllocator(const ResourceAllocator&) = delete;
@@ -42,6 +42,8 @@ class ResourceAllocator
 
     void allocate(ResourceSet& resource_set);
     void free(ResourceSet& resource_set);
+
+    uint32_t m_max_sets_per_pool = 0;
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

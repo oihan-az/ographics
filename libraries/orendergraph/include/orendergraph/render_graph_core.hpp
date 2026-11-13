@@ -55,6 +55,7 @@ class RenderGraph
     void execute(ogfx::CommandBuffer& cmd);
     void reset();
 
+    ogfx::Device& device() { return *m_device; }
     ogfx::ResourceAllocator& get_resource_allocator() { return *m_resource_allocator; }
 
   private:

@@ -1,12 +1,14 @@
 struct VSInput
 {
     float3 position : POSITION;
+    float2 uv : TEXCOORD0;
     float3 normal : NORMAL;
 };
 
 struct VSOutput
 {
     float4 position : SV_Position;
+    float2 uv : TEXCOORD0;
     float4 color : COLOR;
     float3 normal : NORMAL;
     float3 world_position : POSITION1;
@@ -51,6 +53,7 @@ VSOutput VSMain(VSInput input)
 
     output.world_position = world_position.xyz;
     output.color = constants.color;
+    output.uv = input.uv;
 
     float3x3 normal_matrix = inverse_transpose((float3x3) constants.model);
     output.normal = normalize(mul(normal_matrix, input.normal));

@@ -14,8 +14,8 @@ ogfx::VertexInputStateDesc standard_vertex_layout()
     layout.attributes = 
     {
         {.location = 0, .binding = 0, .format = ogfx::Format::RGB32_FLOAT, .offset = offsetof(Vertex, position)},
-        {.location = 2, .binding = 0, .format = ogfx::Format::RG32_FLOAT, .offset = offsetof(Vertex, uv)},
-        {.location = 1, .binding = 0, .format = ogfx::Format::RGB32_FLOAT, .offset = offsetof(Vertex, normal)},
+        {.location = 1, .binding = 0, .format = ogfx::Format::RG32_FLOAT, .offset = offsetof(Vertex, uv)},
+        {.location = 2, .binding = 0, .format = ogfx::Format::RGB32_FLOAT, .offset = offsetof(Vertex, normal)},
         {.location = 3, .binding = 0, .format = ogfx::Format::RGB32_FLOAT, .offset = offsetof(Vertex, tangent)}
     };
 

@@ -4,6 +4,7 @@
 #include <omega/core/entity/entity.hpp>
 #include <omega/assets/imported_model.hpp>
 #include <omega/model/model_handle.hpp>
+#include <omega/texture/texture_handle.hpp>
 
 #include <filesystem>
 
@@ -30,7 +31,7 @@ class ModelSystem
 
     const ImportedModel* get(ModelHandle model) const;
 
-    bool instantiate(ModelHandle model, Entity& root);
+    bool instantiate(ModelHandle model, TextureHandle texture, Entity& root);
 
   private:
     struct ModelSlot

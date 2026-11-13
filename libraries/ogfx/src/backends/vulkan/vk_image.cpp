@@ -91,7 +91,7 @@ Image::Image(const PhysicalDevice& physical_device, const Device& device, const 
     image_info.imageType = to_vk_image_type(m_desc.type);
     image_info.flags = to_vk_image_create_flags(m_desc.type);
     image_info.format = to_vk_format(m_desc.format);
-    image_info.extent = {m_desc.width, m_desc.height, 1};
+    image_info.extent = {m_desc.width, m_desc.height, m_desc.depth};
     image_info.mipLevels = m_desc.mip_levels;
     image_info.arrayLayers = m_desc.array_layers;
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;

@@ -40,7 +40,8 @@ bool ComponentGpuBuffer<T>::create(orendergraph::RenderGraph& rg)
     return true;
 }
 
-template <typename T> void ComponentGpuBuffer<T>::capture_events()
+template <typename T> 
+void ComponentGpuBuffer<T>::capture_events()
 {
     const auto& added = m_events.get_queue<ComponentAddedEvent<T>>().get_events();
     const auto& removed = m_events.get_queue<ComponentRemovedEvent<T>>().get_events();

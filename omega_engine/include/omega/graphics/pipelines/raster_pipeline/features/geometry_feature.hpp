@@ -14,15 +14,22 @@
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
 
+#include <omega/renderable/renderable.hpp>
+
 #include <omega/graphics/gpu_component/component_gpu_buffer.hpp>
+#include <omega/graphics/resources/resource_set_cache.hpp>
+#include <omega/texture/texture_handle.hpp>
+#include <omega/texture/texture_view_handle.hpp>
 
 #include <cstdint>
+#include <unordered_set>
 
 namespace ogfx
 {
 class Image;
 class ImageView;
 class CommandBuffer;
+class Sampler;
 } // namespace ogfx
 
 namespace orendergraph
@@ -40,8 +47,10 @@ class EventSystem;
 class TransformSystem;
 class CameraSystem;
 class GpuMeshSystem;
+class GpuTextureSystem;
 
 template <typename T> class ComponentStorage;
+template <typename Handle, typename Hash> class ResourceSetCache;
 
 struct GeometryRenderFeatureDesc
 {
@@ -57,6 +66,7 @@ struct GeometryRenderFeatureDesc
     TransformSystem& transforms;
     CameraSystem& cameras;
     GpuMeshSystem& gpu_meshes;
+    GpuTextureSystem& gpu_textures;
 };
 
 class GeometryRenderFeature : public orenderer::IRenderFeature
@@ -70,6 +80,21 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
 
   private:
     GeometryRenderFeatureDesc m_desc;
+
+    struct FrameResourceSets
+    {
+        std::unique_ptr<ResourceSetCache<TextureHandle, TextureHandleHash>> m_texture_resource_sets;
+        std::unordered_set<TextureHandle, TextureHandleHash> pending_textures;
+
+        std::vector<ComponentAddedEvent<Renderable>> pending_added;
+        std::vector<ComponentRemovedEvent<Renderable>> pending_removed;
+        std::vector<ComponentModifiedEvent<Renderable>> pending_modified;
+    };
+
+    std::vector<FrameResourceSets> m_resource_sets;
+    std::unordered_map<TextureHandle, TextureViewHandle, TextureHandleHash> m_texture_views;
+
+    void update_texture_resource_set(FrameResourceSets& frame, TextureHandle texture);
 
     ComponentGpuBuffer<DirectionalLight> m_directional_lights;
     ComponentGpuBuffer<PointLight> m_point_lights;
@@ -95,6 +120,8 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
 
     orendergraph::ResourceHandle<ogfx::Image> m_depth_image;
     orendergraph::ResourceHandle<ogfx::ImageView> m_depth_image_view;
+
+    orendergraph::ResourceHandle<ogfx::Sampler> m_sampler;
 };
 
 } // namespace omege

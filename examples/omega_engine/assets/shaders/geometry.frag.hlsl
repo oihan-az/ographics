@@ -3,6 +3,7 @@
 struct PSInput
 {
     float4 position : SV_Position;
+    float2 uv : TEXCOORD0;
     float4 color : COLOR;
     float3 normal : NORMAL;
     float3 world_position : POSITION1;
@@ -21,6 +22,12 @@ StructuredBuffer<PointLight> point_lights;
 
 [[vk::binding(2, 0)]]
 StructuredBuffer<SpotLight> spot_lights;
+
+[[vk::binding(0, 1)]]
+Texture2D<float4> albedo_texture;
+
+[[vk::binding(0, 2)]]
+SamplerState albedo_sampler;
 
 struct LightingConstants
 {
@@ -53,7 +60,9 @@ PSOutput PSMain(PSInput input)
         lighting_constants.spot_light_count
     );
 
-    output.albedo = float4(input.color.rgb * lighting, input.color.a);
+    float4 albedo = albedo_texture.Sample(albedo_sampler, input.uv);
+    
+    output.albedo = float4(albedo.rgb * input.color.rgb * lighting, input.color.a);
 
     return output;
 }
