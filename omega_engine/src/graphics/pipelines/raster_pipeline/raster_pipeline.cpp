@@ -14,6 +14,8 @@ void RasterPipeline::setup(RasterPipelineDesc& desc)
         desc.height,
         desc.frames_in_flight,
         desc.current_frame,
+        desc.missing_texture,
+        desc.missing_texture_view,
         desc.components,
         desc.events,
         desc.transforms,

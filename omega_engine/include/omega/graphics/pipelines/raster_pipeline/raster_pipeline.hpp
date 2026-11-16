@@ -4,6 +4,8 @@
 #include <orenderer/render_pipeline.hpp>
 
 #include <omega/core/entity/entity.hpp>
+#include <omega/texture/texture_handle.hpp>
+#include <omega/texture/texture_view_handle.hpp>
 
 namespace omega
 {
@@ -26,6 +28,9 @@ struct RasterPipelineDesc
 
     std::vector<orendergraph::ResourceHandle<ogfx::Image>> swapchain_images;
     uint32_t* swapchain_image_index = nullptr;
+
+    TextureHandle missing_texture;
+    TextureViewHandle missing_texture_view;
 
     ComponentSystem& components;
     EventSystem& events;

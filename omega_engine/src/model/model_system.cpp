@@ -4,6 +4,7 @@
 #include <omega/core/hierarchy/hierarchy_system.hpp>
 #include <omega/core/component/component_system.hpp>
 #include <omega/mesh/mesh_system.hpp>
+#include <omega/texture/texture_system.hpp>
 #include <omega/renderable/renderable.hpp>
 #include <omega/transform/transform.hpp>
 #include <omega/assets/model_importer.hpp>
@@ -14,9 +15,11 @@
 namespace omega
 {
 
-ModelSystem::ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components,
-                         MeshSystem& meshes, ModelImporter& importer)
-    : m_entities(entities), m_hierarchy(hierarchy), m_components(components), m_meshes(meshes), m_importer(importer)
+ModelSystem::ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components, 
+                         MeshSystem& meshes, TextureSystem& textures,
+                         ModelImporter& importer)
+    : m_entities(entities), m_hierarchy(hierarchy), m_components(components), m_meshes(meshes), m_textures(textures),
+      m_importer(importer)
 {
 }
 
@@ -79,7 +82,7 @@ const ImportedModel* ModelSystem::get(ModelHandle model) const
     return &m_models[model.index].model;
 }
 
-bool ModelSystem::instantiate(ModelHandle model, TextureHandle texture, Entity& root)
+bool ModelSystem::instantiate(ModelHandle model, TextureHandle default_texture, Entity& root)
 {
     const ImportedModel* imported_model = get(model);
     if (!imported_model)
@@ -131,6 +134,24 @@ bool ModelSystem::instantiate(ModelHandle model, TextureHandle texture, Entity& 
         }
     }
 
+
+    // Create each imported texture only once
+    std::vector<TextureHandle> texture_handles;
+    texture_handles.reserve(imported_model->textures.size());
+    for (const ImportedTexture& imported_texture : imported_model->textures)
+    {
+        TextureHandle handle{};
+        if (!m_textures.create_texture(imported_texture.texture, handle))
+        {
+            for (TextureHandle created : texture_handles)
+                m_textures.release_texture(created);
+
+            return false;
+        }
+
+        texture_handles.push_back(handle);
+    }
+
     std::vector<Entity> node_entities(imported_model->nodes.size());
     std::vector<Entity> created_entities;
 
@@ -174,10 +195,14 @@ bool ModelSystem::instantiate(ModelHandle model, TextureHandle texture, Entity& 
 
         for (uint32_t mesh_index : node.meshes)
         {
+            const auto& imported_mesh = imported_model->meshes[mesh_index];
             const auto& handles = mesh_handles[mesh_index];
 
-            for (MeshHandle handle : handles)
+            for (uint32_t primitive_index = 0; primitive_index < imported_mesh.primitives.size(); ++primitive_index)
             {
+                const ImportedPrimitive& primitive = imported_mesh.primitives[primitive_index];
+                const MeshHandle mesh_handle = handles[primitive_index];
+
                 const Entity renderable_entity = m_entities.create_entity();
 
                 if (!renderable_entity.is_valid())
@@ -195,8 +220,12 @@ bool ModelSystem::instantiate(ModelHandle model, TextureHandle texture, Entity& 
                 }
 
                 Renderable renderable{};
-                renderable.mesh = handle;
-                renderable.texture = texture;
+                renderable.mesh = mesh_handle;
+
+                if (primitive.albedo_texture != std::numeric_limits<uint32_t>::max())
+                    renderable.texture = texture_handles[primitive.albedo_texture];
+                else
+                    renderable.texture = default_texture;
 
                 if (!m_components.add<Renderable>(renderable_entity, renderable))
                 {

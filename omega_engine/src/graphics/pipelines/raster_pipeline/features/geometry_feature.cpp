@@ -369,6 +369,27 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
     for (FrameResources& frame : m_frame_resources)
     {
         frame.m_texture_resource_sets = std::make_unique<ResourceSetCache<TextureHandle, TextureHandleHash>>(rg.device(), rg.get_resource_allocator(), *ctx.resource_set_layouts[1]);
+
+        if (!frame.m_texture_resource_sets->acquire(m_desc.missing_texture))
+            continue;
+
+        // Request residency if necessary
+        if (!m_desc.gpu_textures.is_resident(m_desc.missing_texture) &&
+            !m_desc.gpu_textures.is_pending(m_desc.missing_texture) &&
+            !m_desc.gpu_textures.is_uploading(m_desc.missing_texture))
+        {
+            m_desc.gpu_textures.make_resident(m_desc.missing_texture);
+        }
+
+        // Update the resource set
+        ogfx::ImageBinding texture_binding{};
+        texture_binding.binding = 0;
+        texture_binding.image_state = ogfx::ImageState::ShaderRead;
+        texture_binding.image_view = m_desc.gpu_textures.get_view(m_desc.missing_texture_view);
+
+        ogfx::ResourceSetWriteInfo write_info{};
+        write_info.textures.push_back(texture_binding);
+        frame.m_texture_resource_sets->update(m_desc.missing_texture, write_info);
     }
 
     geometry_node->set_pre_execute
@@ -467,7 +488,6 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                         if (!frame.m_texture_views.contains(texture))
                         {
                             const TextureViewHandle view = m_desc.gpu_textures.create_view(texture, TextureViewDesc{});
-
                             if (view.is_valid())
                             {
                                 frame.m_texture_views.emplace(texture, view);
@@ -475,7 +495,6 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                             }
                         }
 
-                        frame.pending_textures.insert(texture);
                         break;
                     }
                     case ComponentEventType::Removed:
@@ -637,10 +656,13 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 cmd.set_inline_constants(constants_info);
 
                 // Texture
-                if (frame.pending_textures.contains(renderable->texture))
-                    continue;
+                TextureHandle texture = renderable->texture;
+                if (frame.pending_textures.contains(texture))
+                {
+                    texture = m_desc.missing_texture;
+                }
 
-                const ogfx::ResourceSet* texture_resource_set = frame.m_texture_resource_sets->get(renderable->texture);
+                const ogfx::ResourceSet* texture_resource_set = frame.m_texture_resource_sets->get(texture);
                 if (!texture_resource_set)
                     continue;
 

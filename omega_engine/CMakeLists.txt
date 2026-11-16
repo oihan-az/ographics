@@ -40,10 +40,11 @@ target_sources(
         src/graphics/pipelines/raster_pipeline/features/geometry_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.cpp
 
-        "src/graphics/resources/gpu_dynamic_buffer.cpp"
+        src/graphics/resources/gpu_dynamic_buffer.cpp
 
         src/loader/loader.cpp
         src/assets/assimp/assimp_model_importer.cpp
+        src/assets/texture_loader.cpp
 
         src/model/model_system.cpp
 
@@ -54,6 +55,7 @@ if(BUILD_TESTING)
 endif()
 
 find_package(assimp CONFIG REQUIRED)
+find_package(Stb REQUIRED)
 
 target_link_libraries(
     omega_engine

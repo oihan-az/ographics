@@ -184,9 +184,45 @@ int main()
     if (!textures.create_texture(missing_texture_asset, missing_texture))
         throw std::runtime_error("Failed to create missing texture");
 
+    if (!gpu_textures.make_resident(missing_texture))
+        throw std::runtime_error("Failed to request missing texture residency");
+
+    omega::TextureViewHandle missing_texture_view = gpu_textures.create_view(missing_texture, omega::TextureViewDesc{});
+
+    // Upload missing texture before rendering the first frame
+    {
+        Frame& frame = frames[current_frame];
+
+        // Two synchronization passes are required:
+        // 1. Upload the texture and wait for GPU completion
+        // 2. Create its image views, which are deferred until the texture is resident
+        for (uint32_t i = 0; i < 2; ++i)
+        {
+            frame.upload_command_buffer->begin();
+            const auto batch = gpu_textures.synchronize(*frame.upload_command_buffer);
+            frame.upload_command_buffer->end();
+
+            if (!batch.is_valid())
+                continue;
+
+            ogfx::SubmitDesc upload_submit;
+            upload_submit.command_buffers.push_back(frame.upload_command_buffer.get());
+            upload_submit.fence = frame.in_flight.get();
+
+            frame.in_flight->reset();
+            graphicsQueue.submit(upload_submit);
+
+            // Wait for upload completion
+            frame.in_flight->wait();
+
+            gpu_textures.complete_uploads(batch);
+            frame.upload_batch = {};
+        }
+    }
+
     // Load scene
     omega::ModelImporter importer;
-    omega::ModelSystem models(entities, hierarchy, components, meshes, importer);
+    omega::ModelSystem models(entities, hierarchy, components, meshes, textures, importer);
     const std::filesystem::path asset_dir = OMEGA_ASSET_DIR;
     const std::filesystem::path model_path = asset_dir / "models/sponza_glTF/Sponza.gltf";
     const omega::ModelHandle model = models.load(model_path);
@@ -273,6 +309,8 @@ int main()
                 &current_frame,
                 swapchain_images,
                 &swapchainImageIndex,
+                missing_texture,
+                missing_texture_view,
                 components,
                 events,
                 transforms,

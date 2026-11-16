@@ -63,6 +63,9 @@ struct GeometryRenderFeatureDesc
     uint32_t frames_in_flight = 0;
     uint32_t* current_frame = nullptr;
 
+    TextureHandle missing_texture;
+    TextureViewHandle missing_texture_view;
+
     ComponentSystem& components;
     EventSystem& events;
     TransformSystem& transforms;

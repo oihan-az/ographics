@@ -16,6 +16,9 @@ VkFormat to_vk_format(Format format)
     case Format::RG8_UNORM:
         return VK_FORMAT_R8G8_UNORM;
 
+    case Format::RGB8_UNORM:
+        return VK_FORMAT_R8G8B8_UNORM;
+
     case Format::RGBA8_UNORM:
         return VK_FORMAT_R8G8B8A8_UNORM;
 
@@ -28,11 +31,26 @@ VkFormat to_vk_format(Format format)
     case Format::BGRA8_SRGB:
         return VK_FORMAT_B8G8R8A8_SRGB;
 
+    case Format::R16_UNORM:
+        return VK_FORMAT_R16_UNORM;
+
+    case Format::RG16_UNORM:
+        return VK_FORMAT_R16G16_UNORM;
+
+    case Format::RGB16_UNORM:
+        return VK_FORMAT_R16G16B16_UNORM;
+
+    case Format::RGBA16_UNORM:
+        return VK_FORMAT_R16G16B16A16_UNORM;
+
     case Format::RG16_FLOAT:
         return VK_FORMAT_R16G16_SFLOAT;
 
     case Format::RGBA16_FLOAT:
         return VK_FORMAT_R16G16B16A16_SFLOAT;
+
+    case Format::R32_FLOAT:
+        return VK_FORMAT_R32_SFLOAT;
 
     case Format::RG32_FLOAT:
         return VK_FORMAT_R32G32_SFLOAT;
@@ -69,6 +87,9 @@ Format from_vk_format(VkFormat format)
     case VK_FORMAT_R8G8_UNORM:
         return Format::RG8_UNORM;
 
+    case VK_FORMAT_R8G8B8_UNORM:
+        return Format::RGB8_UNORM;
+
     case VK_FORMAT_R8G8B8A8_UNORM:
         return Format::RGBA8_UNORM;
 
@@ -81,11 +102,26 @@ Format from_vk_format(VkFormat format)
     case VK_FORMAT_B8G8R8A8_SRGB:
         return Format::BGRA8_SRGB;
 
+    case VK_FORMAT_R16_UNORM:
+        return Format::R16_UNORM;
+
+    case VK_FORMAT_R16G16_UNORM:
+        return Format::RG16_UNORM;
+
+    case VK_FORMAT_R16G16B16_UNORM:
+        return Format::RGB16_UNORM;
+
+    case VK_FORMAT_R16G16B16A16_UNORM:
+        return Format::RGBA16_UNORM;
+
     case VK_FORMAT_R16G16_SFLOAT:
         return Format::RG16_FLOAT;
 
     case VK_FORMAT_R16G16B16A16_SFLOAT:
         return Format::RGBA16_FLOAT;
+
+    case VK_FORMAT_R32_SFLOAT:
+        return Format::R32_FLOAT;
 
     case VK_FORMAT_R32G32_SFLOAT:
         return Format::RG32_FLOAT;

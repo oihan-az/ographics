@@ -1,11 +1,13 @@
 #include <omega/assets/model_importer.hpp>
 
 #include <omega/assets/imported_model.hpp>
+#include <omega/assets/texture_loader.hpp>
 #include <omega/mesh/vertex.hpp>
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
+#include <assimp/material.h>
 
 namespace omega
 {
@@ -66,7 +68,7 @@ Transform convert_transform(const aiMatrix4x4& matrix)
     return result;
 }
 
-ImportedMesh convert_mesh(const aiMesh& source)
+ImportedMesh convert_mesh(const aiMesh& source, uint32_t albedo_texture)
 {
     if (!source.HasPositions() || source.mNumVertices == 0)
         throw std::runtime_error("Assimp mesh has no vertex positions.");
@@ -75,6 +77,9 @@ ImportedMesh convert_mesh(const aiMesh& source)
     result.name = source.mName.C_Str();
 
     ImportedPrimitive primitive;
+
+    primitive.albedo_texture = albedo_texture;
+
     MeshAsset& asset = primitive.mesh;
 
     asset.vertex_input = standard_vertex_layout();
@@ -123,6 +128,49 @@ ImportedMesh convert_mesh(const aiMesh& source)
     return result;
 }
 
+constexpr uint32_t invalid_texture_index = std::numeric_limits<uint32_t>::max();
+
+uint32_t load_material_albedo(const aiScene& scene, const aiMaterial& material, const std::filesystem::path& directory,
+                              ImportedModel& model)
+{
+    aiString texture_path;
+    aiReturn status = material.GetTexture(aiTextureType_BASE_COLOR, 0, &texture_path);
+    if (status != AI_SUCCESS)
+    {
+        status = material.GetTexture(aiTextureType_DIFFUSE, 0, &texture_path);
+    }
+
+    if (status != AI_SUCCESS)
+        return invalid_texture_index;
+
+    TextureAsset texture;
+    const aiTexture* embedded = scene.GetEmbeddedTexture(texture_path.C_Str());
+    if (embedded)
+    {
+        // TODO: support embedded textures
+        return invalid_texture_index;
+    }
+    else
+    {
+        std::filesystem::path file_path(texture_path.C_Str());
+
+        if (file_path.is_relative())
+            file_path = directory / file_path;
+
+        if (!TextureLoader::load(file_path, texture))
+        {
+            return invalid_texture_index;
+        }
+    }
+
+    if (model.textures.size() >= invalid_texture_index)
+        return invalid_texture_index;
+
+    const uint32_t texture_index = static_cast<uint32_t>(model.textures.size());
+    model.textures.push_back(ImportedTexture{.texture = std::move(texture)});
+    return texture_index;
+}
+
 } // namespace
 
 ImportedModel ModelImporter::import(const std::filesystem::path& path)
@@ -143,12 +191,26 @@ ImportedModel ModelImporter::import(const std::filesystem::path& path)
     ImportedModel result;
     result.name = path.stem().string();
 
+    // Load material textures
+    const std::filesystem::path directory = path.parent_path();
+    std::vector<uint32_t> material_textures(scene->mNumMaterials, invalid_texture_index);
+    for (uint32_t i = 0; i < scene->mNumMaterials; ++i)
+    {
+        material_textures[i] = load_material_albedo(*scene, *scene->mMaterials[i], directory, result);
+    }
+
     // Convert meshes
-    // Nodes will reference these by index
     result.meshes.reserve(scene->mNumMeshes);
     for (uint32_t i = 0; i < scene->mNumMeshes; ++i)
     {
-        result.meshes.push_back(convert_mesh(*scene->mMeshes[i]));
+        const aiMesh& mesh = *scene->mMeshes[i];
+
+        uint32_t albedo_texture = invalid_texture_index;
+
+        if (mesh.mMaterialIndex < material_textures.size())
+            albedo_texture = material_textures[mesh.mMaterialIndex];
+
+        result.meshes.push_back(convert_mesh(mesh, albedo_texture));
     }
 
     // Flatten the Assimp node tree into an indexed node array

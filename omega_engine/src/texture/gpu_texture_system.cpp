@@ -125,7 +125,7 @@ void GpuTextureSystem::complete_uploads(TextureUploadBatch handle)
         }
         else
         {
-            // It may have been requested non-resident while uploading.
+            // It may have been requested non-resident while uploading
             release_gpu_texture(texture);
 
             if (m_texture_system.get(texture) == nullptr)

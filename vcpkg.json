@@ -12,6 +12,7 @@
         "magic-enum",
         "gtest",
         "glm",
-        "assimp"
+        "assimp",
+        "stb"
     ]
 }

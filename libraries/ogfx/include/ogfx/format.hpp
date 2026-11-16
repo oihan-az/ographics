@@ -12,15 +12,22 @@ enum class Format
 
     R8_UNORM,
     RG8_UNORM,
+    RGB8_UNORM,
     RGBA8_UNORM,
     BGRA8_UNORM,
 
     RGBA8_SRGB,
     BGRA8_SRGB,
 
+    R16_UNORM,
+    RG16_UNORM,
+    RGB16_UNORM,
+    RGBA16_UNORM,
+
     RG16_FLOAT,
     RGBA16_FLOAT,
 
+    R32_FLOAT,
     RG32_FLOAT,
     RGB32_FLOAT,
     RGBA32_FLOAT,
@@ -45,9 +52,15 @@ bool inline get_format_info(Format format, FormatInfo& out_info)
         return true;
 
     case Format::RG8_UNORM:
+    case Format::R16_UNORM:
         out_info = {2};
         return true;
 
+    case Format::RGB8_UNORM:
+        out_info = {3};
+        return true;
+
+    case Format::RG16_UNORM:
     case Format::RG16_FLOAT:
         out_info = {4};
         return true;
@@ -56,11 +69,17 @@ bool inline get_format_info(Format format, FormatInfo& out_info)
     case Format::BGRA8_UNORM:
     case Format::RGBA8_SRGB:
     case Format::BGRA8_SRGB:
+    case Format::R32_FLOAT:
     case Format::D24_UNORM_S8_UINT:
     case Format::D32_FLOAT:
         out_info = {4};
         return true;
 
+    case Format::RGB16_UNORM:
+        out_info = {6};
+        return true;
+
+    case Format::RGBA16_UNORM:
     case Format::RGBA16_FLOAT:
     case Format::RG32_FLOAT:
     case Format::D32_FLOAT_S8_UINT:

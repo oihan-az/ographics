@@ -2,6 +2,7 @@
 #define OMEGA_IMPORTED_MODEL_HPP
 
 #include <omega/mesh/mesh_asset.hpp>
+#include <omega/texture/texture_asset.hpp>
 #include <omega/transform/transform.hpp>
 
 #include <cstdint>
@@ -15,6 +16,7 @@ namespace omega
 struct ImportedPrimitive
 {
     MeshAsset mesh;
+    uint32_t albedo_texture;
 };
 
 struct ImportedMesh
@@ -22,6 +24,11 @@ struct ImportedMesh
     std::string name;
 
     std::vector<ImportedPrimitive> primitives;
+};
+
+struct ImportedTexture
+{
+    TextureAsset texture;
 };
 
 struct ImportedNode
@@ -40,6 +47,7 @@ struct ImportedModel
     std::string name;
 
     std::vector<ImportedMesh> meshes;
+    std::vector<ImportedTexture> textures;
     std::vector<ImportedNode> nodes;
 
     std::vector<uint32_t> root_nodes;
