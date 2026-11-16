@@ -453,11 +453,24 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                             const TextureHandle previous_texture = it->second;
                             if (texture_resource_sets->release(previous_texture))
                             {
-                                auto view_it = frame.m_texture_views.find(previous_texture);
-                                if (view_it != frame.m_texture_views.end())
+                                bool referenced_in_other_frame = false;
+                                for (const FrameResources& other_frame : m_frame_resources)
                                 {
-                                    m_desc.gpu_textures.release_view(view_it->second);
-                                    frame.m_texture_views.erase(view_it);
+                                    if (other_frame.m_texture_resource_sets->reference_count(previous_texture) > 0)
+                                    {
+                                        referenced_in_other_frame = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!referenced_in_other_frame)
+                                {
+                                    auto view_it = m_texture_views.find(previous_texture);
+                                    if (view_it != m_texture_views.end())
+                                    {
+                                        m_desc.gpu_textures.release_view(view_it->second);
+                                        m_texture_views.erase(view_it);
+                                    }
                                 }
                             }
                         }
@@ -472,6 +485,8 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
                         const TextureHandle texture = renderable->texture;
 
+                        const bool needs_update = texture_resource_sets->reference_count(texture) == 0;
+
                         if (!texture_resource_sets->acquire(texture))
                             break;
 
@@ -485,15 +500,17 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                         }
 
                         // Request a view if one doesn't already exist
-                        if (!frame.m_texture_views.contains(texture))
+                        if (!m_texture_views.contains(texture))
                         {
                             const TextureViewHandle view = m_desc.gpu_textures.create_view(texture, TextureViewDesc{});
                             if (view.is_valid())
                             {
-                                frame.m_texture_views.emplace(texture, view);
-                                frame.pending_textures.insert(texture);
+                                m_texture_views.emplace(texture, view);
                             }
                         }
+
+                        if (needs_update && m_texture_views.contains(texture))
+                            frame.pending_textures.insert(texture);
 
                         break;
                     }
@@ -505,11 +522,24 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                             const TextureHandle previous_texture = it->second;
                             if (texture_resource_sets->release(previous_texture))
                             {
-                                auto view_it = frame.m_texture_views.find(previous_texture);
-                                if (view_it != frame.m_texture_views.end())
+                                bool referenced_in_other_frame = false;
+                                for (const FrameResources& other_frame : m_frame_resources)
                                 {
-                                    m_desc.gpu_textures.release_view(view_it->second);
-                                    frame.m_texture_views.erase(view_it);
+                                    if (other_frame.m_texture_resource_sets->reference_count(previous_texture) > 0)
+                                    {
+                                        referenced_in_other_frame = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!referenced_in_other_frame)
+                                {
+                                    auto view_it = m_texture_views.find(previous_texture);
+                                    if (view_it != m_texture_views.end())
+                                    {
+                                        m_desc.gpu_textures.release_view(view_it->second);
+                                        m_texture_views.erase(view_it);
+                                    }
                                 }
                             }
 
@@ -526,8 +556,8 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 const std::vector<TextureHandle> pending(frame.pending_textures.begin(), frame.pending_textures.end());
                 for (TextureHandle texture : pending)
                 {
-                    auto view_it = frame.m_texture_views.find(texture);
-                    if (view_it == frame.m_texture_views.end())
+                    auto view_it = m_texture_views.find(texture);
+                    if (view_it == m_texture_views.end())
                         continue;
 
                     const ogfx::ImageView* image_view = m_desc.gpu_textures.get_view(view_it->second);

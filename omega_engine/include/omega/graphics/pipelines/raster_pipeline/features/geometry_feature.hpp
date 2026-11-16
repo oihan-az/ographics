@@ -105,7 +105,6 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
         std::unique_ptr<ResourceSetCache<TextureHandle, TextureHandleHash>> m_texture_resource_sets;
 
         std::unordered_set<TextureHandle, TextureHandleHash> pending_textures;
-        std::unordered_map<TextureHandle, TextureViewHandle, TextureHandleHash> m_texture_views;
 
         FrameResources(ComponentSystem& components, EventSystem& events)
             : directional_lights(components), point_lights(components), spot_lights(components)
@@ -113,6 +112,7 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
     };
 
     std::vector<FrameResources> m_frame_resources;
+    std::unordered_map<TextureHandle, TextureViewHandle, TextureHandleHash> m_texture_views;
 
     void create_resources(orendergraph::RenderGraph& rg);
     void add_node(orendergraph::RenderGraph& rg);
