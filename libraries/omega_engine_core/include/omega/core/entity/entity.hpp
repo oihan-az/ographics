@@ -21,6 +21,14 @@ struct Entity
     bool operator==(const Entity&) const = default;
 };
 
+struct EntityHash
+{
+    size_t operator()(const Entity& entity) const noexcept
+    {
+        return entity.index ^ (entity.generation << 1);
+    }
+};
+
 } // namespace omega
 
 #endif // OMEGA_ENTITY_HPP

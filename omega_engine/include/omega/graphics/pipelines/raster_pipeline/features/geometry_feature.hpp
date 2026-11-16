@@ -8,7 +8,6 @@
 
 #include <omega/core/entity/entity.hpp>
 #include <omega/core/component/component_event.hpp>
-#include <omega/graphics/resources/dynamic_buffer.hpp>
 
 #include <omega/lighting/directional_light.hpp>
 #include <omega/lighting/point_light.hpp>
@@ -16,10 +15,13 @@
 
 #include <omega/renderable/renderable.hpp>
 
-#include <omega/graphics/gpu_component/component_gpu_buffer.hpp>
+#include <omega/graphics/resources/gpu_dynamic_buffer.hpp>
+#include <omega/graphics/resources/gpu_component_buffer.hpp>
 #include <omega/graphics/resources/resource_set_cache.hpp>
 #include <omega/texture/texture_handle.hpp>
 #include <omega/texture/texture_view_handle.hpp>
+
+#include <omega/frames_in_flight/frame_event_queue.hpp>
 
 #include <cstdint>
 #include <unordered_set>
@@ -81,34 +83,33 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
   private:
     GeometryRenderFeatureDesc m_desc;
 
-    struct FrameResourceSets
+    FrameEventQueue<ComponentEvent<Renderable>> m_renderable_events;
+    FrameEventQueue<ComponentEvent<DirectionalLight>> m_directional_light_events;
+    FrameEventQueue<ComponentEvent<PointLight>> m_point_light_events;
+    FrameEventQueue<ComponentEvent<SpotLight>> m_spot_light_events;
+
+    struct FrameResources
     {
-        std::unique_ptr<ResourceSetCache<TextureHandle, TextureHandleHash>> m_texture_resource_sets;
-        std::unordered_set<TextureHandle, TextureHandleHash> pending_textures;
+        ComponentGpuBuffer<DirectionalLight> directional_lights;
+        ComponentGpuBuffer<PointLight> point_lights;
+        ComponentGpuBuffer<SpotLight> spot_lights;
 
-        std::vector<ComponentEvent<Renderable>> pending_events;
-    };
-
-    std::vector<FrameResourceSets> m_resource_sets;
-    std::unordered_map<TextureHandle, TextureViewHandle, TextureHandleHash> m_texture_views;
-
-    void update_texture_resource_set(FrameResourceSets& frame, TextureHandle texture);
-
-    ComponentGpuBuffer<DirectionalLight> m_directional_lights;
-    ComponentGpuBuffer<PointLight> m_point_lights;
-    ComponentGpuBuffer<SpotLight> m_spot_lights;
-
-    void update_resource_set(DynamicBuffer& buffer, orendergraph::ResourceWriteDesc& write_desc,
-                             orendergraph::RenderGraph& rg, orendergraph::RenderGraphNode<orendergraph::RasterContext>& node);
-
-    struct FrameResource
-    {
         orendergraph::ResourceWriteDesc directional_buffer_write;
         orendergraph::ResourceWriteDesc point_buffer_write;
         orendergraph::ResourceWriteDesc spot_buffer_write;
+
+        std::unordered_map<Entity, TextureHandle, EntityHash> m_renderable_textures;
+        std::unique_ptr<ResourceSetCache<TextureHandle, TextureHandleHash>> m_texture_resource_sets;
+
+        std::unordered_set<TextureHandle, TextureHandleHash> pending_textures;
+        std::unordered_map<TextureHandle, TextureViewHandle, TextureHandleHash> m_texture_views;
+
+        FrameResources(ComponentSystem& components, EventSystem& events)
+            : directional_lights(components), point_lights(components), spot_lights(components)
+        {}
     };
-    
-    std::vector<FrameResource> m_frames;
+
+    std::vector<FrameResources> m_frame_resources;
 
     void create_resources(orendergraph::RenderGraph& rg);
     void add_node(orendergraph::RenderGraph& rg);
@@ -122,6 +123,6 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
     orendergraph::ResourceHandle<ogfx::Sampler> m_sampler;
 };
 
-} // namespace omege
+} // namespace omega
 
 #endif // GEOMETRY_RENDER_FEATURE_HPP

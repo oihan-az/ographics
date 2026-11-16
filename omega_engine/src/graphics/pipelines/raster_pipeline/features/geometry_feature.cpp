@@ -19,7 +19,7 @@
 #include <omega/texture/gpu_texture_system.hpp>
 
 #include <omega/renderable/renderable.hpp>
-#include <omega/lighting/gpu_light_data.hpp>
+#include <omega/graphics/resources/gpu_light_data.hpp>
 
 #include <filesystem>
 
@@ -42,44 +42,26 @@ struct LightingConstants
 };
 
 GeometryRenderFeature::GeometryRenderFeature(const GeometryRenderFeatureDesc& desc)
-    : m_desc(desc), m_directional_lights(desc.components, desc.events, desc.frames_in_flight),
-      m_point_lights(desc.components, desc.events, desc.frames_in_flight),
-      m_spot_lights(desc.components, desc.events, desc.frames_in_flight)
+    : m_desc(desc), 
+      m_renderable_events(m_desc.frames_in_flight), 
+      m_directional_light_events(m_desc.frames_in_flight),
+      m_point_light_events(m_desc.frames_in_flight),
+      m_spot_light_events(m_desc.frames_in_flight)
 {}
-
-void GeometryRenderFeature::update_texture_resource_set(FrameResourceSets& frame, TextureHandle texture) 
-{
-    auto view_it = m_texture_views.find(texture);
-    if (view_it == m_texture_views.end())
-        return;
-
-    const ogfx::ImageView* image_view = m_desc.gpu_textures.get_view(view_it->second);
-    if (!image_view)
-    {
-        frame.pending_textures.insert(texture);
-        return;
-    }
-
-    ogfx::ImageBinding texture_binding{};
-    texture_binding.binding = 0;
-    texture_binding.image_state = ogfx::ImageState::ShaderRead;
-    texture_binding.image_view = image_view;
-
-    ogfx::ResourceSetWriteInfo write_info{};
-    write_info.textures.push_back(texture_binding);
-
-    frame.m_texture_resource_sets->update(texture, write_info);
-    frame.pending_textures.erase(texture);
-}
 
 void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx) 
 {
     orendergraph::RenderGraph& rg = ctx.render_graph();
 
-    m_frames.resize(m_desc.frames_in_flight);
-    m_directional_lights.create(rg);
-    m_point_lights.create(rg);
-    m_spot_lights.create(rg);
+    m_frame_resources.reserve(m_desc.frames_in_flight);
+    for (uint32_t i = 0; i < m_desc.frames_in_flight; i++)
+    {
+        m_frame_resources.emplace_back(m_desc.components, m_desc.events);
+
+        m_frame_resources[i].directional_lights.create(rg);
+        m_frame_resources[i].point_lights.create(rg);
+        m_frame_resources[i].spot_lights.create(rg);
+    }
 
     constexpr uint32_t light_type_count = 3;
 
@@ -279,9 +261,9 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             desc.resource_set_layouts_desc.push_back(sampler_set_layout_desc);
 
             // One resource set and one write description per frame
-            for (uint32_t i = 0; i < m_frames.size(); ++i)
+            for (uint32_t i = 0; i < m_desc.frames_in_flight; ++i)
             {
-                FrameResource& frame = m_frames[i];
+                FrameResources& frame = m_frame_resources[i];
 
                 orendergraph::ResourceSetDesc resource_set_desc;
                 resource_set_desc.resource_set_layout_idx = 0;
@@ -290,21 +272,21 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
                 orendergraph::BufferBinding directional_binding;
                 directional_binding.binding = 0;
-                directional_binding.buffer = m_directional_lights.get_buffer(i).get_handle();
+                directional_binding.buffer = frame.directional_lights.get_buffer().get_handle();
                 directional_binding.offset = 0;
-                directional_binding.range = m_directional_lights.get_buffer(i).get_capacity();
+                directional_binding.range = frame.directional_lights.get_buffer().get_capacity();
 
                 orendergraph::BufferBinding point_binding;
                 point_binding.binding = 1;
-                point_binding.buffer = m_point_lights.get_buffer(i).get_handle();
+                point_binding.buffer = frame.point_lights.get_buffer().get_handle();
                 point_binding.offset = 0;
-                point_binding.range = m_point_lights.get_buffer(i).get_capacity();
+                point_binding.range = frame.point_lights.get_buffer().get_capacity();
 
                 orendergraph::BufferBinding spot_binding;
                 spot_binding.binding = 2;
-                spot_binding.buffer = m_spot_lights.get_buffer(i).get_handle();
+                spot_binding.buffer = frame.spot_lights.get_buffer().get_handle();
                 spot_binding.offset = 0;
-                spot_binding.range = m_spot_lights.get_buffer(i).get_capacity();
+                spot_binding.range = frame.spot_lights.get_buffer().get_capacity();
 
                 frame.directional_buffer_write.resource_set_idx = i;
                 frame.directional_buffer_write.write_info.buffers = {directional_binding};
@@ -384,8 +366,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
     );
 
     auto& ctx = geometry_node->context();
-    m_resource_sets.resize(m_desc.frames_in_flight);
-    for (FrameResourceSets& frame : m_resource_sets)
+    for (FrameResources& frame : m_frame_resources)
     {
         frame.m_texture_resource_sets = std::make_unique<ResourceSetCache<TextureHandle, TextureHandleHash>>(rg.device(), rg.get_resource_allocator(), *ctx.resource_set_layouts[1]);
     }
@@ -396,57 +377,84 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
         {
             const uint32_t frame_index = *m_desc.current_frame;
+            FrameResources& frame = m_frame_resources[frame_index];
 
             // Update light buffers
             {
-                m_directional_lights.capture_events();
-                m_point_lights.capture_events();
-                m_spot_lights.capture_events();
+                m_directional_light_events.capture(m_desc.events);
+                m_point_light_events.capture(m_desc.events);
+                m_spot_light_events.capture(m_desc.events);
 
-                if (m_directional_lights.process_frame(frame_index, cmd, rg, m_desc.transforms))
+                if (frame.directional_lights.process_frame(cmd, rg,
+                                                           m_directional_light_events.get_events(frame_index),
+                                                           m_desc.transforms))
                 {
-                    update_resource_set(m_directional_lights.get_buffer(frame_index),
-                                        m_frames[frame_index].directional_buffer_write, rg, node);
+                    frame.directional_buffer_write.write_info.buffers[0].range = frame.directional_lights.get_buffer().get_capacity();
+                    node.context().update_resource_set(rg, frame.directional_buffer_write);
                 }
 
-                if (m_point_lights.process_frame(frame_index, cmd, rg, m_desc.transforms))
+                if (frame.point_lights.process_frame(cmd, rg, 
+                                                     m_point_light_events.get_events(frame_index), 
+                                                     m_desc.transforms))
                 {
-                    update_resource_set(m_directional_lights.get_buffer(frame_index),
-                                        m_frames[frame_index].point_buffer_write, rg, node);
+                    frame.point_buffer_write.write_info.buffers[0].range = frame.point_lights.get_buffer().get_capacity();
+                    node.context().update_resource_set(rg, frame.point_buffer_write);
                 }
 
-                if (m_spot_lights.process_frame(frame_index, cmd, rg, m_desc.transforms))
+                if (frame.spot_lights.process_frame(cmd, rg, 
+                                                    m_spot_light_events.get_events(frame_index),
+                                                    m_desc.transforms))
                 {
-                    update_resource_set(m_directional_lights.get_buffer(frame_index),
-                                        m_frames[frame_index].spot_buffer_write, rg, node);
+                    frame.spot_buffer_write.write_info.buffers[0].range = frame.spot_lights.get_buffer().get_capacity();
+                    node.context().update_resource_set(rg, frame.spot_buffer_write);
                 }
+
+                m_directional_light_events.clear(frame_index);
+                m_point_light_events.clear(frame_index);
+                m_spot_light_events.clear(frame_index);
             }
 
             // Update texture resource sets
             {
-                const auto& events = m_desc.events.get_queue<ComponentEvent<Renderable>>().get_events();
-                for (FrameResourceSets& frame : m_resource_sets)
-                    frame.pending_events.insert(frame.pending_events.end(), events.begin(), events.end());
+                m_renderable_events.capture(m_desc.events);
 
-                FrameResourceSets& resource_sets = m_resource_sets[frame_index];
-                auto texture_resource_sets = resource_sets.m_texture_resource_sets.get();
-                for (const auto& event : resource_sets.pending_events)
+                auto texture_resource_sets = frame.m_texture_resource_sets.get();
+                const auto& frame_events = m_renderable_events.get_events(frame_index);
+                for (const auto& event : frame_events)
                 {
-                    const Renderable* renderable = m_desc.components.get<Renderable>(event.entity);
-                    if (!renderable)
-                        continue;
-
-                    const TextureHandle texture = renderable->texture;
-                    if (!texture_resource_sets->acquire(texture))
-                        continue;
-
                     switch (event.type)
                     {
-                    case ComponentEventType::Added:
                     case ComponentEventType::Modified:
                     {
+                        auto it = frame.m_renderable_textures.find(event.entity);
+                        if (it != frame.m_renderable_textures.end())
+                        {
+                            const TextureHandle previous_texture = it->second;
+                            if (texture_resource_sets->release(previous_texture))
+                            {
+                                auto view_it = frame.m_texture_views.find(previous_texture);
+                                if (view_it != frame.m_texture_views.end())
+                                {
+                                    m_desc.gpu_textures.release_view(view_it->second);
+                                    frame.m_texture_views.erase(view_it);
+                                }
+                            }
+                        }
+
+                        // fallthrough
+                    }
+                    case ComponentEventType::Added:
+                    {
+                        const Renderable* renderable = m_desc.components.get<Renderable>(event.entity);
+                        if (!renderable)
+                            continue;
+
+                        const TextureHandle texture = renderable->texture;
+
                         if (!texture_resource_sets->acquire(texture))
                             break;
+
+                        frame.m_renderable_textures[event.entity] = texture;
 
                         // Request residency if necessary
                         if (!m_desc.gpu_textures.is_resident(texture) && !m_desc.gpu_textures.is_pending(texture) &&
@@ -456,43 +464,37 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                         }
 
                         // Request a view if one doesn't already exist
-                        if (!m_texture_views.contains(texture))
+                        if (!frame.m_texture_views.contains(texture))
                         {
                             const TextureViewHandle view = m_desc.gpu_textures.create_view(texture, TextureViewDesc{});
 
                             if (view.is_valid())
-                                m_texture_views.emplace(texture, view);
+                            {
+                                frame.m_texture_views.emplace(texture, view);
+                                frame.pending_textures.insert(texture);
+                            }
                         }
 
-                        update_texture_resource_set(resource_sets, texture);
+                        frame.pending_textures.insert(texture);
                         break;
                     }
-
                     case ComponentEventType::Removed:
                     {
-                        if (!texture_resource_sets->release(texture))
-                            continue;
-
-                        resource_sets.pending_textures.erase(texture);
-
-                        bool has_references = false;
-                        for (const FrameResourceSets& frame : m_resource_sets)
+                        auto it = frame.m_renderable_textures.find(event.entity);
+                        if (it != frame.m_renderable_textures.end())
                         {
-                            if (frame.m_texture_resource_sets->reference_count(texture) > 0)
+                            const TextureHandle previous_texture = it->second;
+                            if (texture_resource_sets->release(previous_texture))
                             {
-                                has_references = true;
-                                break;
+                                auto view_it = frame.m_texture_views.find(previous_texture);
+                                if (view_it != frame.m_texture_views.end())
+                                {
+                                    m_desc.gpu_textures.release_view(view_it->second);
+                                    frame.m_texture_views.erase(view_it);
+                                }
                             }
-                        }
 
-                        if (!has_references)
-                        {
-                            const auto view_it = m_texture_views.find(texture);
-                            if (view_it != m_texture_views.end())
-                            {
-                                m_desc.gpu_textures.release_view(view_it->second);
-                                m_texture_views.erase(view_it);
-                            }
+                            frame.m_renderable_textures.erase(it);
                         }
 
                         break;
@@ -500,13 +502,30 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                     }
                 }
 
-                const std::vector<TextureHandle> pending(resource_sets.pending_textures.begin(), resource_sets.pending_textures.end());
+                m_renderable_events.clear(frame_index);
+
+                const std::vector<TextureHandle> pending(frame.pending_textures.begin(), frame.pending_textures.end());
                 for (TextureHandle texture : pending)
                 {
-                    update_texture_resource_set(resource_sets, texture);
-                }
+                    auto view_it = frame.m_texture_views.find(texture);
+                    if (view_it == frame.m_texture_views.end())
+                        continue;
 
-                resource_sets.pending_events.clear();
+                    const ogfx::ImageView* image_view = m_desc.gpu_textures.get_view(view_it->second);
+                    if (!image_view)
+                        continue;
+
+                    ogfx::ImageBinding texture_binding{};
+                    texture_binding.binding = 0;
+                    texture_binding.image_state = ogfx::ImageState::ShaderRead;
+                    texture_binding.image_view = image_view;
+
+                    ogfx::ResourceSetWriteInfo write_info{};
+                    write_info.textures.push_back(texture_binding);
+
+                    frame.m_texture_resource_sets->update(texture, write_info);
+                    frame.pending_textures.erase(texture);
+                }
             }
 
             orendergraph::NodePreExecute<orendergraph::RasterContext>::execute(rg, cmd, node);
@@ -519,6 +538,8 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
         {
             orendergraph::RasterContext& ctx = node.context();
+            const uint32_t frame_index = *m_desc.current_frame;
+            FrameResources& frame = m_frame_resources[frame_index];
 
             // Fragment constants
             LightingConstants lighting_constants{};
@@ -616,10 +637,10 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 cmd.set_inline_constants(constants_info);
 
                 // Texture
-                if (m_resource_sets[*m_desc.current_frame].pending_textures.contains(renderable->texture))
+                if (frame.pending_textures.contains(renderable->texture))
                     continue;
 
-                const ogfx::ResourceSet* texture_resource_set = m_resource_sets[*m_desc.current_frame].m_texture_resource_sets->get(renderable->texture);
+                const ogfx::ResourceSet* texture_resource_set = frame.m_texture_resource_sets->get(renderable->texture);
                 if (!texture_resource_set)
                     continue;
 
@@ -653,12 +674,4 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
     );
 }
 
-void GeometryRenderFeature::update_resource_set(DynamicBuffer& buffer, orendergraph::ResourceWriteDesc& write_desc,
-                                                orendergraph::RenderGraph& rg,
-                                                orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
-{
-    write_desc.write_info.buffers[0].range = buffer.get_capacity();
-    node.context().update_resource_set(rg, write_desc);
-}
-
-}
+} // omega

@@ -1,4 +1,4 @@
-#include <omega/graphics/resources/dynamic_buffer.hpp>
+#include <omega/graphics/resources/gpu_dynamic_buffer.hpp>
 
 #include <orendergraph/render_graph_core.hpp>
 #include <orendergraph/resource_traits/buffer.hpp>

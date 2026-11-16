@@ -1,7 +1,7 @@
 #ifndef OMEGA_GPU_LIGHT_DATA_HPP
 #define OMEGA_GPU_LIGHT_DATA_HPP
 
-#include <omega/graphics/gpu_component/gpu_component_data.hpp>
+#include <omega/graphics/resources/gpu_component_data.hpp>
 
 #include <omega/core/math/vector4.hpp>
 

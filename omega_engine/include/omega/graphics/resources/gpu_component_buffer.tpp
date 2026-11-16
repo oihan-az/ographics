@@ -1,9 +1,8 @@
-#ifndef COMPONENT_GPU_BUFFER_TPP
-#define COMPONENT_GPU_BUFFER_TPP
+#ifndef OMEGA_GPU_COMPONENT_BUFFER_TPP
+#define OMEGA_GPU_COMPONENT_BUFFER_TPP
 
 #include <omega/core/component/component_system.hpp>
-#include <omega/core/event/event_system.hpp>
-#include <omega/graphics/gpu_component/gpu_component_data.hpp>
+#include <omega/graphics/resources/gpu_component_data.hpp>
 
 #include <orendergraph/render_graph.hpp>
 
@@ -14,82 +13,59 @@ namespace omega
 {
 
 template <typename T>
-ComponentGpuBuffer<T>::ComponentGpuBuffer(ComponentSystem& components, EventSystem& events, uint32_t frames_in_flight)
-    : m_components(components), m_events(events), m_frames(frames_in_flight)
-{
-}
+ComponentGpuBuffer<T>::ComponentGpuBuffer(ComponentSystem& components)
+    : m_components(components)
+{}
 
 template <typename T> 
 bool ComponentGpuBuffer<T>::create(orendergraph::RenderGraph& rg)
 {
     const auto& storage = m_components.get_storage<T>();
-
     const uint64_t required_size = std::max<uint64_t>(storage.size() * sizeof(GpuComponentData<T>), sizeof(GpuComponentData<T>));
 
-    for (FrameResources& frame : m_frames)
-    {
-        ogfx::BufferDesc desc{};
-        desc.size = required_size;
-        desc.usage = ogfx::BufferUsage::Storage | ogfx::BufferUsage::TransferSrc | ogfx::BufferUsage::TransferDst;
-        desc.memory_properties = ogfx::MemoryProperty::HostVisible | ogfx::MemoryProperty::HostCoherent;
-
-        if (!frame.buffer.create(rg, desc))
-            return false;
-    }
+    ogfx::BufferDesc desc{};
+    desc.size = required_size;
+    desc.usage = ogfx::BufferUsage::Storage | ogfx::BufferUsage::TransferSrc | ogfx::BufferUsage::TransferDst;
+    desc.memory_properties = ogfx::MemoryProperty::HostVisible | ogfx::MemoryProperty::HostCoherent;
+    if (!m_buffer.create(rg, desc))
+        return false;
 
     return true;
 }
 
-template <typename T> 
-void ComponentGpuBuffer<T>::capture_events()
-{
-    const auto& events = m_events.get_queue<ComponentEvent<T>>().get_events();
-    for (FrameResources& frame : m_frames)
-        frame.pending_events.insert(frame.pending_events.end(), events.begin(), events.end());
-}
-
 template <typename T>
 template <typename... TArgs>
-bool ComponentGpuBuffer<T>::process_frame(uint32_t frame_index, ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg,
+bool ComponentGpuBuffer<T>::process_frame(ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg,
+                                          const std::vector<ComponentEvent<T>>& events,
                                           TArgs&&... args)
 {
-    if (frame_index >= m_frames.size())
-        return false;
-
-    FrameResources& frame = m_frames[frame_index];
     auto& storage = m_components.get_storage<T>();
 
     const uint64_t required_size = std::max<uint64_t>(storage.size() * sizeof(GpuComponentData<T>), sizeof(GpuComponentData<T>));
-    const uint64_t previous_capacity = frame.buffer.get_capacity();
+    const uint64_t previous_capacity = m_buffer.get_capacity();
 
-    if (!frame.buffer.ensure_capacity(rg, required_size))
+    if (!m_buffer.ensure_capacity(rg, required_size))
         return false;
 
-    const bool buffer_changed = frame.buffer.get_capacity() != previous_capacity;
-
+    const bool buffer_changed = m_buffer.get_capacity() != previous_capacity;
     if (buffer_changed)
-        upload_all(storage, frame, rg, args...);
+        upload_all(storage, rg, args...);
     else
-        process_events(storage, frame, cmd, rg, args...);
-
-    frame.pending_events.clear();
+        process_events(storage, cmd, rg, events, args...);
 
     return buffer_changed;
 }
 
 template <typename T>
 template <typename... TArgs>
-void ComponentGpuBuffer<T>::upload_all(ComponentStorage<T>& storage, FrameResources& frame,
-                                       orendergraph::RenderGraph& rg, TArgs&&... args)
+void ComponentGpuBuffer<T>::upload_all(ComponentStorage<T>& storage, orendergraph::RenderGraph& rg, TArgs&&... args)
 {
     const uint32_t count = static_cast<uint32_t>(storage.size());
-
     if (count == 0)
         return;
 
     std::vector<GpuComponentData<T>> data;
     data.reserve(count);
-
     for (uint32_t i = 0; i < count; ++i)
     {
         const Entity entity = storage.entity_at(i);
@@ -101,58 +77,55 @@ void ComponentGpuBuffer<T>::upload_all(ComponentStorage<T>& storage, FrameResour
         data.push_back(gpu_component_data(*component, entity, args...));
     }
 
-    ogfx::Buffer* buffer = rg.get_resource(frame.buffer.get_handle());
+    ogfx::Buffer* buffer = rg.get_resource(m_buffer.get_handle());
 
     ogfx::BufferWriteInfo write_info{};
     write_info.data = data.data();
     write_info.size = data.size() * sizeof(GpuComponentData<T>);
-
     buffer->write(write_info);
 }
 
 template <typename T>
 template <typename... TArgs>
-void ComponentGpuBuffer<T>::write_component(ComponentStorage<T>& storage, Entity entity, FrameResources& frame,
-                                            orendergraph::RenderGraph& rg, TArgs&&... args)
+void ComponentGpuBuffer<T>::write_component(ComponentStorage<T>& storage, Entity entity, orendergraph::RenderGraph& rg, TArgs&&... args)
 {
     const uint32_t index = storage.get_index(entity);
     const T* component = storage.get(entity);
-
     if (!component)
         return;
 
     const GpuComponentData<T> gpu_data = gpu_component_data(*component, entity, args...);
 
-    ogfx::Buffer* buffer = rg.get_resource(frame.buffer.get_handle());
+    ogfx::Buffer* buffer = rg.get_resource(m_buffer.get_handle());
 
     ogfx::BufferWriteInfo write_info{};
     write_info.data = &gpu_data;
     write_info.size = sizeof(GpuComponentData<T>);
     write_info.offset = index * sizeof(GpuComponentData<T>);
-
     buffer->write(write_info);
 }
 
 template <typename T>
 template <typename... TArgs>
-void ComponentGpuBuffer<T>::process_events(ComponentStorage<T>& storage, FrameResources& frame, 
-                            ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg, 
+void ComponentGpuBuffer<T>::process_events(ComponentStorage<T>& storage, 
+                            ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg,
+                            const std::vector<ComponentEvent<T>>& events,
                             TArgs&&... args)
 {
-    for (const auto& event : frame.pending_events)
+    for (const auto& event : events)
     {
         switch (event.type)
         {
         case ComponentEventType::Added:
         case ComponentEventType::Modified:
         {
-            write_component(storage, event.entity, frame, rg, args...);
+            write_component(storage, event.entity, rg, args...);
             break;
         }
 
         case ComponentEventType::Removed:
         {
-            ogfx::Buffer* buffer = rg.get_resource(frame.buffer.get_handle());
+            ogfx::Buffer* buffer = rg.get_resource(m_buffer.get_handle());
             constexpr uint64_t element_size = sizeof(GpuComponentData<T>);
 
             const uint64_t removed_offset = event.swap_info.new_index * element_size;
@@ -166,7 +139,6 @@ void ComponentGpuBuffer<T>::process_events(ComponentStorage<T>& storage, FrameRe
             copy_info.src_offset = last_offset;
             copy_info.dst_offset = removed_offset;
             copy_info.size = element_size;
-
             cmd.copy_buffer_to_buffer(copy_info);
 
             ogfx::BufferBarrierInfo barrier_info{};
@@ -177,8 +149,8 @@ void ComponentGpuBuffer<T>::process_events(ComponentStorage<T>& storage, FrameRe
             barrier_info.memory_barrier_info.dst_stages = ogfx::PipelineStage::FragmentShader;
             barrier_info.offset = removed_offset;
             barrier_info.size = element_size;
-
             cmd.buffer_barrier(barrier_info);
+
             break;
         }
         }
@@ -186,17 +158,17 @@ void ComponentGpuBuffer<T>::process_events(ComponentStorage<T>& storage, FrameRe
 }
 
 template <typename T> 
-DynamicBuffer& ComponentGpuBuffer<T>::get_buffer(uint32_t frame_index)
+DynamicBuffer& ComponentGpuBuffer<T>::get_buffer()
 {
-    return m_frames.at(frame_index).buffer;
+    return m_buffer;
 }
 
 template <typename T> 
-const DynamicBuffer& ComponentGpuBuffer<T>::get_buffer(uint32_t frame_index) const
+const DynamicBuffer& ComponentGpuBuffer<T>::get_buffer() const
 {
-    return m_frames.at(frame_index).buffer;
+    return m_buffer;
 }
 
 } // namespace omega
 
-#endif // COMPONENT_GPU_BUFFER_TPP
+#endif // OMEGA_GPU_COMPONENT_BUFFER_TPP
