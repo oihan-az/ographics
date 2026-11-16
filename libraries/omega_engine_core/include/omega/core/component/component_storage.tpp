@@ -20,7 +20,7 @@ bool ComponentStorage<T>::add(Entity entity, T component)
 
     m_set.insert(entity, std::move(component));
 
-    m_events.publish(ComponentAddedEvent<T>{entity});
+    m_events.publish(ComponentEvent<T>{ComponentEventType::Added, entity});
 
     return true;
 }
@@ -33,7 +33,7 @@ bool ComponentStorage<T>::remove(Entity entity)
 
     SparseSetSwapInfo<Entity> swap_info = m_set.erase(entity);
 
-    m_events.publish(ComponentRemovedEvent<T>{entity, swap_info});
+    m_events.publish(ComponentEvent<T>{ComponentEventType::Removed, entity, swap_info});
 
     return true;
 }
@@ -44,7 +44,7 @@ bool ComponentStorage<T>::mark_dirty(Entity entity)
     if (!m_set.contains(entity))
         return false;
 
-    m_events.publish(ComponentModifiedEvent<T>{entity});
+    m_events.publish(ComponentEvent<T>{ComponentEventType::Modified, entity});
 
     return true;
 }

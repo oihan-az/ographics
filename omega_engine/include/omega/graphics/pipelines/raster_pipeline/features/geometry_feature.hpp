@@ -86,9 +86,7 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
         std::unique_ptr<ResourceSetCache<TextureHandle, TextureHandleHash>> m_texture_resource_sets;
         std::unordered_set<TextureHandle, TextureHandleHash> pending_textures;
 
-        std::vector<ComponentAddedEvent<Renderable>> pending_added;
-        std::vector<ComponentRemovedEvent<Renderable>> pending_removed;
-        std::vector<ComponentModifiedEvent<Renderable>> pending_modified;
+        std::vector<ComponentEvent<Renderable>> pending_events;
     };
 
     std::vector<FrameResourceSets> m_resource_sets;

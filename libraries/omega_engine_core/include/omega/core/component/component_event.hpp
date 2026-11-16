@@ -7,20 +7,19 @@
 namespace omega
 {
 
-template <typename T> struct ComponentAddedEvent
+enum class ComponentEventType
 {
-    Entity entity;
+    Added,
+    Modified,
+    Removed
 };
 
-template <typename T> struct ComponentModifiedEvent
+template <typename T> 
+struct ComponentEvent
 {
+    ComponentEventType type;
     Entity entity;
-};
-
-template <typename T> struct ComponentRemovedEvent
-{
-    Entity entity;
-    SparseSetSwapInfo<Entity> swap_info;
+    SparseSetSwapInfo<Entity> swap_info{};
 };
 
 } // namespace omega

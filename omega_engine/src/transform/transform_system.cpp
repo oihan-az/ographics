@@ -20,35 +20,26 @@ void TransformSystem::update()
 {
     auto& transform_storage = m_components.get_storage<Transform>();
 
-    // Process added
-    const auto& added_queue = m_events.get_queue<ComponentAddedEvent<Transform>>().get_events();
-    if (!added_queue.empty())
+    // Process transform events
+    const auto& events = m_events.get_queue<ComponentEvent<Transform>>().get_events();
+
+    for (const auto& event : events)
     {
-        for (auto it = added_queue.rbegin(); it != added_queue.rend(); ++it)
+        switch (event.type)
         {
+        case ComponentEventType::Added:
             m_cache.resize(transform_storage.size());
-            invalidate(it->entity);
-        }
-    }
+            invalidate(event.entity);
+            break;
 
-    // Process modified
-    const auto& modified_queue = m_events.get_queue<ComponentModifiedEvent<Transform>>().get_events();
-    if (!modified_queue.empty())
-    {
-        for (auto it = modified_queue.rbegin(); it != modified_queue.rend(); ++it)
-        {
-            invalidate(it->entity);
-        }
-    }
+        case ComponentEventType::Modified:
+            invalidate(event.entity);
+            break;
 
-    // Process removed
-    const auto& removed_queue = m_events.get_queue<ComponentRemovedEvent<Transform>>().get_events();
-    if (!removed_queue.empty())
-    {
-        for (auto it = removed_queue.rbegin(); it != removed_queue.rend(); ++it)
-        {
-            invalidate(it->entity);
-            m_cache.handle_swap(it->swap_info.exchanged, it->swap_info.old_index, it->swap_info.new_index);
+        case ComponentEventType::Removed:
+            invalidate(event.entity);
+            m_cache.handle_swap(event.swap_info.exchanged, event.swap_info.old_index, event.swap_info.new_index);
+            break;
         }
     }
 

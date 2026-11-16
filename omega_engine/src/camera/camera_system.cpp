@@ -19,65 +19,39 @@ CameraSystem::CameraSystem(EventSystem& events, ComponentSystem& components,
 
 void CameraSystem::update() 
 {
-    auto& perspective_storage = m_components.get_storage<PerspectiveCamera>();
-    auto& orthogonal_storage = m_components.get_storage<OrthogonalCamera>();
-
-    // Process added
-    const auto& perspective_added = m_events.get_queue<ComponentAddedEvent<PerspectiveCamera>>().get_events();
-    if (!perspective_added.empty())
+    // Process perspective camera events
+    const auto& perspective_events = m_events.get_queue<ComponentEvent<PerspectiveCamera>>().get_events();
+    for (const auto& event : perspective_events)
     {
-        for (auto it = perspective_added.rbegin(); it != perspective_added.rend(); ++it)
+        invalidate(event.entity);
+
+        switch (event.type)
         {
-            invalidate(it->entity);
+        case ComponentEventType::Added:
+        case ComponentEventType::Modified:
+            break;
+
+        case ComponentEventType::Removed:
+            m_perspective_cache.handle_swap(event.swap_info.exchanged, event.swap_info.old_index, event.swap_info.new_index);
+            break;
         }
     }
 
-    const auto& orthogonal_added = m_events.get_queue<ComponentAddedEvent<OrthogonalCamera>>().get_events();
-    if (!orthogonal_added.empty())
+    // Process orthogonal camera events
+    const auto& orthogonal_events = m_events.get_queue<ComponentEvent<OrthogonalCamera>>().get_events();
+    for (const auto& event : orthogonal_events)
     {
-        for (auto it = orthogonal_added.rbegin(); it != orthogonal_added.rend(); ++it)
-        {
-            invalidate(it->entity);
-        }
-    }
+        invalidate(event.entity);
 
-    // Process modified
-    const auto& perspective_modified = m_events.get_queue<ComponentModifiedEvent<PerspectiveCamera>>().get_events();
-    if (!perspective_modified.empty())
-    {
-        for (auto it = perspective_modified.rbegin(); it != perspective_modified.rend(); ++it)
+        switch (event.type)
         {
-            invalidate(it->entity);
-        }
-    }
+        case ComponentEventType::Added:
+        case ComponentEventType::Modified:
+            break;
 
-    const auto& orthogonal_modified = m_events.get_queue<ComponentModifiedEvent<OrthogonalCamera>>().get_events();
-    if (!orthogonal_modified.empty())
-    {
-        for (auto it = orthogonal_modified.rbegin(); it != orthogonal_modified.rend(); ++it)
-        {
-            invalidate(it->entity);
-        }
-    }
-
-    // Process removed
-    const auto& perspective_removed = m_events.get_queue<ComponentRemovedEvent<PerspectiveCamera>>().get_events();
-    if (!perspective_removed.empty())
-    {
-        for (auto it = perspective_removed.rbegin(); it != perspective_removed.rend(); ++it)
-        {
-            invalidate(it->entity);
-            m_perspective_cache.handle_swap(it->swap_info.exchanged, it->swap_info.old_index, it->swap_info.new_index);
-        }
-    }
-
-    const auto& orthogonal_removed = m_events.get_queue<ComponentRemovedEvent<OrthogonalCamera>>().get_events();
-    if (!orthogonal_removed.empty())
-    {
-        for (auto it = orthogonal_removed.rbegin(); it != orthogonal_removed.rend(); ++it)
-        {
-            invalidate(it->entity);
-            m_orthogonal_cache.handle_swap(it->swap_info.exchanged, it->swap_info.old_index, it->swap_info.new_index);
+        case ComponentEventType::Removed:
+            m_orthogonal_cache.handle_swap(event.swap_info.exchanged, event.swap_info.old_index, event.swap_info.new_index);
+            break;
         }
     }
 

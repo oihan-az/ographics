@@ -422,9 +422,11 @@ TEST_F(ComponentSystemTest, MarkDirty_PublishesModifiedEvent)
 
     events.swap_all_buffers();
 
-    const auto& queue = events.get_queue<ComponentModifiedEvent<Position>>().get_events();
+    const auto& queue = events.get_queue<ComponentEvent<Position>>().get_events();
 
-    ASSERT_EQ(queue.size(), 1);
+    ASSERT_EQ(queue.size(), 2);
+    EXPECT_EQ(queue[0].type, ComponentEventType::Added);
+    EXPECT_EQ(queue[1].type, ComponentEventType::Modified);
     EXPECT_EQ(queue.front().entity, entity);
 }
 
@@ -473,9 +475,10 @@ TEST_F(ComponentSystemTest, Events_AddPublishesAddedEvent)
 
     events.swap_all_buffers();
 
-    const auto& queue = events.get_queue<ComponentAddedEvent<Position>>().get_events();
+    const auto& queue = events.get_queue<ComponentEvent<Position>>().get_events();
 
     ASSERT_EQ(queue.size(), 1);
+    EXPECT_EQ(queue.front().type, ComponentEventType::Added);
     EXPECT_EQ(queue.front().entity, entity);
 }
 
@@ -492,9 +495,10 @@ TEST_F(ComponentSystemTest, Events_RemovePublishesRemovedEvent)
 
     events.swap_all_buffers();
 
-    const auto& queue = events.get_queue<ComponentRemovedEvent<Position>>().get_events();
+    const auto& queue = events.get_queue<ComponentEvent<Position>>().get_events();
 
     ASSERT_EQ(queue.size(), 1);
+    EXPECT_EQ(queue.front().type, ComponentEventType::Removed);
     EXPECT_EQ(queue.front().entity, entity);
 }
 
@@ -510,7 +514,7 @@ TEST_F(ComponentSystemTest, Events_FailedAddDoesNotPublishEvent)
 
     events.swap_all_buffers();
 
-    const auto& queue = events.get_queue<ComponentAddedEvent<Position>>().get_events();
+    const auto& queue = events.get_queue<ComponentEvent<Position>>().get_events();
 
     EXPECT_TRUE(queue.empty());
 }
@@ -525,7 +529,7 @@ TEST_F(ComponentSystemTest, Events_FailedRemoveDoesNotPublishEvent)
 
     events.swap_all_buffers();
 
-    const auto& queue = events.get_queue<ComponentRemovedEvent<Position>>().get_events();
+    const auto& queue = events.get_queue<ComponentEvent<Position>>().get_events();
 
     EXPECT_TRUE(queue.empty());
 }
@@ -540,12 +544,18 @@ TEST_F(ComponentSystemTest, Events_MultipleOperationsPublishInOrder)
 
     events.swap_all_buffers();
 
-    const auto& added_queue = events.get_queue<ComponentAddedEvent<Position>>().get_events();
+    const auto& queue = events.get_queue<ComponentEvent<Position>>().get_events();
 
-    const auto& removed_queue = events.get_queue<ComponentRemovedEvent<Position>>().get_events();
+    ASSERT_EQ(queue.size(), 3);
 
-    EXPECT_EQ(added_queue.size(), 2);
-    EXPECT_EQ(removed_queue.size(), 1);
+    EXPECT_EQ(queue[0].type, ComponentEventType::Added);
+    EXPECT_EQ(queue[0].entity, entity);
+
+    EXPECT_EQ(queue[1].type, ComponentEventType::Removed);
+    EXPECT_EQ(queue[1].entity, entity);
+
+    EXPECT_EQ(queue[2].type, ComponentEventType::Added);
+    EXPECT_EQ(queue[2].entity, entity);
 }
 
 // ============================================================
@@ -667,17 +677,19 @@ TEST_F(ComponentSystemTest, Destruction_PublishesRemovedEvents)
 
     update();
 
-    // Component removal notifications were published into the write buffers.
+    // Component removal notifications were published into the write buffers
     events.swap_all_buffers();
 
-    const auto& position_queue = events.get_queue<ComponentRemovedEvent<Position>>().get_events();
-
-    const auto& velocity_queue = events.get_queue<ComponentRemovedEvent<Velocity>>().get_events();
+    const auto& position_queue = events.get_queue<ComponentEvent<Position>>().get_events();
+    const auto& velocity_queue = events.get_queue<ComponentEvent<Velocity>>().get_events();
 
     ASSERT_EQ(position_queue.size(), 1);
     ASSERT_EQ(velocity_queue.size(), 1);
 
+    EXPECT_EQ(position_queue.front().type, ComponentEventType::Removed);
     EXPECT_EQ(position_queue.front().entity, entity);
+
+    EXPECT_EQ(velocity_queue.front().type, ComponentEventType::Removed);
     EXPECT_EQ(velocity_queue.front().entity, entity);
 }
 

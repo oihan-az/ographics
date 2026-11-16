@@ -424,20 +424,13 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             // Update texture resource sets
             {
-                const auto& added = m_desc.events.get_queue<ComponentAddedEvent<Renderable>>().get_events();
-                const auto& removed = m_desc.events.get_queue<ComponentRemovedEvent<Renderable>>().get_events();
-                const auto& modified = m_desc.events.get_queue<ComponentModifiedEvent<Renderable>>().get_events();
-
+                const auto& events = m_desc.events.get_queue<ComponentEvent<Renderable>>().get_events();
                 for (FrameResourceSets& frame : m_resource_sets)
-                {
-                    frame.pending_added.insert(frame.pending_added.end(), added.begin(), added.end());
-                    frame.pending_removed.insert(frame.pending_removed.end(), removed.begin(), removed.end());
-                    frame.pending_modified.insert(frame.pending_modified.end(), modified.begin(), modified.end());
-                }
+                    frame.pending_events.insert(frame.pending_events.end(), events.begin(), events.end());
 
                 FrameResourceSets& resource_sets = m_resource_sets[frame_index];
                 auto texture_resource_sets = resource_sets.m_texture_resource_sets.get();
-                for (const auto& event : resource_sets.pending_added)
+                for (const auto& event : resource_sets.pending_events)
                 {
                     const Renderable* renderable = m_desc.components.get<Renderable>(event.entity);
                     if (!renderable)
@@ -447,85 +440,63 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                     if (!texture_resource_sets->acquire(texture))
                         continue;
 
-                    // Request residency if necessary
-                    if (!m_desc.gpu_textures.is_resident(texture) && !m_desc.gpu_textures.is_pending(texture) &&
-                        !m_desc.gpu_textures.is_uploading(texture))
+                    switch (event.type)
                     {
-                        m_desc.gpu_textures.make_resident(texture);
-                    }
-
-                    // Request a view if one doesn't already exist
-                    if (!m_texture_views.contains(texture))
+                    case ComponentEventType::Added:
+                    case ComponentEventType::Modified:
                     {
-                        const TextureViewHandle view = m_desc.gpu_textures.create_view(texture, TextureViewDesc{});
-                        if (view.is_valid())
-                            m_texture_views.emplace(texture, view);
-                    }
-
-                    update_texture_resource_set(resource_sets, texture);
-                }
-
-                for (const auto& event : resource_sets.pending_modified)
-                {
-                    const Renderable* renderable = m_desc.components.get<Renderable>(event.entity);
-                    if (!renderable)
-                        continue;
-
-                    const TextureHandle texture = renderable->texture;
-                    if (!texture_resource_sets->acquire(texture))
-                        continue;
-
-                    // Request residency if necessary
-                    if (!m_desc.gpu_textures.is_resident(texture) && !m_desc.gpu_textures.is_pending(texture) &&
-                        !m_desc.gpu_textures.is_uploading(texture))
-                    {
-                        m_desc.gpu_textures.make_resident(texture);
-                    }
-
-                    // Request a view if one doesn't already exist
-                    if (!m_texture_views.contains(texture))
-                    {
-                        const TextureViewHandle view = m_desc.gpu_textures.create_view(texture, TextureViewDesc{});
-                        if (view.is_valid())
-                            m_texture_views.emplace(texture, view);
-                    }
-
-                    update_texture_resource_set(resource_sets, texture);
-                }
-
-                for (const auto& event : resource_sets.pending_removed)
-                {
-                    const Renderable* renderable = m_desc.components.get<Renderable>(event.entity);
-                    if (!renderable)
-                        continue;
-
-                    const TextureHandle texture = renderable->texture;
-                    if (!texture_resource_sets->acquire(texture))
-                        continue;
-
-                    if (!texture_resource_sets->release(texture))
-                        continue;
-
-                    resource_sets.pending_textures.erase(texture);
-
-                    bool has_references = false;
-                    for (const FrameResourceSets& frame : m_resource_sets)
-                    {
-                        if (frame.m_texture_resource_sets->reference_count(texture) > 0)
-                        {
-                            has_references = true;
+                        if (!texture_resource_sets->acquire(texture))
                             break;
+
+                        // Request residency if necessary
+                        if (!m_desc.gpu_textures.is_resident(texture) && !m_desc.gpu_textures.is_pending(texture) &&
+                            !m_desc.gpu_textures.is_uploading(texture))
+                        {
+                            m_desc.gpu_textures.make_resident(texture);
                         }
+
+                        // Request a view if one doesn't already exist
+                        if (!m_texture_views.contains(texture))
+                        {
+                            const TextureViewHandle view = m_desc.gpu_textures.create_view(texture, TextureViewDesc{});
+
+                            if (view.is_valid())
+                                m_texture_views.emplace(texture, view);
+                        }
+
+                        update_texture_resource_set(resource_sets, texture);
+                        break;
                     }
 
-                    if (!has_references)
+                    case ComponentEventType::Removed:
                     {
-                        const auto view_it = m_texture_views.find(texture);
-                        if (view_it != m_texture_views.end())
+                        if (!texture_resource_sets->release(texture))
+                            continue;
+
+                        resource_sets.pending_textures.erase(texture);
+
+                        bool has_references = false;
+                        for (const FrameResourceSets& frame : m_resource_sets)
                         {
-                            m_desc.gpu_textures.release_view(view_it->second);
-                            m_texture_views.erase(view_it);
+                            if (frame.m_texture_resource_sets->reference_count(texture) > 0)
+                            {
+                                has_references = true;
+                                break;
+                            }
                         }
+
+                        if (!has_references)
+                        {
+                            const auto view_it = m_texture_views.find(texture);
+                            if (view_it != m_texture_views.end())
+                            {
+                                m_desc.gpu_textures.release_view(view_it->second);
+                                m_texture_views.erase(view_it);
+                            }
+                        }
+
+                        break;
+                    }
                     }
                 }
 
@@ -535,9 +506,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                     update_texture_resource_set(resource_sets, texture);
                 }
 
-                resource_sets.pending_added.clear();
-                resource_sets.pending_removed.clear();
-                resource_sets.pending_modified.clear();
+                resource_sets.pending_events.clear();
             }
 
             orendergraph::NodePreExecute<orendergraph::RasterContext>::execute(rg, cmd, node);

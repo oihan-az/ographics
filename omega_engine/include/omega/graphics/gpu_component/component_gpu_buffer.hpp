@@ -49,9 +49,7 @@ template <typename T> class ComponentGpuBuffer
     {
         DynamicBuffer buffer;
 
-        std::vector<ComponentAddedEvent<T>> pending_added;
-        std::vector<ComponentRemovedEvent<T>> pending_removed;
-        std::vector<ComponentModifiedEvent<T>> pending_modified;
+        std::vector<ComponentEvent<T>> pending_events;
     };
 
     ComponentSystem& m_components;
@@ -66,12 +64,7 @@ template <typename T> class ComponentGpuBuffer
     void write_component(ComponentStorage<T>& storage, Entity entity, FrameResources& frame, orendergraph::RenderGraph& rg, TArgs&&... args);
 
     template <typename... TArgs>
-    void process_added(ComponentStorage<T>& storage, FrameResources& frame, orendergraph::RenderGraph& rg, TArgs&&... args);
-
-    void process_removed(FrameResources& frame, ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg);
-
-    template <typename... TArgs>
-    void process_modified(ComponentStorage<T>& storage, FrameResources& frame, orendergraph::RenderGraph& rg, TArgs&&... args);
+    void process_events(ComponentStorage<T>& storage, FrameResources& frame, ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg, TArgs&&... args);
 };
 
 } // namespace omega

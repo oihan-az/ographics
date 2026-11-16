@@ -43,16 +43,9 @@ bool ComponentGpuBuffer<T>::create(orendergraph::RenderGraph& rg)
 template <typename T> 
 void ComponentGpuBuffer<T>::capture_events()
 {
-    const auto& added = m_events.get_queue<ComponentAddedEvent<T>>().get_events();
-    const auto& removed = m_events.get_queue<ComponentRemovedEvent<T>>().get_events();
-    const auto& modified = m_events.get_queue<ComponentModifiedEvent<T>>().get_events();
-
+    const auto& events = m_events.get_queue<ComponentEvent<T>>().get_events();
     for (FrameResources& frame : m_frames)
-    {
-        frame.pending_added.insert(frame.pending_added.end(), added.begin(), added.end());
-        frame.pending_removed.insert(frame.pending_removed.end(), removed.begin(), removed.end());
-        frame.pending_modified.insert(frame.pending_modified.end(), modified.begin(), modified.end());
-    }
+        frame.pending_events.insert(frame.pending_events.end(), events.begin(), events.end());
 }
 
 template <typename T>
@@ -75,19 +68,11 @@ bool ComponentGpuBuffer<T>::process_frame(uint32_t frame_index, ogfx::CommandBuf
     const bool buffer_changed = frame.buffer.get_capacity() != previous_capacity;
 
     if (buffer_changed)
-    {
         upload_all(storage, frame, rg, args...);
-    }
     else
-    {
-        process_added(storage, frame, rg, args...);
-        process_removed(frame, cmd, rg);
-        process_modified(storage, frame, rg, args...);
-    }
+        process_events(storage, frame, cmd, rg, args...);
 
-    frame.pending_added.clear();
-    frame.pending_removed.clear();
-    frame.pending_modified.clear();
+    frame.pending_events.clear();
 
     return buffer_changed;
 }
@@ -150,62 +135,53 @@ void ComponentGpuBuffer<T>::write_component(ComponentStorage<T>& storage, Entity
 
 template <typename T>
 template <typename... TArgs>
-void ComponentGpuBuffer<T>::process_added(ComponentStorage<T>& storage, FrameResources& frame,
-                                          orendergraph::RenderGraph& rg, TArgs&&... args)
+void ComponentGpuBuffer<T>::process_events(ComponentStorage<T>& storage, FrameResources& frame, 
+                            ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg, 
+                            TArgs&&... args)
 {
-    for (const auto& event : frame.pending_added)
+    for (const auto& event : frame.pending_events)
     {
-        write_component(storage, event.entity, frame, rg, args...);
-    }
-}
+        switch (event.type)
+        {
+        case ComponentEventType::Added:
+        case ComponentEventType::Modified:
+        {
+            write_component(storage, event.entity, frame, rg, args...);
+            break;
+        }
 
-template <typename T>
-void ComponentGpuBuffer<T>::process_removed(FrameResources& frame, ogfx::CommandBuffer& cmd,
-                                            orendergraph::RenderGraph& rg)
-{
-    ogfx::Buffer* buffer = rg.get_resource(frame.buffer.get_handle());
+        case ComponentEventType::Removed:
+        {
+            ogfx::Buffer* buffer = rg.get_resource(frame.buffer.get_handle());
+            constexpr uint64_t element_size = sizeof(GpuComponentData<T>);
 
-    constexpr uint64_t element_size = sizeof(GpuComponentData<T>);
+            const uint64_t removed_offset = event.swap_info.new_index * element_size;
+            const uint64_t last_offset = event.swap_info.old_index * element_size;
+            if (removed_offset == last_offset)
+                break;
 
-    for (const auto& event : frame.pending_removed)
-    {
-        const uint64_t removed_offset = event.swap_info.new_index * element_size;
+            ogfx::BufferToBufferCopyInfo copy_info{};
+            copy_info.src_buffer = buffer;
+            copy_info.dst_buffer = buffer;
+            copy_info.src_offset = last_offset;
+            copy_info.dst_offset = removed_offset;
+            copy_info.size = element_size;
 
-        const uint64_t last_offset = event.swap_info.old_index * element_size;
+            cmd.copy_buffer_to_buffer(copy_info);
 
-        if (removed_offset == last_offset)
-            continue;
+            ogfx::BufferBarrierInfo barrier_info{};
+            barrier_info.buffer = buffer;
+            barrier_info.memory_barrier_info.src_access = ogfx::AccessFlags::TransferWrite;
+            barrier_info.memory_barrier_info.dst_access = ogfx::AccessFlags::ShaderRead;
+            barrier_info.memory_barrier_info.src_stages = ogfx::PipelineStage::Transfer;
+            barrier_info.memory_barrier_info.dst_stages = ogfx::PipelineStage::FragmentShader;
+            barrier_info.offset = removed_offset;
+            barrier_info.size = element_size;
 
-        ogfx::BufferToBufferCopyInfo copy_info{};
-        copy_info.src_buffer = buffer;
-        copy_info.dst_buffer = buffer;
-        copy_info.src_offset = last_offset;
-        copy_info.dst_offset = removed_offset;
-        copy_info.size = element_size;
-
-        cmd.copy_buffer_to_buffer(copy_info);
-
-        ogfx::BufferBarrierInfo barrier_info{};
-        barrier_info.buffer = buffer;
-        barrier_info.memory_barrier_info.src_access = ogfx::AccessFlags::TransferWrite;
-        barrier_info.memory_barrier_info.dst_access = ogfx::AccessFlags::ShaderRead;
-        barrier_info.memory_barrier_info.src_stages = ogfx::PipelineStage::Transfer;
-        barrier_info.memory_barrier_info.dst_stages = ogfx::PipelineStage::FragmentShader;
-        barrier_info.offset = removed_offset;
-        barrier_info.size = element_size;
-
-        cmd.buffer_barrier(barrier_info);
-    }
-}
-
-template <typename T>
-template <typename... TArgs>
-void ComponentGpuBuffer<T>::process_modified(ComponentStorage<T>& storage, FrameResources& frame,
-                                             orendergraph::RenderGraph& rg, TArgs&&... args)
-{
-    for (const auto& event : frame.pending_modified)
-    {
-        write_component(storage, event.entity, frame, rg, args...);
+            cmd.buffer_barrier(barrier_info);
+            break;
+        }
+        }
     }
 }
 
