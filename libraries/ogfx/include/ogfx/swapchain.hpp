@@ -3,6 +3,7 @@
 
 #include <ogfx/format.hpp>
 #include <ogfx/present_mode.hpp>
+#include <ogfx/present_result.hpp>
 
 #include <ogfx/image.hpp>
 #include <ogfx/image_view.hpp>
@@ -19,6 +20,12 @@ class PhysicalDevice;
 class Device;
 class Surface;
 class Semaphore;
+
+struct AcquireResult
+{
+    PresentResult status = PresentResult::Success;
+    uint32_t image_index = 0;
+};
 
 struct SwapchainDesc
 {
@@ -42,19 +49,20 @@ class Swapchain
     Swapchain(const Swapchain&) = delete;
     Swapchain& operator=(const Swapchain&) = delete;
 
-    Swapchain(Swapchain&&) noexcept;
-    Swapchain& operator=(Swapchain&&) noexcept;
+    Swapchain(Swapchain&&) noexcept = delete;
+    Swapchain& operator=(Swapchain&&) noexcept = delete;
 
-    uint32_t acquire_next_image(Semaphore& signal_semaphore);
+    AcquireResult acquire_next_image(Semaphore& signal_semaphore);
+    void recreate(uint32_t width, uint32_t height);
 
     [[nodiscard]] uint32_t width() const
     {
-        return m_width;
+        return m_desc.width;
     }
 
     [[nodiscard]] uint32_t height() const
     {
-        return m_height;
+        return m_desc.height;
     }
 
     [[nodiscard]] uint32_t image_count() const
@@ -106,11 +114,14 @@ class Swapchain
 
     friend class Queue;
 
+    void create();
+
     std::vector<Image> m_images;
     std::vector<ImageView> m_image_views;
 
-    uint32_t m_width = 0;
-    uint32_t m_height = 0;
+    const PhysicalDevice& m_physical_device;
+    const Device& m_device;
+    SwapchainDesc m_desc;
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

@@ -12,6 +12,8 @@ struct Swapchain::Impl
 {
     VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
     VkDevice m_device = VK_NULL_HANDLE;
+    VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
+    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 };
 
 } // namespace ogfx

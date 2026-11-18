@@ -1,6 +1,8 @@
 #ifndef OMEGA_GRAPHICS_SYSTEM_HPP
 #define OMEGA_GRAPHICS_SYSTEM_HPP
 
+#include <ogfx/swapchain.hpp>
+
 #include <orenderer/renderer.hpp>
 
 #include <omega/mesh/mesh_system.hpp>
@@ -45,6 +47,9 @@ class GraphicsSystem
     uint32_t current_image_index() const;
     uint32_t max_frames_in_flight() const;
 
+    bool needs_swapchain_recreation() const;
+    void recreate_swapchain(uint32_t width, uint32_t height);
+
     ogfx::Swapchain& swapchain();
 
     orenderer::Renderer& renderer();
@@ -77,6 +82,9 @@ class GraphicsSystem
     const uint32_t m_max_frames_in_flight = 0;
     uint32_t m_current_frame = 0;
     uint32_t m_current_image_index = 0;
+
+    ogfx::AcquireResult m_frame_acquired;
+    bool m_recreate_swapchain = false;
 
     ogfx::Device& m_device;
     ogfx::Swapchain& m_swapchain;

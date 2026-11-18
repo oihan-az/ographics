@@ -66,7 +66,19 @@ void GraphicsSystem::start_frame()
     complete_uploads();
 
     Frame& frame = m_frames[m_current_frame];
-    m_current_image_index = m_swapchain.acquire_next_image(*frame.image_available);
+
+    m_frame_acquired = m_swapchain.acquire_next_image(*frame.image_available);
+
+    if (m_frame_acquired.status == ogfx::PresentResult::OutOfDate)
+    {
+        m_recreate_swapchain = true;
+        return;
+    }
+
+    m_current_image_index = m_frame_acquired.image_index;
+
+    if (m_frame_acquired.status == ogfx::PresentResult::Suboptimal)
+        m_recreate_swapchain = true;
 }
 
 void GraphicsSystem::end_frame() 
@@ -128,6 +140,9 @@ void GraphicsSystem::update()
 
 void GraphicsSystem::render()
 {
+    if (m_frame_acquired.status == ogfx::PresentResult::OutOfDate)
+        return;
+
     Frame& frame = m_frames[m_current_frame];
     m_renderer.execute(*frame.command_buffer);
 
@@ -141,7 +156,13 @@ void GraphicsSystem::render()
 
     m_device.queue(ogfx::QueueType::Graphics).submit(submitDesc);
 
-    ogfx::PresentResult presentResult = m_device.queue(ogfx::QueueType::Present).present(m_swapchain, m_current_image_index, *m_render_finished[m_current_image_index]);
+    ogfx::PresentResult present_result = m_device.queue(ogfx::QueueType::Present).present(m_swapchain, m_current_image_index, *m_render_finished[m_current_image_index]);
+
+    if (present_result == ogfx::PresentResult::OutOfDate ||
+        present_result == ogfx::PresentResult::Suboptimal)
+    {
+        m_recreate_swapchain = true;
+    }
 }
 
 void GraphicsSystem::wait()
@@ -173,6 +194,17 @@ uint32_t GraphicsSystem::current_image_index() const
 uint32_t GraphicsSystem::max_frames_in_flight() const
 {
     return m_max_frames_in_flight;
+}
+
+bool GraphicsSystem::needs_swapchain_recreation() const
+{
+    return m_recreate_swapchain;
+}
+
+void GraphicsSystem::recreate_swapchain(uint32_t width, uint32_t height)
+{
+    m_swapchain.recreate(width, height);
+    m_recreate_swapchain = false;
 }
 
 ogfx::Swapchain& GraphicsSystem::swapchain()

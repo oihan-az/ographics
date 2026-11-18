@@ -134,20 +134,38 @@ VkExtent2D choose_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t 
 
 Swapchain::Swapchain(const PhysicalDevice& physical_device, const Device& device, const Surface& surface,
                      const SwapchainDesc& desc)
-    : m_impl(std::make_unique<Impl>()), m_width(desc.width), m_height(desc.height)
+    : m_impl(std::make_unique<Impl>()), m_physical_device(physical_device), m_device(device), m_desc(desc)
 {
-    const VkPhysicalDevice vk_physical_device = physical_device.m_impl->m_physical_device;
-    const VkDevice vk_device = device.m_impl->m_device;
-    const VkSurfaceKHR vk_surface = surface.m_impl->m_surface;
+    m_impl->m_physical_device = physical_device.m_impl->m_physical_device;
+    m_impl->m_device = device.m_impl->m_device;
+    m_impl->m_surface = surface.m_impl->m_surface;
+
+    create();
+}
+
+Swapchain::~Swapchain()
+{
+    if (m_impl && m_impl->m_swapchain != VK_NULL_HANDLE)
+    {
+        vkDestroySwapchainKHR(m_impl->m_device, m_impl->m_swapchain, nullptr);
+        OGFX_LOG("Vulkan swapchain destroyed");
+    }
+}
+
+void Swapchain::create()
+{
+    const VkPhysicalDevice vk_physical_device = m_impl->m_physical_device;
+    const VkDevice vk_device = m_impl->m_device;
+    const VkSurfaceKHR vk_surface = m_impl->m_surface;
 
     OGFX_LOG("Creating Vulkan swapchain");
 
     const SwapchainSupportDetails support = query_swapchain_support(vk_physical_device, vk_surface);
-    const VkSurfaceFormatKHR surface_format = choose_surface_format(support.formats, desc.format);
-    const VkPresentModeKHR present_mode = choose_present_mode(support.present_modes, desc.present_mode);
-    const VkExtent2D extent = choose_extent(support.capabilities, desc.width, desc.height);
+    const VkSurfaceFormatKHR surface_format = choose_surface_format(support.formats, m_desc.format);
+    const VkPresentModeKHR present_mode = choose_present_mode(support.present_modes, m_desc.present_mode);
+    const VkExtent2D extent = choose_extent(support.capabilities, m_desc.width, m_desc.height);
 
-    uint32_t image_count = std::max(desc.image_count, support.capabilities.minImageCount);
+    uint32_t image_count = std::max(m_desc.image_count, support.capabilities.minImageCount);
     if (support.capabilities.maxImageCount > 0)
     {
         image_count = std::min(image_count, support.capabilities.maxImageCount);
@@ -166,7 +184,7 @@ Swapchain::Swapchain(const PhysicalDevice& physical_device, const Device& device
     create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     create_info.presentMode = present_mode;
     create_info.clipped = VK_TRUE;
-    create_info.oldSwapchain = VK_NULL_HANDLE;
+    create_info.oldSwapchain = m_impl->m_swapchain;
 
     if (vkCreateSwapchainKHR(vk_device, &create_info, nullptr, &m_impl->m_swapchain) != VK_SUCCESS)
     {
@@ -194,12 +212,13 @@ Swapchain::Swapchain(const PhysicalDevice& physical_device, const Device& device
             throw std::runtime_error("Failed to retrieve Vulkan swapchain images.");
         }
 
+        m_images.clear();
         m_images.reserve(actual_image_count);
 
         for (VkImage vk_image : vk_images)
         {
-            // Swapchain images are externally created and owned by the swapchain.
-            // Image only wraps the native handle and stores its resource properties.
+            // Swapchain images are externally created and owned by the swapchain
+            // Image only wraps the native handle and stores its resource properties
             ImageDesc desc;
             desc.width = extent.width;
             desc.height = extent.height;
@@ -207,11 +226,11 @@ Swapchain::Swapchain(const PhysicalDevice& physical_device, const Device& device
             desc.array_layers = 1;
             desc.format = from_vk_format(surface_format.format);
             desc.usage = from_vk_image_usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-            desc.owned = false; // The VkImage is owned by the swapchain.
+            desc.owned = false; // The VkImage is owned by the swapchain
 
-            Image image(physical_device, device, desc);
+            Image image(m_physical_device, m_device, desc);
             image.m_impl->m_image = vk_image;
-            image.m_impl->m_device = device.m_impl->m_device;
+            image.m_impl->m_device = m_device.m_impl->m_device;
 
             m_images.emplace_back(std::move(image));
         }
@@ -219,6 +238,7 @@ Swapchain::Swapchain(const PhysicalDevice& physical_device, const Device& device
 
     // Image views
     {
+        m_image_views.clear();
         for (Image& image : m_images)
         {
             ImageViewDesc desc;
@@ -232,35 +252,41 @@ Swapchain::Swapchain(const PhysicalDevice& physical_device, const Device& device
     OGFX_LOG("Vulkan swapchain created with " + std::to_string(actual_image_count) + " image(s)");
 }
 
-Swapchain::~Swapchain()
-{
-    if (m_impl && m_impl->m_swapchain != VK_NULL_HANDLE)
-    {
-        vkDestroySwapchainKHR(m_impl->m_device, m_impl->m_swapchain, nullptr);
-        OGFX_LOG("Vulkan swapchain destroyed");
-    }
-}
-
-Swapchain::Swapchain(Swapchain&&) noexcept = default;
-Swapchain& Swapchain::operator=(Swapchain&&) noexcept = default;
-
-uint32_t Swapchain::acquire_next_image(Semaphore& signal_semaphore)
+AcquireResult Swapchain::acquire_next_image(Semaphore& signal_semaphore)
 {
     uint32_t image_index = 0;
-
     VkResult result = vkAcquireNextImageKHR(m_impl->m_device, m_impl->m_swapchain, UINT64_MAX,
                                             signal_semaphore.m_impl->m_semaphore, VK_NULL_HANDLE, &image_index);
 
-    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    switch (result)
     {
-        OGFX_LOG_ERROR("Failed to acquire Vulkan swapchain image");
+    case VK_SUCCESS:
+        OGFX_LOG("Acquired Vulkan swapchain image [" + std::to_string(image_index) + "]");
+        return {PresentResult::Success, image_index};
 
+    case VK_SUBOPTIMAL_KHR:
+        OGFX_LOG("Acquired suboptimal Vulkan swapchain image [" + std::to_string(image_index) + "]");
+        return {PresentResult::Suboptimal, image_index};
+
+    case VK_ERROR_OUT_OF_DATE_KHR:
+        OGFX_LOG("Vulkan swapchain is out of date");
+        return {PresentResult::OutOfDate, 0};
+
+    default:
+        OGFX_LOG_ERROR("Failed to acquire Vulkan swapchain image");
         throw std::runtime_error("Failed to acquire Vulkan swapchain image.");
     }
+}
 
-    OGFX_LOG("Acquired Vulkan swapchain image [" + std::to_string(image_index) + "]");
+void Swapchain::recreate(uint32_t width, uint32_t height)
+{
+    if (width == 0 || height == 0)
+        return;
 
-    return image_index;
+    m_desc.width = width;
+    m_desc.height = height;
+
+    create();
 }
 
 } // namespace ogfx

@@ -189,6 +189,18 @@ int main()
 
         graphics.start_frame();
 
+        if (graphics.needs_swapchain_recreation())
+        {
+            const uint32_t width = window.width();
+            const uint32_t height = window.height();
+
+            if (width == 0 || height == 0)
+                continue;
+
+            graphics.recreate_swapchain(width, height);
+            continue;
+        }
+
         events.swap_all_buffers();
 
         entities.update();
