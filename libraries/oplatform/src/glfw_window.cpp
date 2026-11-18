@@ -32,7 +32,7 @@ Window::Window(const WindowDesc& desc) : m_impl(std::make_unique<Impl>())
 
     // Create the GLFW window
     m_impl->m_handle = glfwCreateWindow(static_cast<int>(desc.width), static_cast<int>(desc.height), desc.title.c_str(),
-                                      monitor, nullptr);
+                                       monitor, nullptr);
 
     // Check window creation
     if (!m_impl->m_handle)

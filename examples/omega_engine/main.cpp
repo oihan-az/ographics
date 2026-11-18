@@ -43,14 +43,11 @@ int main()
 
     oplatform::Window window(windowDesc);
 
-    const auto extensions = runtime.required_instance_extensions();
-
     // Graphics framework setup
     ogfx::InstanceDesc instance_desc;
     instance_desc.application_name = "Omega Engine";
     instance_desc.engine_name = "Omega Engine";
-    instance_desc.debug = true;
-    instance_desc.extensions = extensions;
+    instance_desc.extensions = ogfx::InstanceExtension::DebugUtils | runtime.required_instance_extensions();
 
     ogfx::Instance instance(instance_desc);
 

@@ -1,7 +1,33 @@
+if(WIN32)
+    target_compile_definitions(ogfx PRIVATE
+        VK_USE_PLATFORM_WIN32_KHR
+        WIN32_LEAN_AND_MEAN
+        NOMINMAX
+    )
+
+elseif(ANDROID)
+    target_compile_definitions(ogfx PRIVATE
+        VK_USE_PLATFORM_ANDROID_KHR
+    )
+
+elseif(APPLE)
+    target_compile_definitions(ogfx PRIVATE
+        VK_USE_PLATFORM_METAL_EXT
+    )
+
+elseif(UNIX)
+    target_compile_definitions(ogfx PRIVATE
+        VK_USE_PLATFORM_XLIB_KHR
+        VK_USE_PLATFORM_XCB_KHR
+        VK_USE_PLATFORM_WAYLAND_KHR
+    )
+endif()
+
 target_sources(
     ogfx
     PRIVATE
         vk_instance.cpp
+        vk_instance_extensions.cpp
         vk_physical_device.cpp
         vk_device.cpp
         vk_surface.cpp

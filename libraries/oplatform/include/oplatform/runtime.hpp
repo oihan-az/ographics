@@ -6,7 +6,7 @@
 #ifndef OPLATFORM_RUNTIME_HPP
 #define OPLATFORM_RUNTIME_HPP
 
-#include <vector>
+#include <ogfx/instance_extensions.hpp>
 
 namespace oplatform
 {
@@ -44,7 +44,7 @@ class Runtime
     Runtime(Runtime&&) = delete;
     Runtime& operator=(Runtime&&) = delete;
 
-    [[nodiscard]] std::vector<const char*> required_instance_extensions() const;
+    [[nodiscard]] ogfx::InstanceExtension required_instance_extensions() const;
 };
 } // namespace oplatform
 

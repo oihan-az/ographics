@@ -1,6 +1,8 @@
 #include <debug.hpp>
+#include <ogfx/enum_string.hpp>
 
 #include "vk_instance.hpp"
+#include "vk_instance_extensions.hpp"
 #include "vk_physical_device.hpp"
 
 #include <cstring>
@@ -105,20 +107,16 @@ Instance::Instance(const InstanceDesc& desc) : m_impl(std::make_unique<Impl>())
     createInfo.pApplicationInfo = &appInfo;
 
     // Extensions
-    std::vector<const char*> extensions = desc.extensions;
-
-    if (desc.debug)
-    {
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-
+    std::vector<const char*> extensions = to_vk_instance_extensions(desc.extensions);
+    OGFX_LOG(std::string("Enabling Vulkan instance extensions: ") + to_string_bitmask(desc.extensions));
+    const bool debug_enabled = has_flag(desc.extensions, InstanceExtension::DebugUtils);
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
 
     // Validation layers
     const std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-    if (desc.debug)
+    if (debug_enabled)
     {
         {
             // Get available validation layers
@@ -167,7 +165,7 @@ Instance::Instance(const InstanceDesc& desc) : m_impl(std::make_unique<Impl>())
     }
 
     // Create the persistent debug messenger
-    if (desc.debug)
+    if (debug_enabled)
     {
         if (CreateDebugUtilsMessengerEXT(m_impl->m_instance, &debugCreateInfo, nullptr, &m_impl->m_debug_messenger) != VK_SUCCESS)
         {

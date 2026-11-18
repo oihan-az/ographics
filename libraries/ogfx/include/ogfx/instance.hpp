@@ -1,6 +1,7 @@
 #ifndef OGFX_INSTANCE_HPP
 #define OGFX_INSTANCE_HPP
 
+#include <ogfx/instance_extensions.hpp>
 #include <ogfx/physical_device.hpp>
 
 #include <memory>
@@ -16,9 +17,7 @@ struct InstanceDesc
     const char* application_name = "ogfx";
     const char* engine_name = "ogfx";
 
-    bool debug = false;
-
-    std::vector<const char*> extensions;
+    InstanceExtension extensions = InstanceExtension::None;
 };
 
 using NativeInstanceHandle = void*;

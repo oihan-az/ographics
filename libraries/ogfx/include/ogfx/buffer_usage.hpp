@@ -4,7 +4,6 @@
 #include <ogfx/enum_flags.hpp>
 
 #include <cstdint>
-#include <string>
 
 namespace ogfx
 {
