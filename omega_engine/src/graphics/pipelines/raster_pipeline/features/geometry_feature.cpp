@@ -5,6 +5,7 @@
 #include <ogfx/image.hpp>
 #include <ogfx/image_view.hpp>
 #include <ogfx/resource_allocator.hpp>
+#include <ogfx/swapchain.hpp>
 
 #include <omega/core/math/matrix4.hpp>
 #include <omega/core/math/vector4.hpp>
@@ -18,6 +19,7 @@
 #include <omega/mesh/vertex.hpp>
 #include <omega/texture/gpu_texture_system.hpp>
 
+#include <omega/graphics/graphics_system.hpp>
 #include <omega/renderable/renderable.hpp>
 #include <omega/graphics/resources/gpu_light_data.hpp>
 
@@ -43,18 +45,18 @@ struct LightingConstants
 
 GeometryRenderFeature::GeometryRenderFeature(const GeometryRenderFeatureDesc& desc)
     : m_desc(desc), 
-      m_renderable_events(m_desc.frames_in_flight), 
-      m_directional_light_events(m_desc.frames_in_flight),
-      m_point_light_events(m_desc.frames_in_flight),
-      m_spot_light_events(m_desc.frames_in_flight)
+      m_renderable_events(m_desc.graphics.max_frames_in_flight()), 
+      m_directional_light_events(m_desc.graphics.max_frames_in_flight()),
+      m_point_light_events(m_desc.graphics.max_frames_in_flight()),
+      m_spot_light_events(m_desc.graphics.max_frames_in_flight())
 {}
 
 void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx) 
 {
     orendergraph::RenderGraph& rg = ctx.render_graph();
 
-    m_frame_resources.reserve(m_desc.frames_in_flight);
-    for (uint32_t i = 0; i < m_desc.frames_in_flight; i++)
+    m_frame_resources.reserve(m_desc.graphics.max_frames_in_flight());
+    for (uint32_t i = 0; i < m_desc.graphics.max_frames_in_flight(); i++)
     {
         m_frame_resources.emplace_back(m_desc.components, m_desc.events);
 
@@ -66,10 +68,10 @@ void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx)
     constexpr uint32_t light_type_count = 3;
 
     ogfx::DescriptorPoolDesc pool_desc;
-    pool_desc.max_sets = m_desc.frames_in_flight + 1;
+    pool_desc.max_sets = m_desc.graphics.max_frames_in_flight() + 1;
     pool_desc.sizes = 
     {
-        {ogfx::ResourceType::StorageBuffer, m_desc.frames_in_flight * light_type_count},
+        {ogfx::ResourceType::StorageBuffer, m_desc.graphics.max_frames_in_flight() * light_type_count},
         {ogfx::ResourceType::Sampler, 1}
     };
     rg.get_resource_allocator().create_pool(pool_desc);
@@ -80,11 +82,13 @@ void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx)
 
 void GeometryRenderFeature::create_resources(orendergraph::RenderGraph& rg)
 {
+    ogfx::Swapchain& swapchain = m_desc.graphics.swapchain();
+
     // Output image
     {
         ogfx::ImageDesc image_desc{};
-        image_desc.width = m_desc.width;
-        image_desc.height = m_desc.height;
+        image_desc.width = swapchain.width();
+        image_desc.height = swapchain.height();
         image_desc.format = ogfx::Format::RGBA8_UNORM;
         image_desc.usage = ogfx::ImageUsage::ColorAttachment | ogfx::ImageUsage::TransferSrc;
         m_out_image = rg.create_resource<ogfx::Image>(image_desc);
@@ -98,8 +102,8 @@ void GeometryRenderFeature::create_resources(orendergraph::RenderGraph& rg)
     // Depth
     {
         ogfx::ImageDesc desc{};
-        desc.width = m_desc.width;
-        desc.height = m_desc.height;
+        desc.width = swapchain.width();
+        desc.height = swapchain.height();
         desc.format = ogfx::Format::D32_FLOAT;
         desc.usage = ogfx::ImageUsage::DepthStencil;
         m_depth_image = rg.create_resource<ogfx::Image>(desc);
@@ -149,14 +153,15 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             desc.render_pass_desc.attachments = {color_attachment, depth_attachment};
 
             // Framebuffer
+            ogfx::Swapchain& swapchain = m_desc.graphics.swapchain();
             ogfx::FramebufferDesc framebuffer_desc;
             framebuffer_desc.attachments = 
             {
                 rg.get_resource(m_out_image_view),                             
                 rg.get_resource(m_depth_image_view)
             };
-            framebuffer_desc.width = m_desc.width;
-            framebuffer_desc.height = m_desc.height;
+            framebuffer_desc.width = swapchain.width();
+            framebuffer_desc.height = swapchain.height();
             desc.framebuffers_desc = {framebuffer_desc};
 
             // Shaders
@@ -186,8 +191,8 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             ogfx::Viewport viewport;
             viewport.x = 0.0f;
             viewport.y = 0.0f;
-            viewport.width = static_cast<float>(m_desc.width);
-            viewport.height = static_cast<float>(m_desc.height);
+            viewport.width = static_cast<float>(swapchain.width());
+            viewport.height = static_cast<float>(swapchain.height());
             viewport.min_depth = 0.0f;
             viewport.max_depth = 1.0f;
 
@@ -196,8 +201,8 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             ogfx::Scissor scissor;
             scissor.x = 0;
             scissor.y = 0;
-            scissor.width = m_desc.width;
-            scissor.height = m_desc.height;
+            scissor.width = swapchain.width();
+            scissor.height = swapchain.height();
 
             desc.viewport.scissors = {scissor};
 
@@ -261,7 +266,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             desc.resource_set_layouts_desc.push_back(sampler_set_layout_desc);
 
             // One resource set and one write description per frame
-            for (uint32_t i = 0; i < m_desc.frames_in_flight; ++i)
+            for (uint32_t i = 0; i < m_desc.graphics.max_frames_in_flight(); ++i)
             {
                 FrameResources& frame = m_frame_resources[i];
 
@@ -311,7 +316,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             resoruce_sampler_binding.sampler = m_sampler;
 
             orendergraph::ResourceWriteDesc write_desc;
-            write_desc.resource_set_idx = m_desc.frames_in_flight;
+            write_desc.resource_set_idx = m_desc.graphics.max_frames_in_flight();
             write_desc.write_info.samplers = {resoruce_sampler_binding};
 
             desc.resource_writes_desc.push_back(write_desc);
@@ -345,8 +350,8 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             desc.color_blend.attachments = {color_blend};
 
             // Runtime render settings
-            desc.width = m_desc.width;
-            desc.height = m_desc.height;
+            desc.width = swapchain.width();
+            desc.height = swapchain.height();
             desc.clear_values = 
             {
                 // Color
@@ -370,26 +375,26 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
     {
         frame.m_texture_resource_sets = std::make_unique<ResourceSetCache<TextureHandle, TextureHandleHash>>(rg.device(), rg.get_resource_allocator(), *ctx.resource_set_layouts[1]);
 
-        if (!frame.m_texture_resource_sets->acquire(m_desc.missing_texture))
+        if (!frame.m_texture_resource_sets->acquire(m_desc.graphics.missing_texture()))
             continue;
 
         // Request residency if necessary
-        if (!m_desc.gpu_textures.is_resident(m_desc.missing_texture) &&
-            !m_desc.gpu_textures.is_pending(m_desc.missing_texture) &&
-            !m_desc.gpu_textures.is_uploading(m_desc.missing_texture))
+        if (!m_desc.graphics.gpu_textures().is_resident(m_desc.graphics.missing_texture()) &&
+            !m_desc.graphics.gpu_textures().is_pending(m_desc.graphics.missing_texture()) &&
+            !m_desc.graphics.gpu_textures().is_uploading(m_desc.graphics.missing_texture()))
         {
-            m_desc.gpu_textures.make_resident(m_desc.missing_texture);
+            m_desc.graphics.gpu_textures().make_resident(m_desc.graphics.missing_texture());
         }
 
         // Update the resource set
         ogfx::ImageBinding texture_binding{};
         texture_binding.binding = 0;
         texture_binding.image_state = ogfx::ImageState::ShaderRead;
-        texture_binding.image_view = m_desc.gpu_textures.get_view(m_desc.missing_texture_view);
+        texture_binding.image_view = m_desc.graphics.gpu_textures().get_view(m_desc.graphics.missing_texture_view());
 
         ogfx::ResourceSetWriteInfo write_info{};
         write_info.textures.push_back(texture_binding);
-        frame.m_texture_resource_sets->update(m_desc.missing_texture, write_info);
+        frame.m_texture_resource_sets->update(m_desc.graphics.missing_texture(), write_info);
     }
 
     geometry_node->set_pre_execute
@@ -397,7 +402,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
         [this](orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd,
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
         {
-            const uint32_t frame_index = *m_desc.current_frame;
+            const uint32_t frame_index = m_desc.graphics.current_frame();
             FrameResources& frame = m_frame_resources[frame_index];
 
             // Update light buffers
@@ -468,7 +473,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                                     auto view_it = m_texture_views.find(previous_texture);
                                     if (view_it != m_texture_views.end())
                                     {
-                                        m_desc.gpu_textures.release_view(view_it->second);
+                                        m_desc.graphics.gpu_textures().release_view(view_it->second);
                                         m_texture_views.erase(view_it);
                                     }
                                 }
@@ -493,16 +498,17 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                         frame.m_renderable_textures[event.entity] = texture;
 
                         // Request residency if necessary
-                        if (!m_desc.gpu_textures.is_resident(texture) && !m_desc.gpu_textures.is_pending(texture) &&
-                            !m_desc.gpu_textures.is_uploading(texture))
+                        if (!m_desc.graphics.gpu_textures().is_resident(texture) && 
+                            !m_desc.graphics.gpu_textures().is_pending(texture) &&
+                            !m_desc.graphics.gpu_textures().is_uploading(texture))
                         {
-                            m_desc.gpu_textures.make_resident(texture);
+                            m_desc.graphics.gpu_textures().make_resident(texture);
                         }
 
                         // Request a view if one doesn't already exist
                         if (!m_texture_views.contains(texture))
                         {
-                            const TextureViewHandle view = m_desc.gpu_textures.create_view(texture, TextureViewDesc{});
+                            const TextureViewHandle view = m_desc.graphics.gpu_textures().create_view(texture, TextureViewDesc{});
                             if (view.is_valid())
                             {
                                 m_texture_views.emplace(texture, view);
@@ -537,7 +543,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                                     auto view_it = m_texture_views.find(previous_texture);
                                     if (view_it != m_texture_views.end())
                                     {
-                                        m_desc.gpu_textures.release_view(view_it->second);
+                                        m_desc.graphics.gpu_textures().release_view(view_it->second);
                                         m_texture_views.erase(view_it);
                                     }
                                 }
@@ -560,7 +566,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                     if (view_it == m_texture_views.end())
                         continue;
 
-                    const ogfx::ImageView* image_view = m_desc.gpu_textures.get_view(view_it->second);
+                    const ogfx::ImageView* image_view = m_desc.graphics.gpu_textures().get_view(view_it->second);
                     if (!image_view)
                         continue;
 
@@ -587,7 +593,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
         {
             orendergraph::RasterContext& ctx = node.context();
-            const uint32_t frame_index = *m_desc.current_frame;
+            const uint32_t frame_index = m_desc.graphics.current_frame();
             FrameResources& frame = m_frame_resources[frame_index];
 
             // Fragment constants
@@ -611,7 +617,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 resource_set_info.layout = ctx.pipeline_layout;
                 resource_set_info.pipeline_type = ogfx::PipelineType::Graphics;
                 resource_set_info.set_index = 0;
-                resource_set_info.resource_set = ctx.resource_sets[*m_desc.current_frame];
+                resource_set_info.resource_set = ctx.resource_sets[m_desc.graphics.current_frame()];
 
                 cmd.bind_resource_set(resource_set_info);
             }
@@ -622,7 +628,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 resource_set_info.layout = ctx.pipeline_layout;
                 resource_set_info.pipeline_type = ogfx::PipelineType::Graphics;
                 resource_set_info.set_index = 2;
-                resource_set_info.resource_set = ctx.resource_sets[m_desc.frames_in_flight];
+                resource_set_info.resource_set = ctx.resource_sets[m_desc.graphics.max_frames_in_flight()];
 
                 cmd.bind_resource_set(resource_set_info);
             }
@@ -637,14 +643,14 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 const Renderable* renderable = m_desc.components.get<Renderable>(entity);
 
                 // GPU mesh
-                if (!m_desc.gpu_meshes.is_resident(renderable->mesh))
+                if (!m_desc.graphics.gpu_meshes().is_resident(renderable->mesh))
                 {
-                    m_desc.gpu_meshes.make_resident(renderable->mesh);
+                    m_desc.graphics.gpu_meshes().make_resident(renderable->mesh);
                     continue;
                 }
 
                 // Draw data
-                const GpuMeshDrawData draw_data = m_desc.gpu_meshes.get_draw_data(renderable->mesh);
+                const GpuMeshDrawData draw_data = m_desc.graphics.gpu_meshes().get_draw_data(renderable->mesh);
                 if (!draw_data.is_valid())
                     continue;
 
@@ -689,7 +695,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 TextureHandle texture = renderable->texture;
                 if (frame.pending_textures.contains(texture))
                 {
-                    texture = m_desc.missing_texture;
+                    texture = m_desc.graphics.missing_texture();
                 }
 
                 const ogfx::ResourceSet* texture_resource_set = frame.m_texture_resource_sets->get(texture);

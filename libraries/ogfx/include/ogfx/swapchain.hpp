@@ -47,12 +47,22 @@ class Swapchain
 
     uint32_t acquire_next_image(Semaphore& signal_semaphore);
 
+    [[nodiscard]] uint32_t width() const
+    {
+        return m_width;
+    }
+
+    [[nodiscard]] uint32_t height() const
+    {
+        return m_height;
+    }
+
     [[nodiscard]] uint32_t image_count() const
     {
         return static_cast<uint32_t>(m_image_views.size());
     }
 
-        [[nodiscard]] Image& image(uint32_t index)
+    [[nodiscard]] Image& image(uint32_t index)
     {
         if (index >= m_image_views.size())
         {
@@ -98,6 +108,9 @@ class Swapchain
 
     std::vector<Image> m_images;
     std::vector<ImageView> m_image_views;
+
+    uint32_t m_width = 0;
+    uint32_t m_height = 0;
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

@@ -6,11 +6,6 @@
 #include <ogfx/device.hpp>
 #include <ogfx/resource_allocator.hpp>
 #include <ogfx/swapchain.hpp>
-#include <ogfx/command_pool.hpp>
-#include <ogfx/fence.hpp>
-#include <ogfx/semaphore.hpp>
-
-#include <orenderer/renderer.hpp>
 
 #include <omega/core/event/event_system.hpp>
 #include <omega/core/entity/entity_system.hpp>
@@ -29,60 +24,10 @@
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
 
+#include <omega/graphics/graphics_system.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/raster_pipeline.hpp>
 
 #include <vector>
-
-constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-
-struct Frame
-{
-    std::unique_ptr<ogfx::CommandPool> command_pool;
-    std::unique_ptr<ogfx::CommandBuffer> command_buffer;
-    std::unique_ptr<ogfx::CommandBuffer> upload_command_buffer;
-
-    std::unique_ptr<ogfx::Semaphore> image_available;
-    std::unique_ptr<ogfx::Fence> in_flight;
-
-    omega::TextureUploadBatch upload_batch{};
-};
-
-omega::TextureAsset make_missing_texture_asset()
-{
-    constexpr uint32_t width = 256;
-    constexpr uint32_t height = 256;
-    constexpr uint32_t tile_size = 16;
-
-    constexpr std::array<uint8_t, 4> purple = {255, 0, 255, 255};
-    constexpr std::array<uint8_t, 4> black = {0, 0, 0, 255};
-
-    omega::TextureAsset asset;
-    asset.type = ogfx::ImageType::Image2D;
-    asset.width = width;
-    asset.height = height;
-    asset.depth = 1;
-    asset.mip_levels = 1;
-    asset.array_layers = 1;
-    asset.format = ogfx::Format::RGBA8_UNORM;
-
-    omega::TextureSubresource subresource;
-    subresource.mip_level = 0;
-    subresource.array_layer = 0;
-    subresource.data.resize(width * height * 4);
-
-    for (uint32_t y = 0; y < height; ++y)
-    {
-        for (uint32_t x = 0; x < width; ++x)
-        {
-            const auto& color = ((x / tile_size + y / tile_size) % 2 == 0) ? purple : black;
-            const size_t offset = (static_cast<size_t>(y) * width + x) * 4;
-            std::memcpy(subresource.data.data() + offset, color.data(), color.size());
-        }
-    }
-
-    asset.subresources.push_back(std::move(subresource));
-    return asset;
-}
 
 int main()
 {
@@ -131,36 +76,6 @@ int main()
     swapchain_desc.image_count = 3;
 
     ogfx::Swapchain swapchain(physical_device, device, surface, swapchain_desc);
-    uint32_t swapchainImageIndex = 0;
-
-    // Submission queues
-    ogfx::Queue& graphicsQueue = device.queue(ogfx::QueueType::Graphics);
-    ogfx::Queue& presentQueue = device.queue(ogfx::QueueType::Present);
-
-    // Frame sync
-    std::array<Frame, MAX_FRAMES_IN_FLIGHT> frames;
-    uint32_t current_frame = 0;
-
-    for (Frame& frame : frames)
-    {
-        ogfx::CommandPoolDesc pool_desc;
-        pool_desc.transient = false;
-        pool_desc.resettable = true;
-
-        frame.command_pool = std::make_unique<ogfx::CommandPool>(device, graphicsQueue, pool_desc);
-        frame.command_buffer = std::make_unique<ogfx::CommandBuffer>(*frame.command_pool);
-        frame.upload_command_buffer = std::make_unique<ogfx::CommandBuffer>(*frame.command_pool);
-        frame.image_available = std::make_unique<ogfx::Semaphore>(device);
-        frame.in_flight = std::make_unique<ogfx::Fence>(device, true);
-    }
-
-    std::vector<std::unique_ptr<ogfx::Semaphore>> render_finished;
-    render_finished.reserve(swapchain.image_count());
-
-    for (uint32_t i = 0; i < swapchain.image_count(); ++i)
-    {
-        render_finished.push_back(std::make_unique<ogfx::Semaphore>(device));
-    }
 
     // Systems
     omega::EventSystem events;
@@ -169,60 +84,16 @@ int main()
     omega::ComponentSystem components(events, entities);
     omega::TransformSystem transforms(events, components, hierarchy, entities);
     omega::CameraSystem cameras(events, components, hierarchy, entities, transforms);
-
-    orenderer::Renderer renderer(physical_device, device, resource_allocator);
-    orendergraph::ResourcePoolRegistry& registry = renderer.resource_registry();
-
-    omega::MeshSystem meshes(events);
-    omega::GpuMeshSystem gpu_meshes(physical_device, device, registry, meshes, events);
-    omega::TextureSystem textures(events);
-    omega::GpuTextureSystem gpu_textures(physical_device, device, registry, textures, events);
-
-    // Create the procedural checkerboard texture
-    omega::TextureHandle missing_texture;
-    const omega::TextureAsset missing_texture_asset = make_missing_texture_asset();
-    if (!textures.create_texture(missing_texture_asset, missing_texture))
-        throw std::runtime_error("Failed to create missing texture");
-
-    if (!gpu_textures.make_resident(missing_texture))
-        throw std::runtime_error("Failed to request missing texture residency");
-
-    omega::TextureViewHandle missing_texture_view = gpu_textures.create_view(missing_texture, omega::TextureViewDesc{});
-
-    // Upload missing texture before rendering the first frame
-    {
-        Frame& frame = frames[current_frame];
-
-        // Two synchronization passes are required:
-        // 1. Upload the texture and wait for GPU completion
-        // 2. Create its image views, which are deferred until the texture is resident
-        for (uint32_t i = 0; i < 2; ++i)
-        {
-            frame.upload_command_buffer->begin();
-            const auto batch = gpu_textures.synchronize(*frame.upload_command_buffer);
-            frame.upload_command_buffer->end();
-
-            if (!batch.is_valid())
-                continue;
-
-            ogfx::SubmitDesc upload_submit;
-            upload_submit.command_buffers.push_back(frame.upload_command_buffer.get());
-            upload_submit.fence = frame.in_flight.get();
-
-            frame.in_flight->reset();
-            graphicsQueue.submit(upload_submit);
-
-            // Wait for upload completion
-            frame.in_flight->wait();
-
-            gpu_textures.complete_uploads(batch);
-            frame.upload_batch = {};
-        }
-    }
+    constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+    omega::GraphicsSystem graphics(physical_device, device, resource_allocator, swapchain, MAX_FRAMES_IN_FLIGHT, events);
+    graphics.initialize();
 
     // Load scene
+    omega::TextureHandle missing_texture = graphics.missing_texture();
+    omega::TextureViewHandle missing_texture_view = graphics.missing_texture_view();
+
     omega::ModelImporter importer;
-    omega::ModelSystem models(entities, hierarchy, components, meshes, textures, importer);
+    omega::ModelSystem models(entities, hierarchy, components, graphics.meshes(), graphics.textures(), importer);
     const std::filesystem::path asset_dir = OMEGA_ASSET_DIR;
     const std::filesystem::path model_path = asset_dir / "models/sponza_glTF/Sponza.gltf";
     const omega::ModelHandle model = models.load(model_path);
@@ -295,34 +166,20 @@ int main()
     {
         // Pipelines
         {
-            std::vector<orendergraph::ResourceHandle<ogfx::Image>> swapchain_images;
-            swapchain_images.resize(swapchain.image_count());
-            for (uint32_t i = 0; i < swapchain.image_count(); i++)
-                swapchain_images[i] = registry.import_resource(&swapchain.image(i));
-
             omega::RasterPipelineDesc pipeline_desc
             {
                 camera_entity, 
-                swapchain_desc.width,
-                swapchain_desc.height,
-                MAX_FRAMES_IN_FLIGHT,
-                &current_frame,
-                swapchain_images,
-                &swapchainImageIndex,
-                missing_texture,
-                missing_texture_view,
                 components,
                 events,
                 transforms,
                 cameras,
-                gpu_meshes,
-                gpu_textures,
+                graphics,
             };
 
-            renderer.create_pipeline<omega::RasterPipeline>();
-            renderer.set_active_pipeline(0);
-            renderer.setup<omega::RasterPipeline>(pipeline_desc);
-            renderer.compile();
+            graphics.renderer().create_pipeline<omega::RasterPipeline>();
+            graphics.renderer().set_active_pipeline(0);
+            graphics.renderer().setup<omega::RasterPipeline>(pipeline_desc);
+            graphics.renderer().compile();
         }
     }
 
@@ -330,58 +187,20 @@ int main()
     {
         window.poll_events();
 
-        Frame& frame = frames[current_frame];
-        frame.in_flight->wait();
+        graphics.start_frame();
 
-        if (frame.upload_batch.is_valid())
-        {
-            gpu_textures.complete_uploads(frame.upload_batch);
-            frame.upload_batch = {};
-        }
-
-        swapchainImageIndex = swapchain.acquire_next_image(*frame.image_available.get());
-
-        // Update systems
         events.swap_all_buffers();
+
         entities.update();
         hierarchy.update();
         components.update();
         transforms.update();
         cameras.update();
-        gpu_meshes.synchronize();
+        graphics.update();
 
-        frame.upload_command_buffer->begin();
-        const auto batch = gpu_textures.synchronize(*frame.upload_command_buffer);
-        frame.upload_command_buffer->end();
-        if (batch.is_valid())
-        {
-            ogfx::SubmitDesc upload_submit;
-            upload_submit.command_buffers.push_back(frame.upload_command_buffer.get());
+        graphics.render();
 
-            graphicsQueue.submit(upload_submit);
-
-            frame.upload_batch = batch;
-        }
-
-        ogfx::CommandBuffer& cmd = *frame.command_buffer;
-
-        renderer.execute(cmd);
-
-        frame.in_flight->reset();
-
-        {
-            ogfx::SubmitDesc submitDesc;
-            submitDesc.command_buffers.push_back(&cmd);
-            submitDesc.wait_semaphores.push_back({frame.image_available.get(), ogfx::PipelineStage::ColorAttachmentOutput});
-            submitDesc.signal_semaphores.push_back(render_finished[swapchainImageIndex].get());
-            submitDesc.fence = frame.in_flight.get();
-
-            graphicsQueue.submit(submitDesc);
-
-            ogfx::PresentResult presentResult = presentQueue.present(swapchain, swapchainImageIndex, *render_finished[swapchainImageIndex]);
-
-            current_frame = (current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
-        }
+        graphics.end_frame();
     }
 
     device.wait_idle();

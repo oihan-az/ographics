@@ -48,8 +48,7 @@ class ComponentSystem;
 class EventSystem;
 class TransformSystem;
 class CameraSystem;
-class GpuMeshSystem;
-class GpuTextureSystem;
+class GraphicsSystem;
 
 template <typename T> class ComponentStorage;
 template <typename Handle, typename Hash> class ResourceSetCache;
@@ -57,21 +56,12 @@ template <typename Handle, typename Hash> class ResourceSetCache;
 struct GeometryRenderFeatureDesc
 {
     Entity camera;
-    uint32_t width = 0;
-    uint32_t height = 0;
-
-    uint32_t frames_in_flight = 0;
-    uint32_t* current_frame = nullptr;
-
-    TextureHandle missing_texture;
-    TextureViewHandle missing_texture_view;
 
     ComponentSystem& components;
     EventSystem& events;
     TransformSystem& transforms;
     CameraSystem& cameras;
-    GpuMeshSystem& gpu_meshes;
-    GpuTextureSystem& gpu_textures;
+    GraphicsSystem& graphics;
 };
 
 class GeometryRenderFeature : public orenderer::IRenderFeature

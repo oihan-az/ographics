@@ -1,0 +1,256 @@
+#include <omega/graphics/graphics_system.hpp>
+
+#include <ogfx/fence.hpp>
+#include <ogfx/semaphore.hpp>
+#include <ogfx/command_pool.hpp>
+#include <ogfx/swapchain.hpp>
+
+#include <array>
+#include <cstring>
+#include <stdexcept>
+#include <utility>
+
+namespace omega
+{
+
+GraphicsSystem::GraphicsSystem(ogfx::PhysicalDevice& physical_device, ogfx::Device& device,
+                               ogfx::ResourceAllocator& allocator, ogfx::Swapchain& swapchain, 
+                               uint32_t max_frames_in_flight, EventSystem& events)
+    : m_max_frames_in_flight(std::max(max_frames_in_flight, 1u)),
+      m_device(device), m_swapchain(swapchain),
+      m_renderer(physical_device, device, allocator),
+      m_meshes(events), m_gpu_meshes(physical_device, device, m_renderer.resource_registry(), m_meshes, events), 
+      m_textures(events), m_gpu_textures(physical_device, device, m_renderer.resource_registry(), m_textures, events)
+{
+    // Frame sync
+    m_frames.resize(m_max_frames_in_flight);
+    for (Frame& frame : m_frames)
+    {
+        ogfx::CommandPoolDesc pool_desc;
+        pool_desc.transient = false;
+        pool_desc.resettable = true;
+
+        frame.command_pool = std::make_unique<ogfx::CommandPool>(device, device.queue(ogfx::QueueType::Graphics), pool_desc);
+        frame.command_buffer = std::make_unique<ogfx::CommandBuffer>(*frame.command_pool);
+        frame.upload_command_buffer = std::make_unique<ogfx::CommandBuffer>(*frame.command_pool);
+        frame.image_available = std::make_unique<ogfx::Semaphore>(device);
+        frame.in_flight = std::make_unique<ogfx::Fence>(device, true);
+    }
+
+    m_render_finished.reserve(m_swapchain.image_count());
+    for (uint32_t i = 0; i < m_swapchain.image_count(); ++i)
+    {
+        m_render_finished.push_back(std::make_unique<ogfx::Semaphore>(device));
+    }
+
+    // Create default graphics assets
+    const TextureAsset asset = create_missing_texture_asset();
+
+    if (!m_textures.create_texture(asset, m_missing_texture))
+        throw std::runtime_error("Failed to create missing texture.");
+
+    if (!m_gpu_textures.make_resident(m_missing_texture))
+        throw std::runtime_error("Failed to request missing texture residency.");
+
+    m_missing_texture_view = m_gpu_textures.create_view(m_missing_texture, TextureViewDesc{});
+
+    if (!m_missing_texture_view.is_valid())
+        throw std::runtime_error("Failed to create missing texture view.");
+}
+
+GraphicsSystem::~GraphicsSystem() = default;
+
+void GraphicsSystem::start_frame()
+{
+    wait();
+    complete_uploads();
+
+    Frame& frame = m_frames[m_current_frame];
+    m_current_image_index = m_swapchain.acquire_next_image(*frame.image_available);
+}
+
+void GraphicsSystem::end_frame() 
+{
+    m_current_frame = (m_current_frame + 1) % m_max_frames_in_flight;
+}
+
+void GraphicsSystem::initialize()
+{
+    Frame& frame = m_frames[m_current_frame];
+
+    // Two synchronization passes are required:
+    // 1. Upload the texture and wait for GPU completion
+    // 2. Create its image views, which are deferred until the texture is resident
+    for (uint32_t i = 0; i < 2; ++i)
+    {
+        frame.upload_command_buffer->begin();
+        const auto batch = m_gpu_textures.synchronize(*frame.upload_command_buffer);
+        frame.upload_command_buffer->end();
+
+        if (!batch.is_valid())
+            continue;
+
+        ogfx::SubmitDesc upload_submit;
+        upload_submit.command_buffers.push_back(frame.upload_command_buffer.get());
+        upload_submit.fence = frame.in_flight.get();
+
+        frame.in_flight->reset();
+        m_device.queue(ogfx::QueueType::Graphics).submit(upload_submit);
+
+        // Wait for upload completion
+        frame.in_flight->wait();
+
+        m_gpu_textures.complete_uploads(batch);
+        frame.upload_batch = {};
+    }
+}
+
+void GraphicsSystem::update()
+{
+    Frame& frame = m_frames[m_current_frame];
+
+    m_gpu_meshes.synchronize();
+
+    frame.upload_command_buffer->begin();
+    const auto batch = m_gpu_textures.synchronize(*frame.upload_command_buffer);
+    frame.upload_command_buffer->end();
+    if (batch.is_valid())
+    {
+        frame.upload_batch = batch;
+
+        ogfx::SubmitDesc upload_submit;
+        upload_submit.command_buffers.push_back(frame.upload_command_buffer.get());
+
+        // TODO: change to transfer queue (need to handle sync between different queues)
+        m_device.queue(ogfx::QueueType::Graphics).submit(upload_submit);
+    }
+}
+
+void GraphicsSystem::render()
+{
+    Frame& frame = m_frames[m_current_frame];
+    m_renderer.execute(*frame.command_buffer);
+
+    frame.in_flight->reset();
+
+    ogfx::SubmitDesc submitDesc;
+    submitDesc.command_buffers.push_back(frame.command_buffer.get());
+    submitDesc.wait_semaphores.push_back({frame.image_available.get(), ogfx::PipelineStage::ColorAttachmentOutput});
+    submitDesc.signal_semaphores.push_back(m_render_finished[m_current_image_index].get());
+    submitDesc.fence = frame.in_flight.get();
+
+    m_device.queue(ogfx::QueueType::Graphics).submit(submitDesc);
+
+    ogfx::PresentResult presentResult = m_device.queue(ogfx::QueueType::Present).present(m_swapchain, m_current_image_index, *m_render_finished[m_current_image_index]);
+}
+
+void GraphicsSystem::wait()
+{
+    Frame& frame = m_frames[m_current_frame];
+    frame.in_flight->wait();
+}
+
+void GraphicsSystem::complete_uploads()
+{
+    Frame& frame = m_frames[m_current_frame];
+    if (frame.upload_batch.is_valid())
+    {
+        m_gpu_textures.complete_uploads(frame.upload_batch);
+        frame.upload_batch = {};
+    }
+}
+
+uint32_t GraphicsSystem::current_frame() const 
+{
+    return m_current_frame;
+}
+
+uint32_t GraphicsSystem::current_image_index() const
+{
+    return m_current_image_index;
+}
+
+uint32_t GraphicsSystem::max_frames_in_flight() const
+{
+    return m_max_frames_in_flight;
+}
+
+ogfx::Swapchain& GraphicsSystem::swapchain()
+{
+    return m_swapchain;
+}
+
+orenderer::Renderer& GraphicsSystem::renderer()
+{
+    return m_renderer;
+}
+
+MeshSystem& GraphicsSystem::meshes()
+{
+    return m_meshes;
+}
+
+GpuMeshSystem& GraphicsSystem::gpu_meshes()
+{
+    return m_gpu_meshes;
+}
+
+TextureSystem& GraphicsSystem::textures()
+{
+    return m_textures;
+}
+
+GpuTextureSystem& GraphicsSystem::gpu_textures()
+{
+    return m_gpu_textures;
+}
+
+TextureHandle GraphicsSystem::missing_texture() const
+{
+    return m_missing_texture;
+}
+
+TextureViewHandle GraphicsSystem::missing_texture_view() const
+{
+    return m_missing_texture_view;
+}
+
+TextureAsset GraphicsSystem::create_missing_texture_asset()
+{
+    constexpr uint32_t width = 256;
+    constexpr uint32_t height = 256;
+    constexpr uint32_t tile_size = 16;
+
+    constexpr std::array<uint8_t, 4> purple = {255, 0, 255, 255};
+    constexpr std::array<uint8_t, 4> black = {0, 0, 0, 255};
+
+    TextureAsset asset;
+    asset.type = ogfx::ImageType::Image2D;
+    asset.width = width;
+    asset.height = height;
+    asset.depth = 1;
+    asset.mip_levels = 1;
+    asset.array_layers = 1;
+    asset.format = ogfx::Format::RGBA8_UNORM;
+
+    TextureSubresource subresource;
+    subresource.mip_level = 0;
+    subresource.array_layer = 0;
+    subresource.data.resize(width * height * 4);
+
+    for (uint32_t y = 0; y < height; ++y)
+    {
+        for (uint32_t x = 0; x < width; ++x)
+        {
+            const auto& color = ((x / tile_size + y / tile_size) % 2 == 0) ? purple : black;
+
+            const size_t offset = (static_cast<size_t>(y) * width + x) * 4;
+            std::memcpy(subresource.data.data() + offset, color.data(), color.size());
+        }
+    }
+
+    asset.subresources.push_back(std::move(subresource));
+    return asset;
+}
+
+} // namespace omega

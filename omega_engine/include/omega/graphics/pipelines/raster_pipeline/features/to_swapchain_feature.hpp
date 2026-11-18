@@ -9,24 +9,29 @@
  
 namespace ogfx
 {
+
 class Image;
 class ImageView;
+
 } // namespace ogfx
 
 namespace orendergraph
 {
+
 class RenderGraph;
-}
+
+} // namespace orendergraph
+
+namespace omega
+{
+
+class GraphicsSystem;
 
 struct ToSwapchainDesc
 {
     orendergraph::ResourceHandle<ogfx::Image> image;
 
-    std::vector<orendergraph::ResourceHandle<ogfx::Image>> swapchain_images;
-    uint32_t swapchain_width = 0;
-    uint32_t swapchain_height = 0;
-
-    uint32_t* image_index = nullptr;
+    GraphicsSystem& graphics;
 };
 
 class ToSwapchain : public orenderer::IRenderFeature
@@ -39,7 +44,11 @@ class ToSwapchain : public orenderer::IRenderFeature
   private:
     ToSwapchainDesc m_desc;
 
+    std::vector<orendergraph::ResourceHandle<ogfx::Image>> m_swapchain_images;
+
     void add_blit_node(orendergraph::RenderGraph& rg);
 };
+
+} // namespace omega
 
 #endif // TO_SWAPCHAIN_FEATURE_HPP

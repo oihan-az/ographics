@@ -36,6 +36,8 @@ target_sources(
         src/texture/texture_system.cpp
         src/texture/gpu_texture_system.cpp
 
+        src/graphics/graphics_system.cpp
+
         src/graphics/pipelines/raster_pipeline/raster_pipeline.cpp
         src/graphics/pipelines/raster_pipeline/features/geometry_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.cpp

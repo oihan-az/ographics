@@ -134,7 +134,7 @@ VkExtent2D choose_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t 
 
 Swapchain::Swapchain(const PhysicalDevice& physical_device, const Device& device, const Surface& surface,
                      const SwapchainDesc& desc)
-    : m_impl(std::make_unique<Impl>())
+    : m_impl(std::make_unique<Impl>()), m_width(desc.width), m_height(desc.height)
 {
     const VkPhysicalDevice vk_physical_device = physical_device.m_impl->m_physical_device;
     const VkDevice vk_device = device.m_impl->m_device;
