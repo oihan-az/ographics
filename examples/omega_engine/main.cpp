@@ -43,37 +43,6 @@ int main()
 
     oplatform::Window window(windowDesc);
 
-    // Graphics framework setup
-    ogfx::InstanceDesc instance_desc;
-    instance_desc.application_name = "Omega Engine";
-    instance_desc.engine_name = "Omega Engine";
-    instance_desc.extensions = ogfx::InstanceExtension::DebugUtils | runtime.required_instance_extensions();
-
-    ogfx::Instance instance(instance_desc);
-
-    ogfx::Surface surface = window.create_surface(instance);
-
-    const std::vector<ogfx::PhysicalDevice> devices = instance.enumerate_physical_devices();
-    ogfx::PhysicalDevice physical_device = instance.pick_physical_device(devices);
-
-    physical_device.desc();
-
-    ogfx::DeviceDesc device_desc;
-
-    ogfx::Device device(physical_device, device_desc, &surface);
-
-    ogfx::ResourceAllocator resource_allocator(device);
-
-    // Swapchain setup
-    ogfx::SwapchainDesc swapchain_desc;
-    swapchain_desc.width = window.width();
-    swapchain_desc.height = window.height();
-    swapchain_desc.format = ogfx::Format::BGRA8_UNORM;
-    swapchain_desc.present_mode = ogfx::PresentMode::Immediate;
-    swapchain_desc.image_count = 3;
-
-    ogfx::Swapchain swapchain(physical_device, device, surface, swapchain_desc);
-
     // Systems
     omega::EventSystem events;
     omega::EntitySystem entities(events);
@@ -82,7 +51,7 @@ int main()
     omega::TransformSystem transforms(events, components, hierarchy, entities);
     omega::CameraSystem cameras(events, components, hierarchy, entities, transforms);
     constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-    omega::GraphicsSystem graphics(physical_device, device, resource_allocator, swapchain, MAX_FRAMES_IN_FLIGHT, events);
+    omega::GraphicsSystem graphics(runtime, window, MAX_FRAMES_IN_FLIGHT, events);
     graphics.initialize();
 
     // Load scene
@@ -108,7 +77,7 @@ int main()
         components.add(camera_entity, transform);
 
         omega::PerspectiveCamera perspective_camera;
-        perspective_camera.proj.aspect_ratio = static_cast<float>(swapchain_desc.width) / static_cast<float>(swapchain_desc.height);
+        perspective_camera.proj.aspect_ratio = static_cast<float>(graphics.swapchain().width()) / static_cast<float>(graphics.swapchain().height());
         perspective_camera.proj.field_of_view = omega::radians(60.0f);
         perspective_camera.proj.near_plane = 0.1f;
         perspective_camera.proj.far_plane = 100.0f;
@@ -212,7 +181,7 @@ int main()
         graphics.end_frame();
     }
 
-    device.wait_idle();
+    graphics.wait();
 
     return 0;
 }

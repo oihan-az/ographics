@@ -1,9 +1,12 @@
 #include <omega/graphics/graphics_system.hpp>
 
+#include <oplatform/runtime.hpp>
+#include <oplatform/window.hpp>
+
+#include <ogfx/instance.hpp>
 #include <ogfx/fence.hpp>
 #include <ogfx/semaphore.hpp>
 #include <ogfx/command_pool.hpp>
-#include <ogfx/swapchain.hpp>
 
 #include <array>
 #include <cstring>
@@ -13,14 +16,31 @@
 namespace omega
 {
 
-GraphicsSystem::GraphicsSystem(ogfx::PhysicalDevice& physical_device, ogfx::Device& device,
-                               ogfx::ResourceAllocator& allocator, ogfx::Swapchain& swapchain, 
-                               uint32_t max_frames_in_flight, EventSystem& events)
-    : m_max_frames_in_flight(std::max(max_frames_in_flight, 1u)),
-      m_device(device), m_swapchain(swapchain),
-      m_renderer(physical_device, device, allocator),
-      m_meshes(events), m_gpu_meshes(physical_device, device, m_renderer.resource_registry(), m_meshes, events), 
-      m_textures(events), m_gpu_textures(physical_device, device, m_renderer.resource_registry(), m_textures, events)
+GraphicsSystem::GraphicsSystem(oplatform::Runtime& runtime, oplatform::Window& window, uint32_t max_frames_in_flight, EventSystem& events)
+    : m_instance(
+      ogfx::InstanceDesc
+      {
+          .application_name = "Omega Engine",
+          .engine_name = "Omega Engine",
+          .extensions = ogfx::InstanceExtension::DebugUtils | runtime.required_instance_extensions()
+      }),
+      m_surface(window.create_surface(m_instance)), 
+      m_physical_device(m_instance.pick_physical_device(m_instance.enumerate_physical_devices())),
+      m_device(m_physical_device, ogfx::DeviceDesc{}, &m_surface), 
+      m_swapchain(m_physical_device, m_device, m_surface,
+      ogfx::SwapchainDesc
+      {
+          .width = window.width(),
+          .height = window.height(),
+          .format = ogfx::Format::BGRA8_UNORM,
+          .present_mode = ogfx::PresentMode::Immediate,
+          .image_count = 3
+      }),
+      m_resource_allocator(m_device),
+      m_max_frames_in_flight(std::max(max_frames_in_flight, 1u)),
+      m_renderer(m_physical_device, m_device, m_resource_allocator),
+      m_meshes(events), m_gpu_meshes(m_physical_device, m_device, m_renderer.resource_registry(), m_meshes, events), 
+      m_textures(events), m_gpu_textures(m_physical_device, m_device, m_renderer.resource_registry(), m_textures, events)
 {
     // Frame sync
     m_frames.resize(m_max_frames_in_flight);
@@ -30,17 +50,17 @@ GraphicsSystem::GraphicsSystem(ogfx::PhysicalDevice& physical_device, ogfx::Devi
         pool_desc.transient = false;
         pool_desc.resettable = true;
 
-        frame.command_pool = std::make_unique<ogfx::CommandPool>(device, device.queue(ogfx::QueueType::Graphics), pool_desc);
+        frame.command_pool = std::make_unique<ogfx::CommandPool>(m_device, m_device.queue(ogfx::QueueType::Graphics), pool_desc);
         frame.command_buffer = std::make_unique<ogfx::CommandBuffer>(*frame.command_pool);
         frame.upload_command_buffer = std::make_unique<ogfx::CommandBuffer>(*frame.command_pool);
-        frame.image_available = std::make_unique<ogfx::Semaphore>(device);
-        frame.in_flight = std::make_unique<ogfx::Fence>(device, true);
+        frame.image_available = std::make_unique<ogfx::Semaphore>(m_device);
+        frame.in_flight = std::make_unique<ogfx::Fence>(m_device, true);
     }
 
     m_render_finished.reserve(m_swapchain.image_count());
     for (uint32_t i = 0; i < m_swapchain.image_count(); ++i)
     {
-        m_render_finished.push_back(std::make_unique<ogfx::Semaphore>(device));
+        m_render_finished.push_back(std::make_unique<ogfx::Semaphore>(m_device));
     }
 
     // Create default graphics assets
@@ -62,7 +82,7 @@ GraphicsSystem::~GraphicsSystem() = default;
 
 void GraphicsSystem::start_frame()
 {
-    wait();
+    wait_frame();
     complete_uploads();
 
     Frame& frame = m_frames[m_current_frame];
@@ -166,6 +186,11 @@ void GraphicsSystem::render()
 }
 
 void GraphicsSystem::wait()
+{
+    m_device.wait_idle();
+}
+
+void GraphicsSystem::wait_frame()
 {
     Frame& frame = m_frames[m_current_frame];
     frame.in_flight->wait();
