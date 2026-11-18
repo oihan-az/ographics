@@ -80,7 +80,56 @@ void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx)
     add_node(rg);
 }
 
-void GeometryRenderFeature::create_resources(orendergraph::RenderGraph& rg)
+void GeometryRenderFeature::on_swapchain_recreated(orenderer::RenderFeatureContext& ctx)
+{
+    create_output_resources(ctx.render_graph());
+
+    ogfx::Swapchain& swapchain = m_desc.graphics.swapchain();
+    orendergraph::RasterContext& raster_ctx = m_geometry_node->context();
+    orendergraph::RasterContext::Desc& raster_desc = m_geometry_node->descriptor();
+
+    // Update frame buffer
+    ogfx::FramebufferDesc framebuffer_desc;
+    framebuffer_desc.attachments = 
+    {
+        ctx.render_graph().get_resource(m_out_image_view),                             
+        ctx.render_graph().get_resource(m_depth_image_view)
+    };
+    framebuffer_desc.width = swapchain.width();
+    framebuffer_desc.height = swapchain.height();
+    raster_desc.framebuffers_desc = {framebuffer_desc};
+
+    raster_ctx.create_framebuffers(ctx.render_graph(), raster_desc);
+
+    // Update viewport
+    ogfx::Viewport viewport;
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(swapchain.width());
+    viewport.height = static_cast<float>(swapchain.height());
+    viewport.min_depth = 0.0f;
+    viewport.max_depth = 1.0f;
+
+    // Update scissor
+    raster_desc.viewport.viewports = {viewport};
+
+    ogfx::Scissor scissor;
+    scissor.x = 0;
+    scissor.y = 0;
+    scissor.width = swapchain.width();
+    scissor.height = swapchain.height();
+
+    raster_desc.viewport.scissors = {scissor};
+
+    // Update the pipeline
+    raster_ctx.create_pipeline(ctx.render_graph(), raster_desc);
+
+    // Update renderpass rendering width and height
+    raster_desc.width = swapchain.width();
+    raster_desc.height = swapchain.height();
+}
+
+void GeometryRenderFeature::create_output_resources(orendergraph::RenderGraph& rg)
 {
     ogfx::Swapchain& swapchain = m_desc.graphics.swapchain();
 
@@ -91,28 +140,56 @@ void GeometryRenderFeature::create_resources(orendergraph::RenderGraph& rg)
         image_desc.height = swapchain.height();
         image_desc.format = ogfx::Format::RGBA8_UNORM;
         image_desc.usage = ogfx::ImageUsage::ColorAttachment | ogfx::ImageUsage::TransferSrc;
-        m_out_image = rg.create_resource<ogfx::Image>(image_desc);
+        if (!m_out_image.is_valid())
+            m_out_image = rg.create_resource<ogfx::Image>(image_desc);
+        else if(!rg.replace_resource<ogfx::Image>(m_out_image, image_desc)) 
+            throw std::runtime_error("Failed to recreate output image");
+        else
+            rg.reset_resource_state(m_out_image);
 
         ogfx::ImageViewDesc image_view_desc{};
         image_view_desc.image = rg.get_resource(m_out_image);
         image_view_desc.aspect = ogfx::ImageAspect::Color;
         m_out_image_view = rg.create_resource<ogfx::ImageView>(image_view_desc);
+        if (!m_out_image_view.is_valid())
+            m_out_image_view = rg.create_resource<ogfx::ImageView>(image_view_desc);
+        else if (!rg.replace_resource<ogfx::ImageView>(m_out_image_view, image_view_desc))
+            throw std::runtime_error("Failed to recreate output image view");
+        else
+            rg.reset_resource_state(m_out_image_view);
     }
 
     // Depth
     {
-        ogfx::ImageDesc desc{};
-        desc.width = swapchain.width();
-        desc.height = swapchain.height();
-        desc.format = ogfx::Format::D32_FLOAT;
-        desc.usage = ogfx::ImageUsage::DepthStencil;
-        m_depth_image = rg.create_resource<ogfx::Image>(desc);
+        ogfx::ImageDesc image_desc{};
+        image_desc.width = swapchain.width();
+        image_desc.height = swapchain.height();
+        image_desc.format = ogfx::Format::D32_FLOAT;
+        image_desc.usage = ogfx::ImageUsage::DepthStencil;
+        m_depth_image = rg.create_resource<ogfx::Image>(image_desc);
+        if (!m_depth_image.is_valid())
+            m_depth_image = rg.create_resource<ogfx::Image>(image_desc);
+        else if (!rg.replace_resource<ogfx::Image>(m_depth_image, image_desc))
+            throw std::runtime_error("Failed to recreate depth image");
+        else
+            rg.reset_resource_state(m_depth_image);
 
         ogfx::ImageViewDesc image_view_desc{};
         image_view_desc.image = rg.get_resource(m_depth_image);
         image_view_desc.aspect = ogfx::ImageAspect::Depth;
         m_depth_image_view = rg.create_resource<ogfx::ImageView>(image_view_desc);
+        if (!m_depth_image_view.is_valid())
+            m_depth_image_view = rg.create_resource<ogfx::ImageView>(image_view_desc);
+        else if (!rg.replace_resource<ogfx::ImageView>(m_depth_image_view, image_view_desc))
+            throw std::runtime_error("Failed to recreate depth image view");
+        else
+            rg.reset_resource_state(m_depth_image_view);
     }
+}
+
+void GeometryRenderFeature::create_resources(orendergraph::RenderGraph& rg)
+{
+    create_output_resources(rg);
 
     // Sampler
     {
@@ -124,7 +201,7 @@ void GeometryRenderFeature::create_resources(orendergraph::RenderGraph& rg)
 void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 {
     // Geometry pass
-    auto geometry_node = rg.add_node<orendergraph::RasterContext>
+    m_geometry_node = rg.add_node<orendergraph::RasterContext>
     (
         "Geometry",
         [this](orendergraph::RenderGraph& rg, orendergraph::RasterContext::Desc& desc)
@@ -370,7 +447,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
         }
     );
 
-    auto& ctx = geometry_node->context();
+    auto& ctx = m_geometry_node->context();
     for (FrameResources& frame : m_frame_resources)
     {
         frame.m_texture_resource_sets = std::make_unique<ResourceSetCache<TextureHandle, TextureHandleHash>>(rg.device(), rg.get_resource_allocator(), *ctx.resource_set_layouts[1]);
@@ -397,7 +474,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
         frame.m_texture_resource_sets->update(m_desc.graphics.missing_texture(), write_info);
     }
 
-    geometry_node->set_pre_execute
+    m_geometry_node->set_pre_execute
     (
         [this](orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd,
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
@@ -587,7 +664,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
         }
     );
 
-    geometry_node->set_execute
+    m_geometry_node->set_execute
     (
         [this](orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd,
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)

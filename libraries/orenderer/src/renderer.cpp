@@ -90,4 +90,13 @@ void Renderer::execute(ogfx::CommandBuffer& command_buffer)
     pipeline->execute(command_buffer);
 }
 
+void Renderer::on_swapchain_recreated() 
+{
+    auto* pipeline = active_pipeline();
+    if (!pipeline)
+        throw std::runtime_error("No active render pipeline.");
+
+    pipeline->on_swapchain_recreated();
+}
+
 } // namespace orenderer

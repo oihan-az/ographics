@@ -33,8 +33,14 @@ struct PipelineContext
     };
 
     void create(RenderGraph& graph, const Desc& desc);
+
+    void create_pipeline_layout(RenderGraph& graph, const Desc& desc);
+    void create_resource_sets(RenderGraph& graph, const Desc& desc);
+
+    void release_pipeline_layout(RenderGraph& graph);
+    void release_resource_sets(RenderGraph& graph);
+
     void update_resource_set(RenderGraph& graph, const ResourceWriteDesc& desc);
-    void clear();
 
     ogfx::PipelineLayout* pipeline_layout = nullptr;
     std::vector<const ogfx::ResourceSetLayout*> resource_set_layouts;

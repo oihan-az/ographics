@@ -171,6 +171,8 @@ void Swapchain::create()
         image_count = std::min(image_count, support.capabilities.maxImageCount);
     }
 
+    VkSwapchainKHR old_swapchain = m_impl->m_swapchain;
+
     VkSwapchainCreateInfoKHR create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     create_info.surface = vk_surface;
@@ -184,12 +186,20 @@ void Swapchain::create()
     create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     create_info.presentMode = present_mode;
     create_info.clipped = VK_TRUE;
-    create_info.oldSwapchain = m_impl->m_swapchain;
+    create_info.oldSwapchain = old_swapchain;
 
     if (vkCreateSwapchainKHR(vk_device, &create_info, nullptr, &m_impl->m_swapchain) != VK_SUCCESS)
     {
         OGFX_LOG_ERROR("Failed to create Vulkan swapchain");
         throw std::runtime_error("Failed to create Vulkan swapchain.");
+    }
+
+    m_image_views.clear();
+    m_images.clear();
+
+    if (old_swapchain != VK_NULL_HANDLE)
+    {
+        vkDestroySwapchainKHR(vk_device, old_swapchain, nullptr);
     }
 
     m_impl->m_device = vk_device;

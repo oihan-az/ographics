@@ -19,6 +19,10 @@ class IObjectCacheEntry
     virtual bool matches(const std::type_info& object_type, const std::type_info& desc_type, const void* desc) const = 0;
 
     virtual void* get() const = 0;
+
+    virtual void add_reference() = 0;
+    virtual bool release_reference() = 0;
+    virtual uint32_t reference_count() const = 0;
 };
 
 template <typename TObject> 
@@ -33,9 +37,14 @@ class ObjectCacheEntry final : public IObjectCacheEntry
 
     void* get() const override;
 
+    void add_reference() override;
+    bool release_reference() override;
+    uint32_t reference_count() const override;
+
   private:
     DescType m_desc;
     std::unique_ptr<TObject> m_object;
+    uint32_t m_reference_count = 0;
 };
 
 class ObjectCache
@@ -47,6 +56,7 @@ class ObjectCache
 
     template <typename TObject> TObject* create(const typename ObjectTraits<TObject>::DescType& desc);
     template <typename TObject> TObject* get_or_create(const typename ObjectTraits<TObject>::DescType& desc);
+    template <typename TObject> bool release(TObject* object);
 
   private:
     const ogfx::PhysicalDevice& m_physical_device;

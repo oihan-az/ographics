@@ -11,7 +11,6 @@ struct GeneralContext
     struct Desc {};
 
     void create(RenderGraph& graph, const Desc& desc) {}
-    void clear() {}
 };
 
 } // namespace orendergraph

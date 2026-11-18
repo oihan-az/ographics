@@ -27,7 +27,6 @@ struct TLASContext
     };
 
     void create(RenderGraph& graph, const Desc& desc);
-    void clear();
 
     ResourceHandle<ogfx::TLAS> tlas_handle;
     ogfx::TLAS* tlas = nullptr;

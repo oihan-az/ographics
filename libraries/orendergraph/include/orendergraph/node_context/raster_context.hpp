@@ -20,6 +20,7 @@
 namespace ogfx
 {
 
+class Shader;
 class GraphicsPipeline;
 class RenderPass;
 class Framebuffer;
@@ -59,8 +60,19 @@ struct RasterContext : public PipelineContext
     };
 
     void create(RenderGraph& graph, const Desc& desc);
-    void clear();
 
+    void create_render_pass(RenderGraph& graph, const Desc& desc);
+    void create_framebuffers(RenderGraph& graph, const Desc& desc);
+    void create_pipeline(RenderGraph& graph, const Desc& desc);
+    void create_shaders(RenderGraph& graph, const Desc& desc);
+
+    void release_render_pass(RenderGraph& graph);
+    void release_framebuffers(RenderGraph& graph);
+    void release_pipeline(RenderGraph& graph);
+    void release_shaders(RenderGraph& graph);
+
+    ogfx::Shader* vertex_shader = nullptr;
+    ogfx::Shader* fragment_shader = nullptr;
     ogfx::GraphicsPipeline* pipeline = nullptr;
     ogfx::RenderPass* render_pass = nullptr;
     std::vector<ogfx::Framebuffer*> framebuffers;

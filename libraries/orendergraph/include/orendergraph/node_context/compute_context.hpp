@@ -31,8 +31,14 @@ struct ComputeContext : public PipelineContext
     };
 
     void create(RenderGraph& graph, const Desc& desc);
-    void clear();
 
+    void create_pipeline(RenderGraph& graph, const Desc& desc);
+    void create_shader(RenderGraph& graph, const Desc& desc);
+
+    void release_pipeline(RenderGraph& graph);
+    void release_shader(RenderGraph& graph);
+
+    ogfx::Shader* compute_shader = nullptr;
     ogfx::ComputePipeline* pipeline = nullptr;
 };
 

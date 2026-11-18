@@ -7,8 +7,6 @@ namespace orendergraph
 
 void TLASContext::create(RenderGraph& graph, const Desc& desc)
 {
-    clear();
-
     // Instances
     std::vector<ogfx::AccelerationStructureInstance> instances;
     instances.reserve(desc.instances.size());
@@ -50,12 +48,6 @@ void TLASContext::create(RenderGraph& graph, const Desc& desc)
 
     // Set as write resource
     graph.write(tlas_handle);
-}
-
-void TLASContext::clear()
-{
-    tlas = nullptr;
-    tlas_handle = {};
 }
 
 } // namespace orendergraph

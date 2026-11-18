@@ -70,6 +70,7 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
     GeometryRenderFeature(const GeometryRenderFeatureDesc& desc);
 
     void build(orenderer::RenderFeatureContext& ctx) override;
+    void on_swapchain_recreated(orenderer::RenderFeatureContext& ctx) override;
 
     const orendergraph::ResourceHandle<ogfx::Image> out_image() const { return m_out_image; }
 
@@ -104,8 +105,11 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
     std::vector<FrameResources> m_frame_resources;
     std::unordered_map<TextureHandle, TextureViewHandle, TextureHandleHash> m_texture_views;
 
+    void create_output_resources(orendergraph::RenderGraph& rg);
     void create_resources(orendergraph::RenderGraph& rg);
     void add_node(orendergraph::RenderGraph& rg);
+
+    orendergraph::RenderGraphNode<orendergraph::RasterContext>* m_geometry_node = nullptr;
 
     orendergraph::ResourceHandle<ogfx::Image> m_out_image;
     orendergraph::ResourceHandle<ogfx::ImageView> m_out_image_view;

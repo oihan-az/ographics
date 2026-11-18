@@ -25,6 +25,13 @@ std::type_index ResourceAccess<T>::resource_type_idx() const
 }
 
 template <typename T> 
+void ResourceAccess<T>::reset_state(ResourcePoolRegistry& registry)
+{
+    auto* pool = registry.get_pool<T>();
+    pool->update_current_state(m_handle.id, {});
+}
+
+template <typename T> 
 void ResourceAccess<T>::update_state(ResourcePoolRegistry& registry)
 {
     if (!m_update_state)

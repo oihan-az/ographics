@@ -41,6 +41,7 @@ class RenderPipeline
     void begin_setup();
     void compile();
     void execute(ogfx::CommandBuffer& command_buffer);
+    void on_swapchain_recreated();
 
     orendergraph::RenderGraph& render_graph();
 

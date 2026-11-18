@@ -24,6 +24,15 @@ void RenderPipeline::execute(ogfx::CommandBuffer& command_buffer)
     m_render_graph.execute(command_buffer);
 }
 
+void RenderPipeline::on_swapchain_recreated()
+{
+    RenderFeatureContext context(m_render_graph);
+    for (std::unique_ptr<IRenderFeature>& render_feature : m_features)
+    {
+        render_feature->on_swapchain_recreated(context);
+    }
+}
+
 orendergraph::RenderGraph& RenderPipeline::render_graph()
 {
     return m_render_graph;

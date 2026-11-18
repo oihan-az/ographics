@@ -41,6 +41,7 @@ class Renderer
     template <typename TPipeline, typename TDesc> void setup(TDesc& desc);
     void compile();
     void execute(ogfx::CommandBuffer& command_buffer);
+    void on_swapchain_recreated();
 
   private:
     ogfx::PhysicalDevice& m_physical_device;

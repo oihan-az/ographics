@@ -35,8 +35,12 @@ class RenderGraph
                                                                 typename ResourceTraits<TResource>::StateType state, 
                                                                 typename ResourceTraits<TResource>::DataType data = {});
 
+    template <typename TResource> void remove_begin_frame_transition(ResourceHandle<TResource> handle);
+    template <typename TResource> void remove_end_frame_transition(ResourceHandle<TResource> handle);
+
     template <typename TObject> TObject* create_object(const typename ObjectTraits<TObject>::DescType& desc);
     template <typename TObject> TObject* get_or_create_object(const typename ObjectTraits<TObject>::DescType& desc);
+    template <typename TObject> bool release_object(TObject* object);
 
     template <typename TContext, typename TSetup> RenderGraphNode<TContext>* add_node(const std::string& name, TSetup&& setup_func);
 
@@ -50,6 +54,8 @@ class RenderGraph
                typename ResourceTraits<TResource>::StateType requested_state = {},
                typename ResourceTraits<TResource>::DataType data = {},
                typename ResourceTraits<TResource>::StateType final_state = {}, bool update_state = false);
+
+    template <typename TResource> void reset_resource_state(ResourceHandle<TResource> handle);
 
     void compile();
     void execute(ogfx::CommandBuffer& cmd);

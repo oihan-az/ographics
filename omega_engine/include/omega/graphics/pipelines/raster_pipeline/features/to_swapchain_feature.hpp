@@ -19,6 +19,8 @@ namespace orendergraph
 {
 
 class RenderGraph;
+template <typename TContext> class RenderGraphNode;
+struct BlitContext;
 
 } // namespace orendergraph
 
@@ -40,11 +42,14 @@ class ToSwapchain : public orenderer::IRenderFeature
     ToSwapchain(const ToSwapchainDesc& desc);
 
     void build(orenderer::RenderFeatureContext& ctx) override;
+    void on_swapchain_recreated(orenderer::RenderFeatureContext& ctx) override;
 
   private:
     ToSwapchainDesc m_desc;
 
     std::vector<orendergraph::ResourceHandle<ogfx::Image>> m_swapchain_images;
+
+    orendergraph::RenderGraphNode<orendergraph::BlitContext>* m_to_swapchain_node = nullptr;
 
     void add_blit_node(orendergraph::RenderGraph& rg);
 };

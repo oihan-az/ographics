@@ -12,6 +12,7 @@ class IRenderFeature
     virtual ~IRenderFeature() = default;
 
     virtual void build(RenderFeatureContext& ctx) = 0;
+    virtual void on_swapchain_recreated(RenderFeatureContext& ctx) {};
 };
 
 } // namespace orenderer

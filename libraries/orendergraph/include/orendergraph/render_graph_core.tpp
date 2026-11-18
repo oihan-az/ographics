@@ -68,6 +68,26 @@ void RenderGraph::add_end_frame_transition(ResourceHandle<TResource> handle,
     m_end_frame_transitions.push_back(std::make_unique<ResourceAccess<TResource>>(handle, state, data));
 }
 
+template <typename TResource>
+void RenderGraph::remove_begin_frame_transition(ResourceHandle<TResource> handle)
+{
+    std::erase_if(m_begin_frame_transitions,
+    [&handle](const std::unique_ptr<IResourceAccess>& access)
+    {
+        return access->resource_id() == handle.id && access->resource_type_idx() == typeid(TResource);
+    });
+}
+
+template <typename TResource>
+void RenderGraph::remove_end_frame_transition(ResourceHandle<TResource> handle)
+{
+    std::erase_if(m_end_frame_transitions,
+    [&handle](const std::unique_ptr<IResourceAccess>& access)
+    {
+        return access->resource_id() == handle.id && access->resource_type_idx() == typeid(TResource);
+    });
+}
+
 template <typename TObject> 
 TObject* RenderGraph::create_object(const typename ObjectTraits<TObject>::DescType& desc)
 {
@@ -78,6 +98,12 @@ template <typename TObject>
 TObject* RenderGraph::get_or_create_object(const typename ObjectTraits<TObject>::DescType& desc)
 {
     return m_object_cache.get_or_create<TObject>(desc);
+}
+
+template <typename TObject>
+bool RenderGraph::release_object(TObject* object)
+{
+    return m_object_cache.release(object);
 }
 
 template <typename TContext, typename TSetup>
@@ -119,6 +145,28 @@ void RenderGraph::write(ResourceHandle<TResource> handle,
 
     auto access = std::make_unique<ResourceAccess<TResource>>(handle, requested_state, data, final_state, update_state);
     m_active_node->writes().push_back(std::move(access));
+}
+
+template <typename TResource>
+void RenderGraph::reset_resource_state(ResourceHandle<TResource> handle)
+{
+    const auto reset = [this, &handle](auto& accesses)
+    {
+        for (auto& access : accesses)
+        {
+            if (access->resource_id() == handle.id &&
+                access->resource_type_idx() == typeid(TResource))
+            {
+                access->reset_state(m_registry);
+            }
+        }
+    };
+
+    for (auto& node : m_nodes)
+    {
+        reset(node->reads());
+        reset(node->writes());
+    }
 }
 
 } // namespace orendergraph

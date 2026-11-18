@@ -203,7 +203,10 @@ bool GraphicsSystem::needs_swapchain_recreation() const
 
 void GraphicsSystem::recreate_swapchain(uint32_t width, uint32_t height)
 {
+    m_device.wait_idle();
+
     m_swapchain.recreate(width, height);
+    m_renderer.on_swapchain_recreated();
     m_recreate_swapchain = false;
 }
 

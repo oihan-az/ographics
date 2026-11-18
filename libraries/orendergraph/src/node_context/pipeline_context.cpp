@@ -10,8 +10,19 @@ namespace orendergraph
 
 void PipelineContext::create(RenderGraph& graph, const Desc& desc)
 {
-    // Pipeline layout
-    resource_set_layouts.clear();
+    create_pipeline_layout(graph, desc);
+    create_resource_sets(graph, desc);
+
+    for (const ResourceWriteDesc& resource_write_desc : desc.resource_writes_desc)
+    {
+        update_resource_set(graph, resource_write_desc);
+    }
+}
+
+void PipelineContext::create_pipeline_layout(RenderGraph& graph, const Desc& desc) 
+{
+    release_pipeline_layout(graph);
+
     resource_set_layouts.reserve(desc.resource_set_layouts_desc.size());
     for (const ogfx::ResourceSetLayoutDesc& set_layout_desc : desc.resource_set_layouts_desc)
     {
@@ -23,25 +34,41 @@ void PipelineContext::create(RenderGraph& graph, const Desc& desc)
     pipeline_layout_desc.inline_constant_ranges = desc.inline_constants_ranges;
 
     pipeline_layout = graph.get_or_create_object<ogfx::PipelineLayout>(pipeline_layout_desc);
+}
 
-    // Resource sets
+void PipelineContext::create_resource_sets(RenderGraph& graph, const Desc& desc)
+{
+    release_resource_sets(graph);
+
     resource_sets.reserve(desc.resource_sets_desc.size());
     for (const ResourceSetDesc& resource_set_desc : desc.resource_sets_desc)
     {
         ogfx::ResourceSetDesc set_desc;
-        set_desc.layout = pipeline_layout_desc.set_layouts[resource_set_desc.resource_set_layout_idx];
+        set_desc.layout = resource_set_layouts[resource_set_desc.resource_set_layout_idx];
 
         ogfx::ResourceSet* resource_set = graph.create_object<ogfx::ResourceSet>(set_desc);
         resource_set->allocate(graph.get_resource_allocator());
 
         resource_sets.push_back(resource_set);
     }
+}
 
-    // Resource set writes
-    for (const ResourceWriteDesc& resource_write_desc : desc.resource_writes_desc)
-    {
-        update_resource_set(graph, resource_write_desc);
-    }
+void PipelineContext::release_pipeline_layout(RenderGraph& graph)
+{
+    if (pipeline_layout)
+        graph.release_object(pipeline_layout);
+    pipeline_layout = nullptr;
+
+    for (const ogfx::ResourceSetLayout* resource_set_layout : resource_set_layouts)
+        graph.release_object(resource_set_layout);
+    resource_set_layouts.clear();
+}
+
+void PipelineContext::release_resource_sets(RenderGraph& graph) 
+{
+    for (const ogfx::ResourceSet* resource_set : resource_sets)
+        graph.release_object(resource_set);
+    resource_sets.clear();
 }
 
 void PipelineContext::update_resource_set(RenderGraph& graph, const ResourceWriteDesc& desc)
@@ -74,13 +101,6 @@ void PipelineContext::update_resource_set(RenderGraph& graph, const ResourceWrit
     }
 
     resource_sets[desc.resource_set_idx]->write(result);
-}
-
-void PipelineContext::clear() 
-{
-    pipeline_layout = nullptr;
-    resource_set_layouts.clear();
-    resource_sets.clear();
 }
 
 } // namespace orendergraph

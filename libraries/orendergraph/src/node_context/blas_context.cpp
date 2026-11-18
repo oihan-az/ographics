@@ -55,10 +55,4 @@ void BLASContext::create(RenderGraph& graph, const Desc& desc)
     }
 }
 
-void BLASContext::clear()
-{
-    blases.clear();
-    blas_handles.clear();
-}
-
 } // namespace orendergraph

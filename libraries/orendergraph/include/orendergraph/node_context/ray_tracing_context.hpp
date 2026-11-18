@@ -4,6 +4,7 @@
 #include <orendergraph/node_context/pipeline_context.hpp>
 
 #include <ogfx/shader.hpp>
+#include <ogfx/ray_tracing_pipeline.hpp>
 
 #include <vector>
 
@@ -35,10 +36,21 @@ struct RayTracingContext : public PipelineContext
     };
 
     void create(RenderGraph& graph, const Desc& desc);
-    void clear();
 
+    void create_pipeline(RenderGraph& graph, const Desc& desc);
+    void create_shaders(RenderGraph& graph, const Desc& desc);
+    void create_stb_buffer(RenderGraph& graph, const Desc& desc);
+
+    void release_shaders(RenderGraph& graph);
+    void release_pipeline(RenderGraph& graph);
+    void release_stb_buffer(RenderGraph& graph);
+
+    const ogfx::Shader* raygen_shader = nullptr;
+    std::vector<const ogfx::Shader*> miss_shaders;
+    std::vector<ogfx::RayTracingHitShaders> hit_shaders;
     ogfx::RayTracingPipeline* pipeline = nullptr;
     ogfx::Buffer* sbt_buffer = nullptr;
+    ResourceHandle<ogfx::Buffer> sbt_buffer_handle;
 };
 
 } // namespace orendergraph
