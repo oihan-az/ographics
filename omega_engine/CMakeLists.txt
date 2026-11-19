@@ -15,6 +15,8 @@ target_include_directories(
 target_sources(
     omega_engine
     PRIVATE
+        src/platform/platform_system.cpp
+
         src/transform/matrix_transform.cpp
         src/transform/transform_system.cpp
 

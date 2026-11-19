@@ -1,7 +1,6 @@
 #include <omega/graphics/graphics_system.hpp>
 
-#include <oplatform/runtime.hpp>
-#include <oplatform/window.hpp>
+#include <omega/platform/platform_system.hpp>
 
 #include <ogfx/instance.hpp>
 #include <ogfx/fence.hpp>
@@ -16,22 +15,22 @@
 namespace omega
 {
 
-GraphicsSystem::GraphicsSystem(oplatform::Runtime& runtime, oplatform::Window& window, uint32_t max_frames_in_flight, EventSystem& events)
+GraphicsSystem::GraphicsSystem(uint32_t max_frames_in_flight, PlatformSystem& platform, EventSystem& events)
     : m_instance(
       ogfx::InstanceDesc
       {
           .application_name = "Omega Engine",
           .engine_name = "Omega Engine",
-          .extensions = ogfx::InstanceExtension::DebugUtils | runtime.required_instance_extensions()
+          .extensions = ogfx::InstanceExtension::DebugUtils | platform.runtime().required_instance_extensions()
       }),
-      m_surface(window.create_surface(m_instance)), 
+      m_surface(platform.window().create_surface(m_instance)), 
       m_physical_device(m_instance.pick_physical_device(m_instance.enumerate_physical_devices())),
       m_device(m_physical_device, ogfx::DeviceDesc{}, &m_surface), 
       m_swapchain(m_physical_device, m_device, m_surface,
       ogfx::SwapchainDesc
       {
-          .width = window.width(),
-          .height = window.height(),
+          .width = platform.window().width(),
+          .height = platform.window().height(),
           .format = ogfx::Format::BGRA8_UNORM,
           .present_mode = ogfx::PresentMode::Immediate,
           .image_count = 3

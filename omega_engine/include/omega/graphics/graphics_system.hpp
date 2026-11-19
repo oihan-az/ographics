@@ -18,14 +18,6 @@
 #include <memory>
 #include <vector>
 
-namespace oplatform
-{
-
-class Runtime;
-class Window;
-
-} // namespace oplatform
-
 namespace ogfx
 {
 
@@ -37,10 +29,12 @@ class Semaphore;
 namespace omega
 {
 
+class PlatformSystem;
+
 class GraphicsSystem
 {
   public:
-    GraphicsSystem(oplatform::Runtime& runtime, oplatform::Window& window, uint32_t max_frames_in_flight, EventSystem& events);
+    GraphicsSystem(uint32_t max_frames_in_flight, PlatformSystem& platform, EventSystem& events);
     ~GraphicsSystem();
 
     void start_frame();

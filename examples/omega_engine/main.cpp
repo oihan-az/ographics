@@ -11,6 +11,7 @@
 #include <omega/core/entity/entity_system.hpp>
 #include <omega/core/hierarchy/hierarchy_system.hpp>
 #include <omega/core/component/component_system.hpp>
+#include <omega/platform/platform_system.hpp>
 #include <omega/transform/transform_system.hpp>
 #include <omega/camera/camera_system.hpp>
 #include <omega/mesh/mesh_system.hpp>
@@ -31,17 +32,13 @@
 
 int main()
 {
-    // Window setup
-    oplatform::Runtime runtime;
-
     oplatform::WindowDesc windowDesc;
     windowDesc.width = 1280;
     windowDesc.height = 720;
     windowDesc.title = "Omega Engine";
     windowDesc.resizable = true;
     windowDesc.fullscreen = false;
-
-    oplatform::Window window(windowDesc);
+    omega::PlatformSystem platform(windowDesc);
 
     // Systems
     omega::EventSystem events;
@@ -51,7 +48,7 @@ int main()
     omega::TransformSystem transforms(events, components, hierarchy, entities);
     omega::CameraSystem cameras(events, components, hierarchy, entities, transforms);
     constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-    omega::GraphicsSystem graphics(runtime, window, MAX_FRAMES_IN_FLIGHT, events);
+    omega::GraphicsSystem graphics(MAX_FRAMES_IN_FLIGHT, platform, events);
     graphics.initialize();
 
     // Load scene
@@ -149,6 +146,7 @@ int main()
         }
     }
 
+    oplatform::Window& window = platform.window();
     while (!window.should_close())
     {
         window.poll_events();
@@ -159,7 +157,6 @@ int main()
         {
             const uint32_t width = window.width();
             const uint32_t height = window.height();
-
             if (width == 0 || height == 0)
                 continue;
 
