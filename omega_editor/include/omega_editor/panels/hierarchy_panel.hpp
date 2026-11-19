@@ -19,13 +19,13 @@ namespace omega_editor
 class HierarchyPanel
 {
   public:
-    void render(omega::Engine& engine);
+    void render(omega::Engine& engine, omega::Entity& selected_entity);
 
   private:
     float m_width_ratio = 0.20f;
     std::optional<omega::Entity> m_pending_delete;
 
-    void render_entity(omega::Entity entity, omega::HierarchySystem& hierarchy);
+    void render_entity(omega::Entity entity, omega::HierarchySystem& hierarchy, omega::Entity& selected_entity);
 };
 
 } // namespace omega_editor

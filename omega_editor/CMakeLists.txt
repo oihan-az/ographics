@@ -20,6 +20,8 @@ target_sources(
         "src/rendering/ui_pipeline.cpp"
         "src/rendering/ui_feature.cpp"
         "src/panels/hierarchy_panel.cpp"
+        "src/panels/inspection_panel.cpp"
+        "src/panels/component_editor_registry.cpp"
  )
 
 find_package(imgui CONFIG REQUIRED)

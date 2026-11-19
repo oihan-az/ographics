@@ -19,6 +19,10 @@ class IComponentStorage
     virtual ~IComponentStorage() = default;
 
     virtual bool remove(Entity entity) = 0;
+    virtual bool contains(Entity entity) const = 0;
+
+    virtual const std::type_info& component_type() const = 0;
+    virtual void* get_component(Entity entity) = 0;
 };
 
 template <typename T> 
@@ -30,7 +34,10 @@ class ComponentStorage : public IComponentStorage
     bool add(Entity entity, T component);
     bool remove(Entity entity) override;
     bool mark_dirty(Entity entity);
-    bool contains(Entity entity) const;
+    bool contains(Entity entity) const override;
+
+    const std::type_info& component_type() const override;
+    void* get_component(Entity entity) override;
 
     uint32_t get_index(Entity entity);
 

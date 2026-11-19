@@ -104,6 +104,7 @@ int main()
     // Editor
     omega_editor::ImGuiLayer imgui_layer;
     omega_editor::Editor editor(engine);
+    editor.initialize();
 
     // Renderer
     {

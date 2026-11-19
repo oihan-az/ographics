@@ -56,6 +56,18 @@ bool ComponentStorage<T>::contains(Entity entity) const
 };
 
 template<typename T>
+const std::type_info& ComponentStorage<T>::component_type() const
+{
+    return typeid(T);
+}
+
+template<typename T>
+void* ComponentStorage<T>::get_component(Entity entity)
+{
+    return get(entity);
+}
+
+template<typename T>
 uint32_t ComponentStorage<T>::get_index(Entity entity)
 {
     return m_set.get_dense_index(entity);

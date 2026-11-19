@@ -21,6 +21,8 @@ class ComponentSystem
 
     void update();
 
+    std::unordered_map<std::type_index, std::unique_ptr<IComponentStorage>>& storages();
+
     template <typename T> ComponentStorage<T>& get_storage();
     template <typename T> bool remove_storage();
     template <typename T> bool has_storage() const;

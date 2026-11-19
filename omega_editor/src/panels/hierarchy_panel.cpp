@@ -9,7 +9,7 @@
 namespace omega_editor
 {
 
-void HierarchyPanel::render(omega::Engine& engine)
+void HierarchyPanel::render(omega::Engine& engine, omega::Entity& selected_entity)
 {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
 
@@ -50,7 +50,7 @@ void HierarchyPanel::render(omega::Engine& engine)
     for (omega::Entity entity : engine.entities())
     {
         if (!hierarchy.has_parent(entity))
-            render_entity(entity, hierarchy);
+            render_entity(entity, hierarchy, selected_entity);
     }
 
     // Empty-space drop target
@@ -80,7 +80,7 @@ void HierarchyPanel::render(omega::Engine& engine)
     }
 }
 
-void HierarchyPanel::render_entity(omega::Entity entity, omega::HierarchySystem& hierarchy)
+void HierarchyPanel::render_entity(omega::Entity entity, omega::HierarchySystem& hierarchy, omega::Entity& selected_entity)
 {
     const auto& children = hierarchy.get_children(entity);
 
@@ -92,7 +92,13 @@ void HierarchyPanel::render_entity(omega::Entity entity, omega::HierarchySystem&
     if (children.empty())
         flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
+    if (selected_entity == entity)
+        flags |= ImGuiTreeNodeFlags_Selected;
+
     const bool opened = ImGui::TreeNodeEx("Entity", flags, "Entity %u", entity.index);
+
+    if (ImGui::IsItemClicked())
+        selected_entity = entity;
 
     if (ImGui::BeginPopupContextItem("EntityContextMenu"))
     {
@@ -128,7 +134,7 @@ void HierarchyPanel::render_entity(omega::Entity entity, omega::HierarchySystem&
     if (opened && !children.empty())
     {
         for (omega::Entity child : children)
-            render_entity(child, hierarchy);
+            render_entity(child, hierarchy, selected_entity);
 
         ImGui::TreePop();
     }
