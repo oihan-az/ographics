@@ -34,7 +34,8 @@ class PlatformSystem;
 class GraphicsSystem
 {
   public:
-    GraphicsSystem(uint32_t max_frames_in_flight, PlatformSystem& platform, EventSystem& events);
+    GraphicsSystem(const std::string& application_name, uint32_t max_frames_in_flight, 
+                   PlatformSystem& platform, EventSystem& events);
     ~GraphicsSystem();
 
     void start_frame();

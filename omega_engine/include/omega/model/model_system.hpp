@@ -14,15 +14,13 @@ namespace omega
 class EntitySystem;
 class HierarchySystem;
 class ComponentSystem;
-class MeshSystem;
-class TextureSystem;
+class GraphicsSystem;
 class ModelImporter;
 
 class ModelSystem
 {
   public:
-    ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components, 
-                MeshSystem& meshes, TextureSystem& textures,
+    ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components, GraphicsSystem& graphics,
                 ModelImporter& importer);
 
     ModelHandle load(const std::filesystem::path& path);
@@ -33,7 +31,7 @@ class ModelSystem
 
     const ImportedModel* get(ModelHandle model) const;
 
-    bool instantiate(ModelHandle model, TextureHandle default_texture, Entity& root);
+    bool instantiate(ModelHandle model, Entity& root);
 
   private:
     struct ModelSlot
@@ -52,8 +50,7 @@ class ModelSystem
     EntitySystem& m_entities;
     HierarchySystem& m_hierarchy;
     ComponentSystem& m_components;
-    MeshSystem& m_meshes;
-    TextureSystem& m_textures;
+    GraphicsSystem& m_graphics;
 };
 
 } // namespace omega

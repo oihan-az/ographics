@@ -1,32 +1,53 @@
 #ifndef OMEGA_ENGINE_HPP
 #define OMEGA_ENGINE_HPP
 
+#include <omega/core/event/event_system.hpp>
+#include <omega/core/entity/entity_system.hpp>
+#include <omega/core/hierarchy/hierarchy_system.hpp>
+#include <omega/core/component/component_system.hpp>
+
+#include <omega/transform/transform_system.hpp>
+#include <omega/camera/camera_system.hpp>
+
+#include <omega/platform/platform_system.hpp>
+#include <omega/graphics/graphics_system.hpp>
+
+#include <cstdint>
+
 namespace omega
 {
+
+struct EngineDesc
+{
+    std::string application_name = "Omega Engine";
+
+    oplatform::WindowDesc window;
+
+    uint32_t max_frames_in_flight = 2;
+};
 
 class Engine
 {
   public:
     Engine(const EngineDesc& desc);
-    ~Engine();
 
-    void update(float delta_time);
+    void initialize();
+    void update();
+    void render();
+    bool start_frame();
+    void end_frame();
+    void wait();
 
+    bool should_close() const;
+
+    EventSystem& events();
     EntitySystem& entities();
     HierarchySystem& hierarchy();
     ComponentSystem& components();
-
     TransformSystem& transforms();
     CameraSystem& cameras();
-
-    MeshSystem& meshes();
-    TextureSystem& textures();
-    ModelSystem& models();
-
-    GpuMeshSystem& gpu_meshes();
-    GpuTextureSystem& gpu_textures();
-
-    orenderer::Renderer& renderer();
+    PlatformSystem& platform();
+    GraphicsSystem& graphics();
 
   private:
     EventSystem m_events;
@@ -35,15 +56,10 @@ class Engine
     ComponentSystem m_components;
     TransformSystem m_transforms;
     CameraSystem m_cameras;
-
+    PlatformSystem m_platform;
     GraphicsSystem m_graphics;
-
-    omega::ModelImporter m_importer;
-    ModelSystem m_models;
-
-    orenderer::Renderer m_renderer;
 };
 
-}
+} // namespace omega
 
 #endif // OMEGA_ENGINE_HPP

@@ -3,6 +3,7 @@
 #include <omega/core/entity/entity_system.hpp>
 #include <omega/core/hierarchy/hierarchy_system.hpp>
 #include <omega/core/component/component_system.hpp>
+#include <omega/graphics/graphics_system.hpp>
 #include <omega/mesh/mesh_system.hpp>
 #include <omega/texture/texture_system.hpp>
 #include <omega/renderable/renderable.hpp>
@@ -15,10 +16,9 @@
 namespace omega
 {
 
-ModelSystem::ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components, 
-                         MeshSystem& meshes, TextureSystem& textures,
+ModelSystem::ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components, GraphicsSystem& graphics,
                          ModelImporter& importer)
-    : m_entities(entities), m_hierarchy(hierarchy), m_components(components), m_meshes(meshes), m_textures(textures),
+    : m_entities(entities), m_hierarchy(hierarchy), m_components(components), m_graphics(graphics),
       m_importer(importer)
 {
 }
@@ -82,7 +82,7 @@ const ImportedModel* ModelSystem::get(ModelHandle model) const
     return &m_models[model.index].model;
 }
 
-bool ModelSystem::instantiate(ModelHandle model, TextureHandle default_texture, Entity& root)
+bool ModelSystem::instantiate(ModelHandle model, Entity& root)
 {
     const ImportedModel* imported_model = get(model);
     if (!imported_model)
@@ -121,10 +121,10 @@ bool ModelSystem::instantiate(ModelHandle model, TextureHandle default_texture, 
         {
             MeshHandle handle{};
 
-            if (!m_meshes.create_mesh(primitive.mesh, handle))
+            if (!m_graphics.meshes().create_mesh(primitive.mesh, handle))
             {
                 for (MeshHandle created : created_meshes)
-                    m_meshes.release_mesh(created);
+                    m_graphics.meshes().release_mesh(created);
 
                 return false;
             }
@@ -141,10 +141,10 @@ bool ModelSystem::instantiate(ModelHandle model, TextureHandle default_texture, 
     for (const ImportedTexture& imported_texture : imported_model->textures)
     {
         TextureHandle handle{};
-        if (!m_textures.create_texture(imported_texture.texture, handle))
+        if (!m_graphics.textures().create_texture(imported_texture.texture, handle))
         {
             for (TextureHandle created : texture_handles)
-                m_textures.release_texture(created);
+                m_graphics.textures().release_texture(created);
 
             return false;
         }
@@ -163,7 +163,7 @@ bool ModelSystem::instantiate(ModelHandle model, TextureHandle default_texture, 
         }
 
         for (MeshHandle handle : created_meshes)
-            m_meshes.release_mesh(handle);
+            m_graphics.meshes().release_mesh(handle);
     };
 
     // Create node entities and their transforms
@@ -225,7 +225,7 @@ bool ModelSystem::instantiate(ModelHandle model, TextureHandle default_texture, 
                 if (primitive.albedo_texture != std::numeric_limits<uint32_t>::max())
                     renderable.texture = texture_handles[primitive.albedo_texture];
                 else
-                    renderable.texture = default_texture;
+                    renderable.texture = m_graphics.missing_texture();
 
                 if (!m_components.add<Renderable>(renderable_entity, renderable))
                 {

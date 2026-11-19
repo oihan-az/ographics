@@ -15,11 +15,12 @@
 namespace omega
 {
 
-GraphicsSystem::GraphicsSystem(uint32_t max_frames_in_flight, PlatformSystem& platform, EventSystem& events)
+GraphicsSystem::GraphicsSystem(const std::string& application_name, uint32_t max_frames_in_flight,
+                               PlatformSystem& platform, EventSystem& events)
     : m_instance(
       ogfx::InstanceDesc
       {
-          .application_name = "Omega Engine",
+          .application_name = application_name.c_str(),
           .engine_name = "Omega Engine",
           .extensions = ogfx::InstanceExtension::DebugUtils | platform.runtime().required_instance_extensions()
       }),
@@ -61,20 +62,6 @@ GraphicsSystem::GraphicsSystem(uint32_t max_frames_in_flight, PlatformSystem& pl
     {
         m_render_finished.push_back(std::make_unique<ogfx::Semaphore>(m_device));
     }
-
-    // Create default graphics assets
-    const TextureAsset asset = create_missing_texture_asset();
-
-    if (!m_textures.create_texture(asset, m_missing_texture))
-        throw std::runtime_error("Failed to create missing texture.");
-
-    if (!m_gpu_textures.make_resident(m_missing_texture))
-        throw std::runtime_error("Failed to request missing texture residency.");
-
-    m_missing_texture_view = m_gpu_textures.create_view(m_missing_texture, TextureViewDesc{});
-
-    if (!m_missing_texture_view.is_valid())
-        throw std::runtime_error("Failed to create missing texture view.");
 }
 
 GraphicsSystem::~GraphicsSystem() = default;
@@ -107,11 +94,24 @@ void GraphicsSystem::end_frame()
 
 void GraphicsSystem::initialize()
 {
-    Frame& frame = m_frames[m_current_frame];
+    // Create default graphics assets
+    const TextureAsset asset = create_missing_texture_asset();
+
+    if (!m_textures.create_texture(asset, m_missing_texture))
+        throw std::runtime_error("Failed to create missing texture.");
+
+    if (!m_gpu_textures.make_resident(m_missing_texture))
+        throw std::runtime_error("Failed to request missing texture residency.");
+
+    m_missing_texture_view = m_gpu_textures.create_view(m_missing_texture, TextureViewDesc{});
+
+    if (!m_missing_texture_view.is_valid())
+        throw std::runtime_error("Failed to create missing texture view.");
 
     // Two synchronization passes are required:
     // 1. Upload the texture and wait for GPU completion
     // 2. Create its image views, which are deferred until the texture is resident
+    Frame& frame = m_frames[m_current_frame];
     for (uint32_t i = 0; i < 2; ++i)
     {
         frame.upload_command_buffer->begin();
