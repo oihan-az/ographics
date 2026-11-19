@@ -16,8 +16,10 @@ target_sources(
     omega_editor
     PRIVATE
         "main.cpp"
+        "src/editor.cpp"
         "src/rendering/ui_pipeline.cpp"
         "src/rendering/ui_feature.cpp"
+        "src/panels/hierarchy_panel.cpp"
  )
 
 find_package(imgui CONFIG REQUIRED)

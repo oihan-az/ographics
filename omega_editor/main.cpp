@@ -8,6 +8,7 @@
 
 #include <omega_editor/ui/imgui_layer.hpp>
 #include <omega_editor/rendering/ui_pipeline.hpp>
+#include <omega_editor/editor.hpp>
 
 #include <imgui.h>
 
@@ -102,6 +103,7 @@ int main()
 
     // Editor
     omega_editor::ImGuiLayer imgui_layer;
+    omega_editor::Editor editor(engine);
 
     // Renderer
     {
@@ -135,10 +137,7 @@ int main()
 
         imgui_layer.begin_frame();
 
-        ImGui::Begin("Omega Editor");
-        ImGui::Text("Hello from Omega Editor!");
-        ImGui::Text("ImGui is working.");
-        ImGui::End();
+        editor.render();
 
         imgui_layer.end_frame();
 
