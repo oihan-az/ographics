@@ -10,6 +10,11 @@
 namespace ogfx
 {
 
+namespace vulkan
+{
+class VulkanAccess;
+} // namespace vulkan
+
 class PhysicalDevice;
 class Surface;
 
@@ -75,6 +80,7 @@ class Device
     }
 
   private:
+    friend class vulkan::VulkanAccess;
     friend class Swapchain;
     friend class Image;
     friend class CommandPool;

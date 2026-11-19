@@ -46,6 +46,8 @@ void RenderGraph::execute(ogfx::CommandBuffer& cmd)
             continue;
         }
 
+        node->prepare(*this);
+
         for (auto& access : node->reads())
             access->transition(cmd, m_registry);
 

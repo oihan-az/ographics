@@ -123,28 +123,36 @@ RenderGraphNode<TContext>* RenderGraph::add_node(const std::string& name, TSetup
 }
 
 template <typename TResource>
-void RenderGraph::read(ResourceHandle<TResource> handle, 
+ResourceAccess<TResource>& RenderGraph::read(ResourceHandle<TResource> handle, 
                        typename ResourceTraits<TResource>::StateType requested_state,
                        typename ResourceTraits<TResource>::DataType data)
 {
     if (!m_active_node)
-        return;
+        throw std::logic_error("Cannot declare resource access without an active node.");
 
     auto access = std::make_unique<ResourceAccess<TResource>>(handle, requested_state, data);
+
+    auto& result = *access;
     m_active_node->reads().push_back(std::move(access));
+
+    return result;
 }
 
 template <typename TResource>
-void RenderGraph::write(ResourceHandle<TResource> handle, 
+ResourceAccess<TResource>& RenderGraph::write(ResourceHandle<TResource> handle, 
                         typename ResourceTraits<TResource>::StateType requested_state,
                         typename ResourceTraits<TResource>::DataType data,
                         typename ResourceTraits<TResource>::StateType final_state, bool update_state)
 {
     if (!m_active_node)
-        return;
+        throw std::logic_error("Cannot declare resource access without an active node.");
 
     auto access = std::make_unique<ResourceAccess<TResource>>(handle, requested_state, data, final_state, update_state);
+
+    auto& result = *access;
     m_active_node->writes().push_back(std::move(access));
+
+    return result;
 }
 
 template <typename TResource>

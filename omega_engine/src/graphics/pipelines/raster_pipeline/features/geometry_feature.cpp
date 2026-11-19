@@ -207,7 +207,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
         [this](orendergraph::RenderGraph& rg, orendergraph::RasterContext::Desc& desc)
         {
             // Dependencies
-            rg.write(m_out_image, ogfx::ImageState::RenderTarget, {ogfx::ImageAspect::Color}, ogfx::ImageState::TransferSrc, true );
+            rg.write(m_out_image, ogfx::ImageState::RenderTarget, {ogfx::ImageAspect::Color}, ogfx::ImageState::TransferSrc, true);
             rg.write(m_depth_image, ogfx::ImageState::DepthStencil, {ogfx::ImageAspect::Depth}, ogfx::ImageState::Undefined, true);
 
             // Render pass

@@ -38,6 +38,11 @@ void RasterContext::create_pipeline(RenderGraph& graph, const Desc& desc)
 {
     release_pipeline(graph);
 
+    // No graphics pipeline is needed when this raster context
+    // only uses the render pass to record commands
+    if (vertex_shader == nullptr)
+        return;
+
     ogfx::GraphicsPipelineDesc pipeline_desc;
     pipeline_desc.render_pass = render_pass;
     pipeline_desc.layout = pipeline_layout;

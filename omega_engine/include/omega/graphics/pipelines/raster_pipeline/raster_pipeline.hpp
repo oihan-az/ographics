@@ -4,8 +4,6 @@
 #include <orenderer/render_pipeline.hpp>
 
 #include <omega/core/entity/entity.hpp>
-#include <omega/texture/texture_handle.hpp>
-#include <omega/texture/texture_view_handle.hpp>
 
 namespace omega
 {

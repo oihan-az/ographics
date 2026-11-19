@@ -42,6 +42,12 @@ void RenderGraphNode<TContext>::compile(RenderGraph& graph)
 }
 
 template <typename TContext> 
+void RenderGraphNode<TContext>::set_prepare(PrepareCallback callback)
+{
+    m_custom_prepare = std::move(callback);
+}
+
+template <typename TContext> 
 void RenderGraphNode<TContext>::set_pre_execute(ExecuteCallback callback)
 {
     m_custom_pre_execute = std::move(callback);
@@ -57,6 +63,13 @@ template <typename TContext>
 void RenderGraphNode<TContext>::set_post_execute(ExecuteCallback callback)
 {
     m_custom_post_execute = std::move(callback);
+}
+
+template <typename TContext> 
+void RenderGraphNode<TContext>::prepare(RenderGraph& graph)
+{
+    if (m_custom_prepare)
+        m_custom_prepare(graph);
 }
 
 template <typename TContext> 

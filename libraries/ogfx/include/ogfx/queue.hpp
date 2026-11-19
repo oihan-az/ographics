@@ -10,6 +10,11 @@
 namespace ogfx
 {
 
+namespace vulkan
+{
+class VulkanAccess;
+} // namespace vulkan
+
 class CommandBuffer;
 class Semaphore;
 class Fence;
@@ -49,6 +54,7 @@ class Queue
     [[nodiscard]] bool valid() const;
 
   private:
+    friend class vulkan::VulkanAccess;
     friend class Device;
     friend class CommandPool;
 

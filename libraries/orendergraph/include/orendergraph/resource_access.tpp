@@ -25,6 +25,18 @@ std::type_index ResourceAccess<T>::resource_type_idx() const
 }
 
 template <typename T> 
+void ResourceAccess<T>::set_active(bool active)
+{
+    m_active = active;
+}
+
+template <typename T> 
+bool ResourceAccess<T>::is_active() const
+{
+    return m_active;
+}
+
+template <typename T> 
 void ResourceAccess<T>::reset_state(ResourcePoolRegistry& registry)
 {
     auto* pool = registry.get_pool<T>();
@@ -34,7 +46,7 @@ void ResourceAccess<T>::reset_state(ResourcePoolRegistry& registry)
 template <typename T> 
 void ResourceAccess<T>::update_state(ResourcePoolRegistry& registry)
 {
-    if (!m_update_state)
+    if (!m_active || !m_update_state)
         return;
 
     auto* pool = registry.get_pool<T>();
@@ -44,6 +56,9 @@ void ResourceAccess<T>::update_state(ResourcePoolRegistry& registry)
 template <typename T> 
 void ResourceAccess<T>::transition(ogfx::CommandBuffer& cmd, ResourcePoolRegistry& registry)
 {
+    if (!m_active)
+        return;
+
     T* physical_resource = registry.get_resource<T>(m_handle);
     if (physical_resource == nullptr)
         return;

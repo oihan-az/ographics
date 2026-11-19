@@ -66,4 +66,6 @@ add_subdirectory(examples/orenderer/demo)
 add_subdirectory(omega_engine)
 add_subdirectory(examples/omega_engine)
 
+add_subdirectory(omega_editor)
+
 include(CTest)

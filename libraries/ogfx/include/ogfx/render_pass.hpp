@@ -12,6 +12,11 @@
 namespace ogfx
 {
 
+namespace vulkan
+{
+class VulkanAccess;
+} // namespace vulkan
+
 class Device;
 
 struct RenderPassAttachmentDesc
@@ -45,6 +50,7 @@ class RenderPass
     RenderPass& operator=(RenderPass&&) noexcept;
 
   private:
+    friend class vulkan::VulkanAccess;
     friend class Framebuffer;
     friend class CommandBuffer;
     friend class GraphicsPipeline;

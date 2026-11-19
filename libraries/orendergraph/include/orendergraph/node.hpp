@@ -36,6 +36,7 @@ class IRenderGraphNode
     std::vector<std::unique_ptr<IResourceAccess>>& reads() { return m_reads; }
     std::vector<std::unique_ptr<IResourceAccess>>& writes() { return m_writes; }
 
+    virtual void prepare(RenderGraph& rg) = 0;
     virtual void pre_execute(RenderGraph& rg, ogfx::CommandBuffer& cmd) = 0;
     virtual void execute(RenderGraph& rg, ogfx::CommandBuffer& cmd) = 0;
     virtual void post_execute(RenderGraph& rg, ogfx::CommandBuffer& cmd) = 0;
@@ -55,6 +56,7 @@ class RenderGraphNode : public IRenderGraphNode
 public:
     using TDesc = typename TContext::Desc;
     using SetupCallback = std::function<void(RenderGraph&, TDesc&)>;
+    using PrepareCallback = std::function<void(RenderGraph&)>;
     using ExecuteCallback = std::function<void(RenderGraph&, ogfx::CommandBuffer&, RenderGraphNode<TContext>&)>;
 
     RenderGraphNode(const std::string& name, ExecutionFrequency exe_frec = ExecutionFrequency::EveryExecution);
@@ -67,10 +69,12 @@ public:
 
     void compile(RenderGraph& graph);
 
+    void set_prepare(PrepareCallback callback);
     void set_pre_execute(ExecuteCallback callback);
     void set_execute(ExecuteCallback callback);
     void set_post_execute(ExecuteCallback callback);
 
+    void prepare(RenderGraph& graph) override;
     void pre_execute(RenderGraph& graph, ogfx::CommandBuffer& cmd) override;
     void execute(RenderGraph& graph, ogfx::CommandBuffer& cmd) override;
     void post_execute(RenderGraph& graph, ogfx::CommandBuffer& cmd) override;
@@ -79,6 +83,7 @@ private:
     TContext m_ctx{};
     TDesc m_desc{};
 
+    PrepareCallback m_custom_prepare;
     ExecuteCallback m_custom_pre_execute;
     ExecuteCallback m_custom_execute;
     ExecuteCallback m_custom_post_execute;

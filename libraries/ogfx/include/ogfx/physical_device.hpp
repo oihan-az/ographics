@@ -8,6 +8,11 @@
 namespace ogfx
 {
 
+namespace vulkan
+{
+class VulkanAccess;
+} // namespace vulkan
+
 struct PhysicalDeviceDesc
 {
     std::string name;
@@ -37,6 +42,7 @@ class PhysicalDevice
     const PhysicalDeviceDesc& desc() const;
 
   private:
+    friend class vulkan::VulkanAccess;
     friend class Instance;
     friend class Device;
     friend class Swapchain;

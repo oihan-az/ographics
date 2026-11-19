@@ -60,11 +60,18 @@ class GraphicsSystem
     MeshSystem& meshes();
     GpuMeshSystem& gpu_meshes();
 
+    ogfx::Instance& instance();
+    ogfx::PhysicalDevice& physical_device();
+    ogfx::Device& device();
+    ogfx::ResourceAllocator& resource_allocator();
+
     TextureSystem& textures();
     GpuTextureSystem& gpu_textures();
 
     TextureHandle missing_texture() const;
     TextureViewHandle missing_texture_view() const;
+
+    ogfx::CommandBuffer& current_command_buffer();
 
   private:
     struct Frame

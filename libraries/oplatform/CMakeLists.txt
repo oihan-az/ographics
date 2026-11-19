@@ -43,6 +43,7 @@ target_sources(
         src/debug.cpp
         src/runtime.cpp
         src/glfw_window.cpp
+        src/glfw_access.cpp
 )
 
 find_package(glfw3 CONFIG REQUIRED)

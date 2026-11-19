@@ -44,6 +44,8 @@ class ToSwapchain : public orenderer::IRenderFeature
     void build(orenderer::RenderFeatureContext& ctx) override;
     void on_swapchain_recreated(orenderer::RenderFeatureContext& ctx) override;
 
+    const std::vector<orendergraph::ResourceHandle<ogfx::Image>>& swapchain_images();
+
   private:
     ToSwapchainDesc m_desc;
 

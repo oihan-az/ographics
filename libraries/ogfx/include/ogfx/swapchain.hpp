@@ -55,6 +55,11 @@ class Swapchain
     AcquireResult acquire_next_image(Semaphore& signal_semaphore);
     void recreate(uint32_t width, uint32_t height);
 
+    [[nodiscard]] Format format() const
+    {
+        return m_desc.format;
+    }
+
     [[nodiscard]] uint32_t width() const
     {
         return m_desc.width;

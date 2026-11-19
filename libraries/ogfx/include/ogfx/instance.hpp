@@ -10,6 +10,11 @@
 namespace ogfx
 {
 
+namespace vulkan
+{
+class VulkanAccess;
+} // namespace vulkan
+
 class Surface;
 
 struct InstanceDesc
@@ -40,6 +45,7 @@ class Instance
     [[nodiscard]] PhysicalDevice pick_physical_device(const std::vector<PhysicalDevice>& physicalDevice) const;
 
   private:
+    friend class vulkan::VulkanAccess;
     friend class Surface;
 
     struct Impl;

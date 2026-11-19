@@ -254,6 +254,26 @@ GpuMeshSystem& GraphicsSystem::gpu_meshes()
     return m_gpu_meshes;
 }
 
+ogfx::Instance& GraphicsSystem::instance()
+{
+    return m_instance;
+}
+
+ogfx::PhysicalDevice& GraphicsSystem::physical_device()
+{
+    return m_physical_device;
+}
+
+ogfx::Device& GraphicsSystem::device()
+{
+    return m_device;
+}
+
+ogfx::ResourceAllocator& GraphicsSystem::resource_allocator()
+{
+    return m_resource_allocator;
+}
+
 TextureSystem& GraphicsSystem::textures()
 {
     return m_textures;
@@ -272,6 +292,11 @@ TextureHandle GraphicsSystem::missing_texture() const
 TextureViewHandle GraphicsSystem::missing_texture_view() const
 {
     return m_missing_texture_view;
+}
+
+ogfx::CommandBuffer& GraphicsSystem::current_command_buffer()
+{
+    return *m_frames[m_current_frame].command_buffer;
 }
 
 TextureAsset GraphicsSystem::create_missing_texture_asset()

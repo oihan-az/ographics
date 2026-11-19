@@ -16,6 +16,11 @@
 namespace ogfx
 {
 
+namespace vulkan
+{
+class VulkanAccess;
+} // namespace vulkan
+
 class CommandPool;
 
 class CommandBuffer
@@ -68,6 +73,7 @@ class CommandBuffer
     void trace_rays(const TraceRaysInfo& info);
 
   private:
+    friend class vulkan::VulkanAccess;
     friend class Queue;
 
     struct Impl;

@@ -45,15 +45,15 @@ class RenderGraph
     template <typename TContext, typename TSetup> RenderGraphNode<TContext>* add_node(const std::string& name, TSetup&& setup_func);
 
     template <typename TResource>
-    void read(ResourceHandle<TResource> handle, 
-              typename ResourceTraits<TResource>::StateType requested_state,
-              typename ResourceTraits<TResource>::DataType data = {});
+    ResourceAccess<TResource>& read(ResourceHandle<TResource> handle, 
+                                    typename ResourceTraits<TResource>::StateType requested_state,
+                                    typename ResourceTraits<TResource>::DataType data = {});
 
     template <typename TResource>
-    void write(ResourceHandle<TResource> handle, 
-               typename ResourceTraits<TResource>::StateType requested_state = {},
-               typename ResourceTraits<TResource>::DataType data = {},
-               typename ResourceTraits<TResource>::StateType final_state = {}, bool update_state = false);
+    ResourceAccess<TResource>& write(ResourceHandle<TResource> handle, 
+                               typename ResourceTraits<TResource>::StateType requested_state = {},
+                               typename ResourceTraits<TResource>::DataType data = {},
+                               typename ResourceTraits<TResource>::StateType final_state = {}, bool update_state = false);
 
     template <typename TResource> void reset_resource_state(ResourceHandle<TResource> handle);
 

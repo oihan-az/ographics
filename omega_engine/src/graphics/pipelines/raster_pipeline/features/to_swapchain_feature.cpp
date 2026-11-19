@@ -47,6 +47,11 @@ void ToSwapchain::on_swapchain_recreated(orenderer::RenderFeatureContext& ctx)
     blit_desc.height = swapchain.height();
 }
 
+const std::vector<orendergraph::ResourceHandle<ogfx::Image>>& ToSwapchain::swapchain_images()
+{
+    return m_swapchain_images;
+}
+
 void ToSwapchain::add_blit_node(orendergraph::RenderGraph& rg)
 {
     m_to_swapchain_node = rg.add_node<orendergraph::BlitContext>

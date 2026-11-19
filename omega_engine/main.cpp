@@ -1,0 +1,136 @@
+#include <omega/engine/engine.hpp>
+
+#include <omega/assets/model_importer.hpp>
+#include <omega/model/model_system.hpp>
+#include <omega/lighting/directional_light.hpp>
+#include <omega/lighting/point_light.hpp>
+#include <omega/lighting/spot_light.hpp>
+
+#include <omega/graphics/graphics_system.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/raster_pipeline.hpp>
+
+int main()
+{
+    omega::EngineDesc desc;
+    desc.application_name = "Omega Demo";
+    desc.window = 
+    {
+        .width = 1280,
+        .height = 720,
+        .title = desc.application_name,
+        .resizable = true,
+        .fullscreen = false,
+    };
+    desc.max_frames_in_flight = 2;
+
+    omega::Engine engine(desc);
+
+    engine.initialize();
+
+    // Load scene
+    omega::ModelImporter importer;
+    omega::ModelSystem models(engine.entities(), engine.hierarchy(), engine.components(), engine.graphics(), importer);
+    const std::filesystem::path asset_dir = OMEGA_ASSET_DIR;
+    const std::filesystem::path model_path = asset_dir / "models/sponza_glTF/Sponza.gltf";
+    const omega::ModelHandle model = models.load(model_path);
+    omega::Entity sponza;
+
+    if (!models.instantiate(model, sponza))
+        throw std::runtime_error("Failed to instantiate");
+
+    // Create camera
+    omega::Entity camera_entity = engine.entities().create_entity();
+    {
+        omega::Transform transform;
+        transform.position = {0.0f, 2.0f, 0.0f};
+        transform.rotation = omega::Quaternion{0.70710678f, 0.0f, -0.70710678f, 0.0f};
+        engine.components().add(camera_entity, transform);
+
+        omega::PerspectiveCamera perspective_camera;
+        perspective_camera.proj.aspect_ratio = static_cast<float>(engine.graphics().swapchain().width()) / static_cast<float>(engine.graphics().swapchain().height());
+        perspective_camera.proj.field_of_view = omega::radians(60.0f);
+        perspective_camera.proj.near_plane = 0.1f;
+        perspective_camera.proj.far_plane = 100.0f;
+        engine.components().add(camera_entity, perspective_camera);
+    }
+
+    // Create directional light
+    omega::Entity directional_light_entity = engine.entities().create_entity();
+    {
+        omega::Transform transform;
+        transform.rotation = omega::Quaternion{0.70710678f, -0.2, 0.0f, 0.0f};
+        engine.components().add(directional_light_entity, transform);
+    
+        omega::DirectionalLight directional_light;
+        directional_light.color = {0.2f, 1.0f, 0.2f};
+        directional_light.intensity = 1.0f;
+        engine.components().add(directional_light_entity, directional_light);
+    }
+
+    // Create point light
+    omega::Entity point_light_entity = engine.entities().create_entity();
+    {
+        omega::Transform transform;
+        transform.position = {6.0f, 1.0f, 0.0f};
+        engine.components().add(point_light_entity, transform);
+    
+        omega::PointLight point_light;
+        point_light.color = {1.0f, 0.2f, 0.2f};
+        point_light.intensity = 5.0f;
+        point_light.range = 8.0f;
+        engine.components().add(point_light_entity, point_light);
+    }
+
+    // Create spot light
+    omega::Entity spot_light_entity = engine.entities().create_entity();
+    {
+        omega::Transform transform;
+        transform.position = {5.0f, 1.4f, 0.0f};
+        transform.rotation = omega::Quaternion{1.0f, 0.0f, 0.0f, 0.0f};
+        engine.components().add(spot_light_entity, transform);
+    
+        omega::SpotLight spot_light;
+        spot_light.color = {0.2f, 0.2f, 1.0f};
+        spot_light.intensity = 8.0f;
+        spot_light.range = 100.0f;
+        spot_light.inner_angle = omega::radians(20.0f);
+        spot_light.outer_angle = omega::radians(35.0f);
+        engine.components().add(spot_light_entity, spot_light);
+    }
+
+    // Renderer
+    {
+        // Pipelines
+        {
+            omega::RasterPipelineDesc pipeline_desc
+            {
+                camera_entity, 
+                engine.components(),
+                engine.events(),
+                engine.transforms(),
+                engine.cameras(),
+                engine.graphics(),
+            };
+
+            engine.graphics().renderer().create_pipeline<omega::RasterPipeline>();
+            engine.graphics().renderer().set_active_pipeline(0);
+            engine.graphics().renderer().setup<omega::RasterPipeline>(pipeline_desc);
+            engine.graphics().renderer().compile();
+        }
+    }
+
+    while (!engine.should_close())
+    {
+        if (!engine.start_frame())
+            continue;
+
+        engine.update();
+        engine.render();
+
+        engine.end_frame();
+    }
+
+    engine.wait();
+
+    return 0;
+}

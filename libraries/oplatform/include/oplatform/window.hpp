@@ -22,6 +22,13 @@ class Instance;
 namespace oplatform
 {
 
+namespace glfw
+{
+
+class GLFWAccess;
+
+} // namespace glfw;
+
 /**
  * @brief Describes the properties of a window.
  */
@@ -74,6 +81,8 @@ class Window
     [[nodiscard]] uint32_t height() const;
 
   private:
+    friend class glfw::GLFWAccess;
+
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };

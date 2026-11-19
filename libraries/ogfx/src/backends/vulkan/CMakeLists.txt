@@ -26,6 +26,7 @@ endif()
 target_sources(
     ogfx
     PRIVATE
+        vulkan_access.cpp
         vk_instance.cpp
         vk_instance_extensions.cpp
         vk_physical_device.cpp
