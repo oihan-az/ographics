@@ -4,6 +4,7 @@
 #include <omega_editor/panels/component_editor.hpp>
 
 #include <optional>
+#include <typeindex>
 
 namespace omega
 {
@@ -24,10 +25,21 @@ class InspectionPanel
     void render(omega::Engine& engine, omega::Entity& selected_entity, ComponentEditorRegistry& component_editor_registry);
 
   private:
+    enum class ComponentAction
+    {
+        None,
+        Add,
+        Remove
+    };
+
     float m_width_ratio = 0.20f;
 
-    std::optional<ComponentEditor*> m_pending_remove;
-    std::optional<ComponentEditor*> m_pending_add;
+    ComponentAction m_pending_action = ComponentAction::None;
+    std::optional<std::type_index> m_pending_type;
+    bool m_confirmation_open = false;
+    std::optional<std::type_index> m_navigation_target;
+
+    void clear_pending_action();
 };
 
 } // namespace omega_editor

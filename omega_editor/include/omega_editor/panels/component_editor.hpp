@@ -26,6 +26,8 @@ struct ComponentEditor
     std::function<void(omega::Entity, omega::ComponentSystem&)> draw;
     std::function<void(omega::Entity, omega::ComponentSystem&)> create;
     std::function<void(omega::Entity, omega::ComponentSystem&)> remove;
+
+    std::function<void(omega::ComponentSystem&)> prepare;
 };
 
 } // namespace omega_editor

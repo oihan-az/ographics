@@ -30,6 +30,7 @@ void ComponentEditorRegistry::register_component(std::string name, std::function
     };
     editor.create = [](omega::Entity entity, omega::ComponentSystem& components) { components.add<T>(entity, T{}); };
     editor.remove = [](omega::Entity entity, omega::ComponentSystem& components) { components.remove<T>(entity); };
+    editor.prepare = [](omega::ComponentSystem& components) { components.get_storage<T>(); };
 
     m_editors.push_back(std::move(editor));
 }
