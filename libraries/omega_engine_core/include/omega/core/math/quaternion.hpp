@@ -10,6 +10,7 @@ namespace omega
 
 using Quaternion = glm::quat;
 
+Quaternion normalize(const Quaternion& quat);
 Quaternion angle_axis(float angle, const Vector3& axis);
 Vector3 euler_angles(const Quaternion& quat);
 

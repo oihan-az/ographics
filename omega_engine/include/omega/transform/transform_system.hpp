@@ -14,6 +14,7 @@ class EventSystem;
 class ComponentSystem;
 class HierarchySystem;
 class EntitySystem;
+class HierarchyModifiedEvent;
 
 class TransformSystem
 {
@@ -28,6 +29,8 @@ class TransformSystem
     void invalidate(Entity entity);
     void mark_hierarchy_dirty(Entity entity);
     void mark_descendants_dirty(Entity entity);
+
+    void on_hierarchy_modified(const HierarchyModifiedEvent& event);
 
   private:
     DenseIndexedCache<Matrix4> m_cache;

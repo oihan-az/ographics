@@ -40,6 +40,9 @@ target_sources(
         "src/math/matrix_transform.cpp"
         "src/math/matrix_projection.cpp"
         "src/math/matrix4.cpp"
+        "src/math/vector2.cpp"
+        "src/math/vector3.cpp"
+        "src/math/vector4.cpp"
 
         "src/event/event_system.cpp"
 

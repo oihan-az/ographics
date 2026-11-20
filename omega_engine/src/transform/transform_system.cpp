@@ -7,6 +7,7 @@
 #include <omega/core/component/component_system.hpp>
 #include <omega/core/hierarchy/hierarchy_event.hpp>
 #include <omega/core/hierarchy/hierarchy_system.hpp>
+#include <omega/core/math/quaternion.hpp>
 
 namespace omega
 {
@@ -37,6 +38,7 @@ void TransformSystem::update()
 
             if (event.origin == ComponentModifiedOrigin::Direct)
                 mark_descendants_dirty(event.entity);
+
             break;
 
         case ComponentEventType::Removed:
@@ -50,7 +52,7 @@ void TransformSystem::update()
     const auto& hierarchy_events = m_events.get_queue<HierarchyModifiedEvent>().get_events();
     for (const auto& event : hierarchy_events)
     {
-        invalidate(event.entity);
+        on_hierarchy_modified(event);
     }
 }
 
@@ -124,6 +126,34 @@ void TransformSystem::mark_descendants_dirty(Entity entity)
 {
     for (Entity child : m_hierarchy.get_children(entity))
         mark_hierarchy_dirty(child);
+}
+
+void TransformSystem::on_hierarchy_modified(const HierarchyModifiedEvent& event)
+{
+    Transform* transform = m_components.get<Transform>(event.entity);
+    if (!transform)
+    {
+        invalidate(event.entity);
+        return;
+    }
+
+    const Matrix4 old_world = get_world_matrix(event.entity);
+    const Entity parent = m_hierarchy.get_parent(event.entity);
+    const Matrix4 parent_world = parent.is_valid() ? get_world_matrix(parent) : Matrix4(1.0f);
+    const Matrix4 new_local = omega::inverse(parent_world) * old_world;
+
+    Vector3 position; Quaternion rotation; Vector3 scale; Vector3 skew; Vector4 perspective;
+    if (!omega::decompose(new_local, scale, rotation, position, skew, perspective))
+    {
+        return;
+    }
+
+    transform->position = position;
+    transform->rotation = omega::normalize(rotation);
+    transform->scale = scale;
+
+    // Publish a normal modification event
+    m_components.mark_dirty<Transform>(event.entity);
 }
 
 } // namespace omega

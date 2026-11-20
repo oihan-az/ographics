@@ -8,6 +8,8 @@ namespace omega
 
 using Vector3 = glm::vec3;
 
+Vector3 normalize(const Vector3& vec);
+
 } // namespace omega
 
 #endif // OMEGA_MATH_VECTOR3_HPP
