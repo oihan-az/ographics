@@ -48,6 +48,7 @@ target_sources(
 
         "src/hierarchy/hierarchy_system.cpp"
 
+        "src/component/component_dependency_graph.cpp"
         "src/component/component_system.cpp"
 
         "src/memory/range_allocator.cpp"

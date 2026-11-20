@@ -28,4 +28,9 @@ std::unordered_map<std::type_index, std::unique_ptr<IComponentStorage>>& Compone
     return m_storages;
 }
 
+const ComponentDependencyGraph& ComponentSystem::dependency_graph() const
+{
+    return m_dependency_graph;
+}
+
 } // namespace omega

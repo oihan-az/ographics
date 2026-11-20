@@ -2,6 +2,8 @@
 #define OMEGA_COMPONENT_SYSTEM_HPP
 
 #include <omega/core/component/component_storage.hpp>
+#include <omega/core/component/component_traits.hpp>
+#include <omega/core/component/component_dependency_graph.hpp>
 #include <omega/core/event/event_system.hpp>
 #include <omega/core/entity/entity_system.hpp>
 
@@ -22,6 +24,7 @@ class ComponentSystem
     void update();
 
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStorage>>& storages();
+    const ComponentDependencyGraph& dependency_graph() const;
 
     template <typename T> ComponentStorage<T>& get_storage();
     template <typename T> bool remove_storage();
@@ -40,12 +43,14 @@ class ComponentSystem
   private:
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStorage>> m_storages;
 
-    // Events
-    EventSystem& m_events;
+    template <typename T> void register_component_type();
+    template <typename T, typename... Deps> void register_dependencies(TypeList<Deps...>);
+    ComponentDependencyGraph m_dependency_graph;
 
-    // Entities
+    EventSystem& m_events;
     EntitySystem& m_entities;
 };
+
 } // namespace omega
 
 #include "component_system.tpp"
