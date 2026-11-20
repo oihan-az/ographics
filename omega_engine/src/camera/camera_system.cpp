@@ -65,7 +65,6 @@ void CameraSystem::update()
 
 CameraData CameraSystem::get_camera_data(Entity entity)
 {
-
     // Return default data for entities that are no longer alive
     if (!m_entitites.is_alive(entity))
         return CameraData{};

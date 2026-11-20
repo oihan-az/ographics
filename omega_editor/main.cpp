@@ -12,6 +12,7 @@
 #include <omega_editor/editor.hpp>
 
 #include <imgui.h>
+#include <ImGuizmo.h>
 
 int main()
 {
@@ -133,6 +134,7 @@ int main()
         engine.update();
 
         imgui_layer.begin_frame();
+        ImGuizmo::BeginFrame();
 
         editor.render();
 

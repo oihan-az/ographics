@@ -26,6 +26,7 @@ target_sources(
         "src/panels/inspection_panel.cpp"
         "src/panels/component_editor_registry.cpp"
         "src/icons/icons.cpp"
+        "src/gizmos/transform_gizmo.cpp"
  )
 
 find_package(imgui CONFIG REQUIRED)

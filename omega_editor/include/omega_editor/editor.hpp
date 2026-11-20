@@ -7,6 +7,7 @@
 #include <omega_editor/panels/hierarchy_panel.hpp>
 #include <omega_editor/panels/inspection_panel.hpp>
 #include <omega_editor/panels/component_editor_registry.hpp>
+#include <omega_editor/gizmos/transform_gizmo.hpp>
 
 namespace omega
 {
@@ -31,6 +32,7 @@ class Editor
     omega::Engine& m_engine;
 
     omega::Entity m_selected_entity;
+    omega::Entity m_camera_entity;
 
     void register_component_editors();
     ComponentEditorRegistry m_component_editors;
@@ -43,8 +45,10 @@ class Editor
 
     CameraViewport m_camera_viewport;
     ViewportToolbar m_viewport_toolbar;
-
     void update_camera_viewport();
+
+    TransformGizmo m_transform_gizmo;
+    void render_transform_gizmo();
 };
 
 } // namespace omega_editor

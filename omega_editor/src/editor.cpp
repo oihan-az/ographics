@@ -34,7 +34,7 @@ namespace omega_editor
 {
 
 Editor::Editor(omega::Engine& engine, omega::Entity camera_entity)
-    : m_engine(engine), m_camera_viewport(engine.components(), camera_entity)
+    : m_engine(engine), m_camera_entity(camera_entity), m_camera_viewport(engine.components(), camera_entity)
 {
 }
 
@@ -73,6 +73,8 @@ void Editor::render()
         m_camera_viewport.toggle_fullscreen();
         m_viewport_toolbar.show();
     }
+
+    render_transform_gizmo();
 }
 
 const CameraViewport& Editor::camera_viewport() const
@@ -269,6 +271,13 @@ void Editor::update_camera_viewport()
     }
 
     m_camera_viewport.update(available);
+}
+
+void Editor::render_transform_gizmo() 
+{
+    const omega::CameraData& camera_data = m_engine.cameras().get_camera_data(m_camera_entity);
+    m_transform_gizmo.render(m_camera_viewport, m_selected_entity, camera_data.view, camera_data.projection,
+                             m_engine.components(), m_engine.transforms(), m_engine.hierarchy());
 }
 
 } // namespace omega_editor
