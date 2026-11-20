@@ -55,7 +55,14 @@ void HierarchyPanel::render(omega::Engine& engine, omega::Entity& selected_entit
 
     // Empty-space drop target
     const ImVec2 available = ImGui::GetContentRegionAvail();
+
     ImGui::InvisibleButton("HierarchyDropTarget", ImVec2(available.x, available.y));
+
+    // Deselect when clicking empty space
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+        selected_entity = omega::Entity{};
+
+    // Allow dropping entities to make them roots
     if (ImGui::BeginDragDropTarget())
     {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY"))
