@@ -5,6 +5,7 @@
 #include <omega/lighting/directional_light.hpp>
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.hpp>
 
 #include <omega_editor/ui/imgui_layer.hpp>
 #include <omega_editor/rendering/ui_pipeline.hpp>
@@ -103,31 +104,26 @@ int main()
 
     // Editor
     omega_editor::ImGuiLayer imgui_layer;
-    omega_editor::Editor editor(engine);
+    omega_editor::Editor editor(engine, camera_entity);
     editor.initialize();
 
     // Renderer
+    omega_editor::UIPipelineDesc pipeline_desc
     {
-        // Pipelines
-        {
-            omega_editor::UIPipelineDesc pipeline_desc
-            {
-                camera_entity,
-                imgui_layer,
-                engine.components(),
-                engine.events(),
-                engine.transforms(),
-                engine.cameras(),
-                engine.platform(),
-                engine.graphics(),
-            };
+        camera_entity,
+        imgui_layer,
+        engine.components(),
+        engine.events(),
+        engine.transforms(),
+        engine.cameras(),
+        engine.platform(),
+        engine.graphics(),
+    };
 
-            engine.graphics().renderer().create_pipeline<omega_editor::UIPipeline>();
-            engine.graphics().renderer().set_active_pipeline(0);
-            engine.graphics().renderer().setup<omega_editor::UIPipeline>(pipeline_desc);
-            engine.graphics().renderer().compile();
-        }
-    }
+    omega_editor::UIPipeline& pipeline = engine.graphics().renderer().create_pipeline<omega_editor::UIPipeline>();
+    engine.graphics().renderer().set_active_pipeline(0);
+    engine.graphics().renderer().setup<omega_editor::UIPipeline>(pipeline_desc);
+    engine.graphics().renderer().compile();
 
     while (!engine.should_close())
     {
@@ -141,6 +137,16 @@ int main()
         editor.render();
 
         imgui_layer.end_frame();
+
+        const omega_editor::ViewportRect& rect = editor.camera_viewport().rect();
+        omega::RenderRegion region
+        {
+            static_cast<uint32_t>(rect.position.x), 
+            static_cast<uint32_t>(rect.position.y),
+            static_cast<uint32_t>(rect.size.x),
+            static_cast<uint32_t>(rect.size.y)
+        };
+        pipeline.set_viewport(region);
 
         engine.render();
 

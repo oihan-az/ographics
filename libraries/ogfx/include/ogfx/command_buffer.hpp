@@ -59,7 +59,8 @@ class CommandBuffer
     void copy_buffer_to_buffer(const BufferToBufferCopyInfo& info);
     void copy_buffer_to_image(const BufferToImageCopyInfo& info);
     void copy_image_to_image(const ImageToImageCopyInfo& info);
-    void blit_image(const ImageToImageCopyInfo& info);
+    void blit_image(const ImageBlitInfo& info);
+    void clear_image(const ImageClearInfo& info);
 
     void generate_mipmaps(const GenerateMipmapsInfo& info);
 

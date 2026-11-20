@@ -18,21 +18,27 @@ struct NodeExecute<BlitContext>
     {
         BlitContext::Desc& desc = node.descriptor();
 
-        ogfx::ImageToImageCopyInfo copy_info{};
-        copy_info.src_image = graph.get_resource(desc.source_image);
-        copy_info.src_mip_level = desc.src_mip_level;
-        copy_info.src_base_array_layer = desc.src_base_array_layer;
+        ogfx::ImageBlitInfo info{};
+        info.src_image = graph.get_resource(desc.source_image);
+        info.src_mip_level = desc.src_mip_level;
+        info.src_base_array_layer = desc.src_base_array_layer;
+        info.src_x = desc.src_x;
+        info.src_y = desc.src_y;
+        info.src_width = desc.src_width;
+        info.src_height = desc.src_height;
 
-        copy_info.dst_image = graph.get_resource(desc.destination_images[desc.destination_image_index]);
-        copy_info.dst_mip_level = desc.dst_mip_level;
-        copy_info.dst_base_array_layer = desc.dst_base_array_layer;
+        info.dst_image = graph.get_resource(desc.destination_images[desc.destination_image_index]);
+        info.dst_mip_level = desc.dst_mip_level;
+        info.dst_base_array_layer = desc.dst_base_array_layer;
+        info.dst_x = desc.dst_x;
+        info.dst_y = desc.dst_y;
+        info.dst_width = desc.dst_width;
+        info.dst_height = desc.dst_height;
 
-        copy_info.width = desc.width;
-        copy_info.height = desc.height;
-        copy_info.depth = desc.depth;
-        copy_info.array_layer_count = desc.array_layer_count;
+        info.depth = desc.depth;
+        info.array_layer_count = desc.array_layer_count;
 
-        cmd.blit_image(copy_info);
+        cmd.blit_image(info);
     }
 };
 

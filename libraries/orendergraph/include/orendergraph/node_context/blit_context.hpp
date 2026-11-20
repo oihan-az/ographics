@@ -23,12 +23,18 @@ struct BlitContext
 
         uint32_t src_mip_level = 0;
         uint32_t src_base_array_layer = 0;
+        int32_t src_x = 0;
+        int32_t src_y = 0;
+        uint32_t src_width = 0;
+        uint32_t src_height = 0;
 
         uint32_t dst_mip_level = 0;
         uint32_t dst_base_array_layer = 0;
+        int32_t dst_x = 0;
+        int32_t dst_y = 0;
+        uint32_t dst_width = 0;
+        uint32_t dst_height = 0;
 
-        uint32_t width = 0;
-        uint32_t height = 0;
         uint32_t depth = 1;
         uint32_t array_layer_count = 1;
     };

@@ -123,6 +123,10 @@ void PanelSlot::end()
         m_size.height.size = clamp_ratio(window_size.y / viewport_size.y, m_size.height);
     }
 
+    const ImVec2 position = ImGui::GetWindowPos();
+    const ImVec2 size = ImGui::GetWindowSize();
+    m_bounds = {position.x, position.y, size.x, size.y};
+
     ImGui::End();
 }
 
@@ -139,6 +143,11 @@ float PanelSlot::width_ratio() const
 float PanelSlot::height_ratio() const
 {
     return uses_height(m_anchor) ? m_size.height.size : 1.0f;
+}
+
+const PanelBounds& PanelSlot::bounds() const
+{
+    return m_bounds;
 }
 
 } // namespace omega_editor

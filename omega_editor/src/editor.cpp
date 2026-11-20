@@ -3,6 +3,8 @@
 #include <omega/core/math/angle.hpp>
 #include <omega/core/math/quaternion.hpp>
 
+#include <omega/engine/engine.hpp>
+
 #include <omega/transform/transform.hpp>
 #include <omega/camera/camera.hpp>
 #include <omega/lighting/directional_light.hpp>
@@ -11,10 +13,30 @@
 
 #include <imgui.h>
 
+namespace
+{
+
+void draw_viewport_outline(const omega_editor::ViewportRect& rect)
+{
+    if (rect.size.x <= 0.0f || rect.size.y <= 0.0f)
+        return;
+
+    const ImVec2 min = rect.position;
+    const ImVec2 max(rect.position.x + rect.size.x, rect.position.y + rect.size.y);
+    ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+
+    draw_list->AddRect(min, max, IM_COL32(140, 150, 170, 150), 0.0f, 0, 1.0f);
+}
+
+} // namespace
+
 namespace omega_editor
 {
 
-Editor::Editor(omega::Engine& engine) : m_engine(engine) {}
+Editor::Editor(omega::Engine& engine, omega::Entity camera_entity)
+    : m_engine(engine), m_camera_viewport(engine.components(), camera_entity)
+{
+}
 
 void Editor::initialize()
 {
@@ -23,8 +45,39 @@ void Editor::initialize()
 
 void Editor::render()
 {
-    m_hierarchy_panel.render(m_left_slot, m_engine, m_selected_entity);
-    m_inspection_panel.render(m_right_slot, m_engine, m_selected_entity, m_component_editors);
+    // Fullscreen shortcut
+    if (ImGui::IsKeyPressed(ImGuiKey_F11, false))
+    {
+        m_camera_viewport.toggle_fullscreen();
+        m_viewport_toolbar.show();
+    }
+
+    // Editor panels
+    if (!m_camera_viewport.fullscreen())
+    {
+        m_hierarchy_panel.render(m_left_slot, m_engine, m_selected_entity);
+
+        m_inspection_panel.render(m_right_slot, m_engine, m_selected_entity, m_component_editors);
+    }
+
+    // Viewport layout
+    update_camera_viewport();
+
+    if (!m_camera_viewport.fullscreen())
+        draw_viewport_outline(m_camera_viewport.rect());
+
+    // Viewport toolbar
+    const ViewportToolbarAction action = m_viewport_toolbar.render(m_camera_viewport);
+    if (action == ViewportToolbarAction::ToggleFullscreen)
+    {
+        m_camera_viewport.toggle_fullscreen();
+        m_viewport_toolbar.show();
+    }
+}
+
+const CameraViewport& Editor::camera_viewport() const
+{
+    return m_camera_viewport;
 }
 
 void Editor::register_component_editors() 
@@ -190,6 +243,32 @@ void Editor::register_component_editors()
             return changed;
         }
     );
+}
+
+void Editor::update_camera_viewport()
+{
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+    const ImVec2 origin = viewport->WorkPos;
+    const ImVec2 size = viewport->WorkSize;
+
+    ViewportRect available{origin, size};
+
+    if (!m_camera_viewport.fullscreen())
+    {
+        constexpr float padding = 8.0f;
+
+        const PanelBounds& left = m_left_slot.bounds();
+        const PanelBounds& right = m_right_slot.bounds();
+
+        const float x_min = left.x + left.width + padding;
+        const float x_max = right.x - padding;
+
+        available.position.x = x_min;
+        available.size.x = std::max(0.0f, x_max - x_min);
+    }
+
+    m_camera_viewport.update(available);
 }
 
 } // namespace omega_editor

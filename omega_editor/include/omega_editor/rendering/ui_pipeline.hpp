@@ -14,6 +14,8 @@ class TransformSystem;
 class CameraSystem;
 class GraphicsSystem;
 class PlatformSystem;
+class ToSwapchain;
+struct RenderRegion;
 
 } // namespace omega
 
@@ -42,6 +44,11 @@ class UIPipeline : public orenderer::RenderPipeline
     using orenderer::RenderPipeline::RenderPipeline;
 
     void setup(UIPipelineDesc& desc);
+
+    void set_viewport(const omega::RenderRegion& region);
+
+  private:
+    omega::ToSwapchain* m_to_swapchain;
 };
 
 } // namespace omega_editor

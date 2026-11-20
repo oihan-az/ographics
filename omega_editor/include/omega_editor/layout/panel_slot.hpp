@@ -29,6 +29,14 @@ struct PanelSize
     PanelDimension height;
 };
 
+struct PanelBounds
+{
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;
+    float height = 0.0f;
+};
+
 class PanelSlot
 {
   public:
@@ -42,9 +50,12 @@ class PanelSlot
     float width_ratio() const;
     float height_ratio() const;
 
+    const PanelBounds& bounds() const;
+
   private:
     PanelAnchor m_anchor;
     PanelSize m_size;
+    PanelBounds m_bounds;
 };
 
 } // namespace omega_editor

@@ -4,6 +4,7 @@
 #include <orendergraph/node_context/general_context.hpp>
 #include <orendergraph/node_context/blas_context.hpp>
 #include <orendergraph/node_context/blit_context.hpp>
+#include <orendergraph/node_context/clear_context.hpp>
 #include <orendergraph/node_context/compute_context.hpp>
 #include <orendergraph/node_context/pipeline_context.hpp>
 #include <orendergraph/node_context/raster_context.hpp>

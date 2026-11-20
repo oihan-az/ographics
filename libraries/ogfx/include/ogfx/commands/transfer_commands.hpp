@@ -60,6 +60,48 @@ struct ImageToImageCopyInfo
     uint32_t array_layer_count = 1;
 };
 
+struct ImageBlitInfo
+{
+    const Image* src_image = nullptr;
+    const Image* dst_image = nullptr;
+
+    uint32_t src_mip_level = 0;
+    uint32_t src_base_array_layer = 0;
+
+    uint32_t dst_mip_level = 0;
+    uint32_t dst_base_array_layer = 0;
+
+    ImageAspect src_aspect = ImageAspect::Color;
+    ImageAspect dst_aspect = ImageAspect::Color;
+
+    int32_t src_x = 0;
+    int32_t src_y = 0;
+    int32_t dst_x = 0;
+    int32_t dst_y = 0;
+
+    uint32_t src_width = 0;
+    uint32_t src_height = 0;
+
+    uint32_t dst_width = 0;
+    uint32_t dst_height = 0;
+
+    uint32_t depth = 1;
+    uint32_t array_layer_count = 1;
+};
+
+struct ImageClearInfo
+{
+    const Image* image = nullptr;
+
+    float color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+    uint32_t base_mip_level = 0;
+    uint32_t mip_level_count = 1;
+
+    uint32_t base_array_layer = 0;
+    uint32_t array_layer_count = 1;
+};
+
 struct GenerateMipmapsInfo
 {
     const Image* image = nullptr;

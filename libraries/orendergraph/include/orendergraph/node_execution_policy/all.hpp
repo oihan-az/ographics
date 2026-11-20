@@ -7,5 +7,6 @@
 #include <orendergraph/node_execution_policy/blas.hpp>
 #include <orendergraph/node_execution_policy/tlas.hpp>
 #include <orendergraph/node_execution_policy/blit.hpp>
+#include <orendergraph/node_execution_policy/clear.hpp>
 
 #endif // ORENDERGRAPH_NODE_EXECUTION_POLICY_ALL_HPP

@@ -2,6 +2,8 @@
 #define OMEGA_EDITOR_HPP
 
 #include <omega_editor/layout/panel_slot.hpp>
+#include <omega_editor/layout/camera_viewport.hpp>
+#include <omega_editor/layout/viewport_toolbar.hpp>
 #include <omega_editor/panels/hierarchy_panel.hpp>
 #include <omega_editor/panels/inspection_panel.hpp>
 #include <omega_editor/panels/component_editor_registry.hpp>
@@ -19,9 +21,11 @@ namespace omega_editor
 class Editor
 {
   public:
-    Editor(omega::Engine& engine);
+    Editor(omega::Engine& engine, omega::Entity camera_entity);
     void initialize();
     void render();
+
+    const CameraViewport& camera_viewport() const;
 
   private:
     omega::Engine& m_engine;
@@ -34,9 +38,13 @@ class Editor
     HierarchyPanel m_hierarchy_panel;
     InspectionPanel m_inspection_panel;
 
-    // Layout
     PanelSlot m_left_slot{PanelAnchor::Left, {{0.20f, 0.15f, 0.35f}, {}}};
     PanelSlot m_right_slot{PanelAnchor::Right, {{0.20f, 0.15f, 0.35f}, {}}};
+
+    CameraViewport m_camera_viewport;
+    ViewportToolbar m_viewport_toolbar;
+
+    void update_camera_viewport();
 };
 
 } // namespace omega_editor
