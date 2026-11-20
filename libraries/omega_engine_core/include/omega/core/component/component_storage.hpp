@@ -4,6 +4,7 @@
 #include <omega/core/entity/entity.hpp>
 #include <omega/core/entity/entity_indexer.hpp>
 #include <omega/core/container/sparse_set.hpp>
+#include <omega/core/component/component_event.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -33,7 +34,7 @@ class ComponentStorage : public IComponentStorage
 
     bool add(Entity entity, T component);
     bool remove(Entity entity) override;
-    bool mark_dirty(Entity entity);
+    bool mark_dirty(Entity entity, ComponentModifiedOrigin origin = ComponentModifiedOrigin::Direct);
     bool contains(Entity entity) const override;
 
     const std::type_info& component_type() const override;

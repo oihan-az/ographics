@@ -32,7 +32,7 @@ class ComponentSystem
 
     template <typename T> bool add(Entity entity, T component);
     template <typename T> bool remove(Entity entity);
-    template <typename T> bool mark_dirty(Entity entity);
+    template <typename T> bool mark_dirty(Entity entity, ComponentModifiedOrigin origin = ComponentModifiedOrigin::Direct);
     template <typename T> bool has(Entity entity) const;
 
     template <typename T> T* get(Entity entity);

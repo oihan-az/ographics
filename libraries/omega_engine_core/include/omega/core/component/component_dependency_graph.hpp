@@ -2,6 +2,7 @@
 #define OMEGA_COMPONENT_DEPENDENCY_GRAPH_HPP
 
 #include <omega/core/entity/entity.hpp>
+#include <omega/core/component/component_event.hpp>
 
 #include <functional>
 #include <typeindex>
@@ -21,7 +22,7 @@ class ComponentDependencyGraph
         std::function<bool(Entity)> has;
         std::function<bool(Entity)> ensure;
         std::function<bool(Entity)> remove;
-        std::function<bool(Entity)> mark_dirty;
+        std::function<bool(Entity, ComponentModifiedOrigin)> mark_dirty;
     };
 
     struct Node

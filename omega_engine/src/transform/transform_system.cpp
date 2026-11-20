@@ -34,6 +34,9 @@ void TransformSystem::update()
 
         case ComponentEventType::Modified:
             invalidate(event.entity);
+
+            if (event.origin == ComponentModifiedOrigin::Direct)
+                mark_descendants_dirty(event.entity);
             break;
 
         case ComponentEventType::Removed:
@@ -57,26 +60,26 @@ Matrix4 TransformSystem::get_world_matrix(Entity entity)
     if (!m_entitites.is_alive(entity))
         return Matrix4(1.0f);
 
-    auto& transform_storage = m_components.get_storage<Transform>();
-    uint32_t dense_idx = transform_storage.get_index(entity);
-
-    // Reuse the cached matrix when it is still valid
-    if (!m_cache.is_dirty(dense_idx))
-        return *m_cache.get(dense_idx);
-
-    // Get the local matrix, or return the parent's world matrix if no Transform exists
     const Transform* transform = m_components.get<Transform>(entity);
+    const Entity parent = m_hierarchy.get_parent(entity);
+
+    // Entities without a local Transform inherit their parent's matrix
     if (!transform)
     {
-        Entity parent = m_hierarchy.get_parent(entity);
         return parent.is_valid() ? get_world_matrix(parent) : Matrix4(1.0f);
     }
 
-    Matrix4 local_matrix = mtx_transform(*transform);
+    auto& storage = m_components.get_storage<Transform>();
+    const uint32_t dense_idx = storage.get_index(entity);
+
+    // Use the cached matrix when valid.
+    if (!m_cache.is_dirty(dense_idx))
+        return *m_cache.get(dense_idx);
+
+    const Matrix4 local_matrix = mtx_transform(*transform);
 
     // Combine the local matrix with the parent's world matrix
     Matrix4 world_matrix = local_matrix;
-    Entity parent = m_hierarchy.get_parent(entity);
     if (parent.is_valid())
         world_matrix = get_world_matrix(parent) * local_matrix;
 
@@ -88,17 +91,39 @@ Matrix4 TransformSystem::get_world_matrix(Entity entity)
 
 void TransformSystem::invalidate(Entity entity)
 {
-    auto& transform_storage = m_components.get_storage<Transform>();
-    uint32_t dense_idx = transform_storage.get_index(entity);
+    if (!m_entitites.is_alive(entity))
+        return;
 
-    m_cache.invalidate(dense_idx);
+    // Invalidate this entity's cached world transform
+    if (m_components.has<Transform>(entity))
+    {
+        auto& storage = m_components.get_storage<Transform>();
+
+        m_cache.invalidate(storage.get_index(entity));
+    }
 
     // Notify dependent systems that this world transform may have changed
     m_events.publish(WorldTransformChangedEvent{entity});
+}
 
-    // Invalidate descendants because their world transforms depend on this entity
+void TransformSystem::mark_hierarchy_dirty(Entity entity)
+{
+    if (!m_entitites.is_alive(entity))
+        return;
+
+    if (m_components.has<Transform>(entity))
+    {
+        m_components.mark_dirty<Transform>(entity, ComponentModifiedOrigin::Propagated);
+    }
+
     for (Entity child : m_hierarchy.get_children(entity))
-        invalidate(child);
+        mark_hierarchy_dirty(child);
+}
+
+void TransformSystem::mark_descendants_dirty(Entity entity)
+{
+    for (Entity child : m_hierarchy.get_children(entity))
+        mark_hierarchy_dirty(child);
 }
 
 } // namespace omega

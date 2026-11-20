@@ -14,12 +14,19 @@ enum class ComponentEventType
     Removed
 };
 
+enum class ComponentModifiedOrigin
+{
+    Direct,
+    Propagated
+};
+
 template <typename T> 
 struct ComponentEvent
 {
     ComponentEventType type;
     Entity entity;
     SparseSetSwapInfo<Entity> swap_info{};
+    ComponentModifiedOrigin origin = ComponentModifiedOrigin::Direct;
 };
 
 } // namespace omega

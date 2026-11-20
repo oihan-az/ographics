@@ -26,6 +26,8 @@ class TransformSystem
 
   private:
     void invalidate(Entity entity);
+    void mark_hierarchy_dirty(Entity entity);
+    void mark_descendants_dirty(Entity entity);
 
   private:
     DenseIndexedCache<Matrix4> m_cache;

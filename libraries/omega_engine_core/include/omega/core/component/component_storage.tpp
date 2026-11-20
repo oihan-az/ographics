@@ -2,7 +2,6 @@
 #define OMEGA_COMPONENT_STORAGE_TPP
 
 #include <omega/core/event/event_system.hpp>
-#include <omega/core/component/component_event.hpp>
 
 #include <utility>
 
@@ -39,12 +38,16 @@ bool ComponentStorage<T>::remove(Entity entity)
 }
 
 template <typename T> 
-bool ComponentStorage<T>::mark_dirty(Entity entity)
+bool ComponentStorage<T>::mark_dirty(Entity entity, ComponentModifiedOrigin origin)
 {
     if (!m_set.contains(entity))
         return false;
 
-    m_events.publish(ComponentEvent<T>{ComponentEventType::Modified, entity});
+    ComponentEvent<T> event{ComponentEventType::Modified, entity};
+
+    event.origin = origin;
+
+    m_events.publish(event);
 
     return true;
 }

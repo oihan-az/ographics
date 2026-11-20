@@ -111,7 +111,7 @@ bool ComponentSystem::remove(Entity entity)
 }
 
 template <typename T> 
-bool ComponentSystem::mark_dirty(Entity entity)
+bool ComponentSystem::mark_dirty(Entity entity, ComponentModifiedOrigin origin)
 {
     if (!m_entities.is_valid(entity))
         return false;
@@ -125,7 +125,7 @@ bool ComponentSystem::mark_dirty(Entity entity)
     {
         const auto* node = m_dependency_graph.find(*it);
         if (node->operations.has(entity))
-            node->operations.mark_dirty(entity);
+            node->operations.mark_dirty(entity, origin);
     }
 
     return get_storage<T>().mark_dirty(entity);
@@ -197,12 +197,12 @@ void ComponentSystem::register_component_type()
 
         return get_storage<T>().remove(entity);
     };
-    operations.mark_dirty = [this](Entity entity)
+    operations.mark_dirty = [this](Entity entity, ComponentModifiedOrigin origin)
     {
         if (!has<T>(entity))
             return false;
 
-        return get_storage<T>().mark_dirty(entity);
+        return get_storage<T>().mark_dirty(entity, origin);
     };
 
     m_dependency_graph.register_type(type, std::move(operations));
