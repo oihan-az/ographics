@@ -19,6 +19,7 @@ target_sources(
         "src/editor.cpp"
         "src/rendering/ui_pipeline.cpp"
         "src/rendering/ui_feature.cpp"
+        "src/layout/panel_slot.cpp"
         "src/panels/hierarchy_panel.cpp"
         "src/panels/inspection_panel.cpp"
         "src/panels/component_editor_registry.cpp"

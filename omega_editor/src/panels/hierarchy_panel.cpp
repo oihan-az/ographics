@@ -1,4 +1,5 @@
 #include <omega_editor/panels/hierarchy_panel.hpp>
+#include <omega_editor/layout/panel_slot.hpp>
 
 #include <omega/core/entity/entity_system.hpp>
 #include <omega/core/hierarchy/hierarchy_system.hpp>
@@ -9,76 +10,61 @@
 namespace omega_editor
 {
 
-void HierarchyPanel::render(omega::Engine& engine, omega::Entity& selected_entity)
+void HierarchyPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Entity& selected_entity)
 {
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-
-    const float viewport_width = viewport->WorkSize.x;
-    const float viewport_height = viewport->WorkSize.y;
-
-    const float min_width = viewport_width * 0.15f;
-    const float max_width = viewport_width * 0.35f;
-
-    m_width_ratio = std::clamp(m_width_ratio, 0.15f, 0.35f);
-
-    ImGui::SetNextWindowPos(viewport->WorkPos);
-    ImGui::SetNextWindowSize(ImVec2(viewport_width * m_width_ratio, viewport_height));
-
-    ImGui::SetNextWindowSizeConstraints(ImVec2(min_width, viewport_height), ImVec2(max_width, viewport_height));
-
-    ImGui::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
-
-    // Toolbar
-    omega::HierarchySystem& hierarchy = engine.hierarchy();
-
-    ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("Entities");
-
-    ImGui::SameLine();
-
-    const float button_width = ImGui::GetFrameHeight();
-    ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - button_width);
-
-    if (ImGui::Button("+", ImVec2(button_width, 0.0f)))
-        engine.entities().create_entity();
-
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    // Entity tree
-    for (omega::Entity entity : engine.entities())
+    const bool visible = slot.begin("Hierarchy");
+    if (visible)
     {
-        if (!hierarchy.has_parent(entity))
-            render_entity(entity, hierarchy, selected_entity);
-    }
 
-    // Empty-space drop target
-    const ImVec2 available = ImGui::GetContentRegionAvail();
+        // Toolbar
+        omega::HierarchySystem& hierarchy = engine.hierarchy();
 
-    ImGui::InvisibleButton("HierarchyDropTarget", ImVec2(available.x, available.y));
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Entities");
 
-    // Deselect when clicking empty space
-    if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
-        selected_entity = omega::Entity{};
+        ImGui::SameLine();
 
-    // Allow dropping entities to make them roots
-    if (ImGui::BeginDragDropTarget())
-    {
-        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY"))
+        const float button_width = ImGui::GetFrameHeight();
+        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - button_width);
+
+        if (ImGui::Button("+", ImVec2(button_width, 0.0f)))
+            engine.entities().create_entity();
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // Entity tree
+        for (omega::Entity entity : engine.entities())
         {
-            const auto* dragged_entity = static_cast<const omega::Entity*>(payload->Data);
-
-            hierarchy.clear_parent(*dragged_entity);
+            if (!hierarchy.has_parent(entity))
+                render_entity(entity, hierarchy, selected_entity);
         }
 
-        ImGui::EndDragDropTarget();
+        // Empty-space drop target
+        const ImVec2 available = ImGui::GetContentRegionAvail();
+
+        ImGui::InvisibleButton("HierarchyDropTarget", ImVec2(available.x, available.y));
+
+        // Deselect when clicking empty space
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+            selected_entity = omega::Entity{};
+
+        // Allow dropping entities to make them roots
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY"))
+            {
+                const auto* dragged_entity = static_cast<const omega::Entity*>(payload->Data);
+
+                hierarchy.clear_parent(*dragged_entity);
+            }
+
+            ImGui::EndDragDropTarget();
+        }
     }
 
-    // Update width ratio after resizing
-    m_width_ratio = ImGui::GetWindowWidth() / viewport_width;
-
-    ImGui::End();
+    slot.end();
 
     if (m_pending_delete.has_value())
     {

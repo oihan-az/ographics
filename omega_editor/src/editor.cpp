@@ -23,8 +23,8 @@ void Editor::initialize()
 
 void Editor::render()
 {
-    m_hierarchy_panel.render(m_engine, m_selected_entity);
-    m_inspection_panel.render(m_engine, m_selected_entity, m_component_editors);
+    m_hierarchy_panel.render(m_left_slot, m_engine, m_selected_entity);
+    m_inspection_panel.render(m_right_slot, m_engine, m_selected_entity, m_component_editors);
 }
 
 void Editor::register_component_editors() 

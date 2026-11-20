@@ -1,5 +1,6 @@
 #include <omega_editor/panels/inspection_panel.hpp>
 #include <omega_editor/panels/component_editor_registry.hpp>
+#include <omega_editor/layout/panel_slot.hpp>
 
 #include <omega/engine/engine.hpp>
 
@@ -298,192 +299,178 @@ ConfirmationResult draw_component_confirmation(const omega_editor::ComponentEdit
 namespace omega_editor
 {
 
-void InspectionPanel::render(omega::Engine& engine, omega::Entity& selected_entity,
+void InspectionPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Entity& selected_entity,
                              ComponentEditorRegistry& component_editor_registry)
 {
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const bool visible = slot.begin("Inspector");
 
-    const float viewport_width = viewport->WorkSize.x;
-    const float viewport_height = viewport->WorkSize.y;
-
-    const float min_width = viewport_width * 0.15f;
-    const float max_width = viewport_width * 0.35f;
-
-    m_width_ratio = std::clamp(m_width_ratio, 0.15f, 0.35f);
-
-    const float panel_width = viewport_width * m_width_ratio;
-
-    ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport_width - panel_width, viewport->WorkPos.y));
-
-    ImGui::SetNextWindowSize(ImVec2(panel_width, viewport_height));
-
-    ImGui::SetNextWindowSizeConstraints(ImVec2(min_width, viewport_height), ImVec2(max_width, viewport_height));
-
-    ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
-
-    omega::ComponentSystem& components = engine.components();
-
-    const bool valid_selection = selected_entity.is_valid() && engine.entities().is_alive(selected_entity);
-
-    if (!valid_selection)
+    if (visible)
     {
-        ImGui::TextDisabled("No entity selected");
+        omega::ComponentSystem& components = engine.components();
 
-        // Discard actions associated with a previous selection
-        clear_pending_action();
-    }
-    else
-    {
-        ImGui::Text("Entity %u", selected_entity.index);
-        ImGui::Separator();
+        const bool valid_selection = selected_entity.is_valid() && engine.entities().is_alive(selected_entity);
 
-        // Existing components
-        const auto navigation_target = m_navigation_target;
-        m_navigation_target.reset();
-        for (ComponentEditor& editor : component_editor_registry.editors())
+        if (!valid_selection)
         {
-            if (!editor.has(selected_entity, components))
-                continue;
+            ImGui::TextDisabled("No entity selected");
 
-            ImGui::PushID(editor.name.c_str());
-
-            const float button_width = ImGui::GetFrameHeight();
-
-            if (ImGui::BeginTable("ComponentHeader", 2))
-            {
-                ImGui::TableSetupColumn("Header", ImGuiTableColumnFlags_WidthStretch);
-
-                ImGui::TableSetupColumn("Remove", ImGuiTableColumnFlags_WidthFixed, button_width);
-
-                ImGui::TableNextRow();
-
-                ImGui::TableSetColumnIndex(0);
-
-                // Expand the target component
-                if (navigation_target == editor.type)
-                {
-                    ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-                }
-
-                const bool opened = ImGui::CollapsingHeader(editor.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
-
-                ImGui::TableSetColumnIndex(1);
-
-                if (ImGui::Button("X", ImVec2(button_width, button_width)))
-                {
-                    m_pending_action = ComponentAction::Remove;
-                    m_pending_type = editor.type;
-                }
-
-                ImGui::EndTable();
-
-                if (navigation_target == editor.type)
-                {
-                    ImGui::SetScrollHereY(0.2f);
-                }
-
-                if (opened)
-                {
-                    // Draw properties
-                    editor.draw(selected_entity, components);
-
-                    // Draw relationships and receive any navigation request
-                    if (auto target = draw_component_relationships(editor, selected_entity, components, component_editor_registry))
-                    {
-                        m_navigation_target = *target;
-                    }
-                }
-            }
-
-            ImGui::PopID();
-        }
-
-        // Add component
-        ImGui::Separator();
-
-        if (ImGui::Button("Add Component", ImVec2(-1.0f, 0.0f)))
-        {
-            ImGui::OpenPopup("AddComponentPopup");
-        }
-
-        if (ImGui::BeginPopup("AddComponentPopup"))
-        {
-            for (ComponentEditor& editor : component_editor_registry.editors())
-            {
-                if (editor.has(selected_entity, components))
-                    continue;
-
-                if (ImGui::MenuItem(editor.name.c_str()))
-                {
-                    m_pending_action = ComponentAction::Add;
-                    m_pending_type = editor.type;
-                }
-            }
-
-            ImGui::EndPopup();
-        }
-    }
-
-    ComponentEditor* editor = m_pending_type.has_value() ? find_component_editor(*m_pending_type, component_editor_registry) : nullptr;
-
-    // Evaluate pending operation
-    if (valid_selection && m_pending_action != ComponentAction::None && editor != nullptr &&
-        !m_confirmation_open)
-    {
-        const bool adding = m_pending_action == ComponentAction::Add;
-
-        // Lazily register its component type and dependencies
-        if (adding && editor->prepare)
-            editor->prepare(components);
-
-        const auto affected = affected_components(editor->type, selected_entity, components, adding);
-
-        if (affected.empty())
-        {
-            // No cascading effect: perform immediately
-            if (adding)
-                editor->create(selected_entity, components);
-            else
-                editor->remove(selected_entity, components);
-
+            // Discard actions associated with a previous selection
             clear_pending_action();
         }
         else
         {
-            // Other components are affected: ask for confirmation
-            ImGui::OpenPopup("Confirm component change");
-            m_confirmation_open = true;
+            ImGui::Text("Entity %u", selected_entity.index);
+            ImGui::Separator();
+
+            // Existing components
+            const auto navigation_target = m_navigation_target;
+            m_navigation_target.reset();
+            for (ComponentEditor& editor : component_editor_registry.editors())
+            {
+                if (!editor.has(selected_entity, components))
+                    continue;
+
+                ImGui::PushID(editor.name.c_str());
+
+                const float button_width = ImGui::GetFrameHeight();
+
+                if (ImGui::BeginTable("ComponentHeader", 2))
+                {
+                    ImGui::TableSetupColumn("Header", ImGuiTableColumnFlags_WidthStretch);
+
+                    ImGui::TableSetupColumn("Remove", ImGuiTableColumnFlags_WidthFixed, button_width);
+
+                    ImGui::TableNextRow();
+
+                    ImGui::TableSetColumnIndex(0);
+
+                    // Expand the target component
+                    if (navigation_target == editor.type)
+                    {
+                        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+                    }
+
+                    const bool opened = ImGui::CollapsingHeader(editor.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+
+                    ImGui::TableSetColumnIndex(1);
+
+                    if (ImGui::Button("X", ImVec2(button_width, button_width)))
+                    {
+                        m_pending_action = ComponentAction::Remove;
+                        m_pending_type = editor.type;
+                    }
+
+                    ImGui::EndTable();
+
+                    if (navigation_target == editor.type)
+                    {
+                        ImGui::SetScrollHereY(0.2f);
+                    }
+
+                    if (opened)
+                    {
+                        // Draw properties
+                        editor.draw(selected_entity, components);
+
+                        // Draw relationships and receive any navigation request
+                        if (auto target = draw_component_relationships(editor, selected_entity, components,
+                                                                       component_editor_registry))
+                        {
+                            m_navigation_target = *target;
+                        }
+                    }
+                }
+
+                ImGui::PopID();
+            }
+
+            // Add component
+            ImGui::Separator();
+
+            if (ImGui::Button("Add Component", ImVec2(-1.0f, 0.0f)))
+            {
+                ImGui::OpenPopup("AddComponentPopup");
+            }
+
+            if (ImGui::BeginPopup("AddComponentPopup"))
+            {
+                for (ComponentEditor& editor : component_editor_registry.editors())
+                {
+                    if (editor.has(selected_entity, components))
+                        continue;
+
+                    if (ImGui::MenuItem(editor.name.c_str()))
+                    {
+                        m_pending_action = ComponentAction::Add;
+                        m_pending_type = editor.type;
+                    }
+                }
+
+                ImGui::EndPopup();
+            }
         }
-    }
 
-    // Confirmation popup
-    editor = m_pending_type.has_value() ? find_component_editor(*m_pending_type, component_editor_registry) : nullptr;
-    if (valid_selection && editor != nullptr && m_pending_action != ComponentAction::None && m_confirmation_open)
-    {
-        const bool adding = m_pending_action == ComponentAction::Add;
+        ComponentEditor* editor =
+            m_pending_type.has_value() ? find_component_editor(*m_pending_type, component_editor_registry) : nullptr;
 
-        const ConfirmationResult result = draw_component_confirmation(*editor, selected_entity, components, component_editor_registry, adding);
-        if (result == ConfirmationResult::Confirmed)
+        // Evaluate pending operation
+        if (valid_selection && m_pending_action != ComponentAction::None && editor != nullptr && !m_confirmation_open)
         {
-            if (adding)
-                editor->create(selected_entity, components);
+            const bool adding = m_pending_action == ComponentAction::Add;
+
+            // Lazily register its component type and dependencies
+            if (adding && editor->prepare)
+                editor->prepare(components);
+
+            const auto affected = affected_components(editor->type, selected_entity, components, adding);
+
+            if (affected.empty())
+            {
+                // No cascading effect: perform immediately
+                if (adding)
+                    editor->create(selected_entity, components);
+                else
+                    editor->remove(selected_entity, components);
+
+                clear_pending_action();
+            }
             else
-                editor->remove(selected_entity, components);
+            {
+                // Other components are affected: ask for confirmation
+                ImGui::OpenPopup("Confirm component change");
+                m_confirmation_open = true;
+            }
+        }
 
-            clear_pending_action();
-        }
-        else if (result == ConfirmationResult::Cancelled)
+        // Confirmation popup
+        editor =
+            m_pending_type.has_value() ? find_component_editor(*m_pending_type, component_editor_registry) : nullptr;
+        if (valid_selection && editor != nullptr && m_pending_action != ComponentAction::None && m_confirmation_open)
         {
-            clear_pending_action();
+            const bool adding = m_pending_action == ComponentAction::Add;
+
+            const ConfirmationResult result =
+                draw_component_confirmation(*editor, selected_entity, components, component_editor_registry, adding);
+            if (result == ConfirmationResult::Confirmed)
+            {
+                if (adding)
+                    editor->create(selected_entity, components);
+                else
+                    editor->remove(selected_entity, components);
+
+                clear_pending_action();
+            }
+            else if (result == ConfirmationResult::Cancelled)
+            {
+                clear_pending_action();
+            }
         }
+
+        if (m_confirmation_open && !ImGui::IsPopupOpen("Confirm component change"))
+            clear_pending_action();
     }
 
-    if (m_confirmation_open && !ImGui::IsPopupOpen("Confirm component change"))
-        clear_pending_action();
-
-    m_width_ratio = ImGui::GetWindowWidth() / viewport_width;
-
-    ImGui::End();
+    slot.end();
 }
 
 void InspectionPanel::clear_pending_action()

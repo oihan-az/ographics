@@ -18,11 +18,13 @@ namespace omega_editor
 {
 
 class ComponentEditorRegistry;
+class PanelSlot;
 
 class InspectionPanel
 {
   public:
-    void render(omega::Engine& engine, omega::Entity& selected_entity, ComponentEditorRegistry& component_editor_registry);
+    void render(PanelSlot& slot, omega::Engine& engine, omega::Entity& selected_entity,
+                ComponentEditorRegistry& component_editor_registry);
 
   private:
     enum class ComponentAction
