@@ -57,7 +57,9 @@ struct ViewportRect
 class CameraViewport
 {
   public:
-    CameraViewport(omega::ComponentSystem& components, omega::Entity camera_entity);
+    CameraViewport(omega::ComponentSystem& components);
+
+    void set_camera(omega::Entity camera_entity);
 
     void update(const ViewportRect& available);
 
@@ -74,7 +76,7 @@ class CameraViewport
 
   private:
     omega::ComponentSystem& m_components;
-    omega::Entity m_camera_entity;
+    omega::Entity m_camera_entity{};
 
     ViewportRect m_rect;
     AspectRatioPreset m_aspect_ratio = AspectRatioPreset::Ratio16_9;

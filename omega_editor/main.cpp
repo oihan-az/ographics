@@ -43,22 +43,6 @@ int main()
     if (!models.instantiate(model, sponza))
         throw std::runtime_error("Failed to instantiate");
 
-    // Create camera
-    omega::Entity camera_entity = engine.entities().create_entity();
-    {
-        omega::Transform transform;
-        transform.position = {0.0f, 2.0f, 0.0f};
-        transform.rotation = omega::Quaternion{0.70710678f, 0.0f, -0.70710678f, 0.0f};
-        engine.components().add(camera_entity, transform);
-
-        omega::PerspectiveCamera perspective_camera;
-        perspective_camera.proj.aspect_ratio = static_cast<float>(engine.graphics().swapchain().width()) / static_cast<float>(engine.graphics().swapchain().height());
-        perspective_camera.proj.field_of_view = omega::radians(60.0f);
-        perspective_camera.proj.near_plane = 0.1f;
-        perspective_camera.proj.far_plane = 100.0f;
-        engine.components().add(camera_entity, perspective_camera);
-    }
-
     // Create directional light
     omega::Entity directional_light_entity = engine.entities().create_entity();
     {
@@ -105,13 +89,13 @@ int main()
 
     // Editor
     omega_editor::ImGuiLayer imgui_layer;
-    omega_editor::Editor editor(engine, camera_entity);
+    omega_editor::Editor editor(engine);
     editor.initialize();
 
     // Renderer
     omega_editor::UIPipelineDesc pipeline_desc
     {
-        camera_entity,
+        editor.editor_camera(),
         imgui_layer,
         engine.components(),
         engine.events(),

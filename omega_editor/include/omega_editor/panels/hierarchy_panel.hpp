@@ -21,9 +21,12 @@ class PanelSlot;
 class HierarchyPanel
 {
   public:
-    void render(PanelSlot& slot, omega::Engine& engine, omega::Entity& selected_entity);
+    void render(PanelSlot& slot, omega::Engine& engine, 
+                omega::Entity& selected_entity, omega::Entity excluded_entity = omega::Entity{});
 
   private:
+    omega::Entity m_excluded_entity{};
+
     std::optional<omega::Entity> m_pending_delete;
 
     void render_entity(omega::Entity entity, omega::HierarchySystem& hierarchy, omega::Entity& selected_entity);

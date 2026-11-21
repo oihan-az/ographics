@@ -10,8 +10,11 @@
 namespace omega_editor
 {
 
-void HierarchyPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Entity& selected_entity)
+void HierarchyPanel::render(PanelSlot& slot, omega::Engine& engine, 
+                            omega::Entity& selected_entity, omega::Entity excluded_entity)
 {
+    m_excluded_entity = excluded_entity;
+
     const bool visible = slot.begin("Hierarchy");
     if (visible)
     {
@@ -75,6 +78,9 @@ void HierarchyPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Entit
 
 void HierarchyPanel::render_entity(omega::Entity entity, omega::HierarchySystem& hierarchy, omega::Entity& selected_entity)
 {
+    if (entity == m_excluded_entity)
+        return;
+
     const auto& children = hierarchy.get_children(entity);
 
     ImGui::PushID(static_cast<int>(entity.index));

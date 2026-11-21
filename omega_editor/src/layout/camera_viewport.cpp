@@ -9,9 +9,14 @@
 namespace omega_editor
 {
 
-CameraViewport::CameraViewport(omega::ComponentSystem& components, omega::Entity camera_entity)
-    : m_components(components), m_camera_entity(camera_entity)
+CameraViewport::CameraViewport(omega::ComponentSystem& components)
+    : m_components(components)
 {
+}
+
+void CameraViewport::set_camera(omega::Entity camera_entity)
+{
+    m_camera_entity = camera_entity;
 }
 
 void CameraViewport::update(const ViewportRect& available)

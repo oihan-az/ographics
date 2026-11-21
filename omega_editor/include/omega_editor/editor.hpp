@@ -22,17 +22,21 @@ namespace omega_editor
 class Editor
 {
   public:
-    Editor(omega::Engine& engine, omega::Entity camera_entity);
+    Editor(omega::Engine& engine);
+
     void initialize();
     void render();
 
+    omega::Entity editor_camera() const;
     const CameraViewport& camera_viewport() const;
 
   private:
+    void create_editor_camera();
+    omega::Entity m_camera_entity{};
+
     omega::Engine& m_engine;
 
     omega::Entity m_selected_entity;
-    omega::Entity m_camera_entity;
 
     void register_component_editors();
     ComponentEditorRegistry m_component_editors;

@@ -33,13 +33,14 @@ void draw_viewport_outline(const omega_editor::ViewportRect& rect)
 namespace omega_editor
 {
 
-Editor::Editor(omega::Engine& engine, omega::Entity camera_entity)
-    : m_engine(engine), m_camera_entity(camera_entity), m_camera_viewport(engine.components(), camera_entity)
+Editor::Editor(omega::Engine& engine)
+    : m_engine(engine), m_camera_viewport(engine.components())
 {
 }
 
 void Editor::initialize()
 {
+    create_editor_camera();
     register_component_editors();
 }
 
@@ -55,7 +56,7 @@ void Editor::render()
     // Editor panels
     if (!m_camera_viewport.fullscreen())
     {
-        m_hierarchy_panel.render(m_left_slot, m_engine, m_selected_entity);
+        m_hierarchy_panel.render(m_left_slot, m_engine, m_selected_entity, m_camera_entity);
 
         m_inspection_panel.render(m_right_slot, m_engine, m_selected_entity, m_component_editors);
     }
@@ -77,9 +78,35 @@ void Editor::render()
     render_transform_gizmo();
 }
 
+omega::Entity Editor::editor_camera() const
+{
+    return m_camera_entity;
+}
+
 const CameraViewport& Editor::camera_viewport() const
 {
     return m_camera_viewport;
+}
+
+void Editor::create_editor_camera() 
+{
+    m_camera_entity = m_engine.entities().create_entity();
+
+    omega::Transform transform;
+    transform.position = {0.0f, 2.0f, 0.0f};
+    transform.rotation = omega::Quaternion{0.70710678f, 0.0f, -0.70710678f, 0.0f};
+
+    m_engine.components().add(m_camera_entity, transform);
+
+    omega::PerspectiveCamera camera;
+    camera.proj.aspect_ratio = m_camera_viewport.aspect_ratio();
+    camera.proj.field_of_view = omega::radians(60.0f);
+    camera.proj.near_plane = 0.1f;
+    camera.proj.far_plane = 100.0f;
+
+    m_engine.components().add(m_camera_entity, camera);
+
+    m_camera_viewport.set_camera(m_camera_entity);
 }
 
 void Editor::register_component_editors() 
