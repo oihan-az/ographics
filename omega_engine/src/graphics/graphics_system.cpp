@@ -16,7 +16,7 @@ namespace omega
 {
 
 GraphicsSystem::GraphicsSystem(const std::string& application_name, uint32_t max_frames_in_flight,
-                               PlatformSystem& platform, EventSystem& events)
+                               PlatformSystem& platform, EventSystem& events, PerformanceSystem& performance)
     : m_instance(
       ogfx::InstanceDesc
       {
@@ -40,7 +40,8 @@ GraphicsSystem::GraphicsSystem(const std::string& application_name, uint32_t max
       m_max_frames_in_flight(std::max(max_frames_in_flight, 1u)),
       m_renderer(m_physical_device, m_device, m_resource_allocator),
       m_meshes(events), m_gpu_meshes(m_physical_device, m_device, m_renderer.resource_registry(), m_meshes, events), 
-      m_textures(events), m_gpu_textures(m_physical_device, m_device, m_renderer.resource_registry(), m_textures, events)
+      m_textures(events), m_gpu_textures(m_physical_device, m_device, m_renderer.resource_registry(), m_textures, events),
+      m_performance(performance)
 {
     // Frame sync
     m_frames.resize(m_max_frames_in_flight);
@@ -68,12 +69,25 @@ GraphicsSystem::~GraphicsSystem() = default;
 
 void GraphicsSystem::start_frame()
 {
-    wait_frame();
-    complete_uploads();
+    ScopedCpuTimer timer(m_performance, "Graphics Start Frame");
+
+    {
+        ScopedCpuTimer timer(m_performance, "Wait Frame");
+        wait_frame();
+    }
+
+    {
+        ScopedCpuTimer timer(m_performance, "Complete Uploads");
+        complete_uploads();
+    }
 
     Frame& frame = m_frames[m_current_frame];
 
-    m_frame_acquired = m_swapchain.acquire_next_image(*frame.image_available);
+    {
+        ScopedCpuTimer timer(m_performance, "Acquire Swapchain Image");
+
+        m_frame_acquired = m_swapchain.acquire_next_image(*frame.image_available);
+    }
 
     if (m_frame_acquired.status == ogfx::PresentResult::OutOfDate)
     {
@@ -138,49 +152,77 @@ void GraphicsSystem::initialize()
 
 void GraphicsSystem::update()
 {
+    ScopedCpuTimer timer(m_performance, "Graphics Update");
+
     Frame& frame = m_frames[m_current_frame];
 
-    m_gpu_meshes.synchronize();
+    {
+        ScopedCpuTimer timer(m_performance, "Synchronize Meshes");
+        m_gpu_meshes.synchronize();
+    }
 
-    frame.upload_command_buffer->begin();
-    const auto batch = m_gpu_textures.synchronize(*frame.upload_command_buffer);
-    frame.upload_command_buffer->end();
+    TextureUploadBatch batch;
+    {
+        ScopedCpuTimer timer(m_performance, "Synchronize Textures");
+
+        frame.upload_command_buffer->begin();
+        batch = m_gpu_textures.synchronize(*frame.upload_command_buffer);
+        frame.upload_command_buffer->end();
+    }
+
     if (batch.is_valid())
     {
         frame.upload_batch = batch;
 
+        ScopedCpuTimer timer(m_performance, "Submit Uploads");
+
         ogfx::SubmitDesc upload_submit;
         upload_submit.command_buffers.push_back(frame.upload_command_buffer.get());
 
-        // TODO: change to transfer queue (need to handle sync between different queues)
+        // TODO: Change to transfer queue.
         m_device.queue(ogfx::QueueType::Graphics).submit(upload_submit);
     }
 }
 
 void GraphicsSystem::render()
 {
+    ScopedCpuTimer timer(m_performance, "Graphics Render");
+
     if (m_frame_acquired.status == ogfx::PresentResult::OutOfDate)
         return;
 
     Frame& frame = m_frames[m_current_frame];
-    m_renderer.execute(*frame.command_buffer);
 
-    frame.in_flight->reset();
-
-    ogfx::SubmitDesc submitDesc;
-    submitDesc.command_buffers.push_back(frame.command_buffer.get());
-    submitDesc.wait_semaphores.push_back({frame.image_available.get(), ogfx::PipelineStage::ColorAttachmentOutput});
-    submitDesc.signal_semaphores.push_back(m_render_finished[m_current_image_index].get());
-    submitDesc.fence = frame.in_flight.get();
-
-    m_device.queue(ogfx::QueueType::Graphics).submit(submitDesc);
-
-    ogfx::PresentResult present_result = m_device.queue(ogfx::QueueType::Present).present(m_swapchain, m_current_image_index, *m_render_finished[m_current_image_index]);
-
-    if (present_result == ogfx::PresentResult::OutOfDate ||
-        present_result == ogfx::PresentResult::Suboptimal)
     {
-        m_recreate_swapchain = true;
+        ScopedCpuTimer timer(m_performance, "Renderer Execute");
+
+        m_renderer.execute(*frame.command_buffer);
+    }
+
+    {
+        ScopedCpuTimer timer(m_performance, "Graphics Submission");
+
+        frame.in_flight->reset();
+
+        ogfx::SubmitDesc submitDesc;
+        submitDesc.command_buffers.push_back(frame.command_buffer.get());
+        submitDesc.wait_semaphores.push_back({frame.image_available.get(), ogfx::PipelineStage::ColorAttachmentOutput});
+        submitDesc.signal_semaphores.push_back(m_render_finished[m_current_image_index].get());
+        submitDesc.fence = frame.in_flight.get();
+
+        m_device.queue(ogfx::QueueType::Graphics).submit(submitDesc);
+    }
+
+    {
+        ScopedCpuTimer timer(m_performance, "Graphics Present");
+
+        ogfx::PresentResult present_result = m_device.queue(ogfx::QueueType::Present).present(m_swapchain, m_current_image_index, *m_render_finished[m_current_image_index]);
+
+        if (present_result == ogfx::PresentResult::OutOfDate ||
+            present_result == ogfx::PresentResult::Suboptimal)
+        {
+            m_recreate_swapchain = true;
+        }
     }
 }
 

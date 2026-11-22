@@ -15,6 +15,8 @@
 #include <omega/texture/texture_system.hpp>
 #include <omega/texture/gpu_texture_system.hpp>
 
+#include <omega/core/performance/performance_system.hpp>
+
 #include <memory>
 #include <vector>
 
@@ -35,7 +37,7 @@ class GraphicsSystem
 {
   public:
     GraphicsSystem(const std::string& application_name, uint32_t max_frames_in_flight, 
-                   PlatformSystem& platform, EventSystem& events);
+                   PlatformSystem& platform, EventSystem& events, PerformanceSystem& performance);
     ~GraphicsSystem();
 
     void start_frame();
@@ -118,6 +120,8 @@ class GraphicsSystem
     void complete_uploads();
 
     static TextureAsset create_missing_texture_asset();
+
+    PerformanceSystem& m_performance;
 };
 
 } // namespace omega

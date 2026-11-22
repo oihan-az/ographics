@@ -10,7 +10,7 @@ Engine::Engine(const EngineDesc& desc)
       m_transforms(m_events, m_components, m_hierarchy, m_entities),
       m_cameras(m_events, m_components, m_hierarchy, m_entities, m_transforms),
       m_platform(desc.window),
-      m_graphics(desc.application_name, desc.max_frames_in_flight, m_platform, m_events)
+      m_graphics(desc.application_name, desc.max_frames_in_flight, m_platform, m_events, m_performance)
 {}
 
 void Engine::initialize()
