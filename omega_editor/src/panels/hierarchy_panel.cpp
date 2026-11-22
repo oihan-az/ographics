@@ -10,17 +10,19 @@
 namespace omega_editor
 {
 
-void HierarchyPanel::render(PanelSlot& slot, omega::Engine& engine, 
-                            omega::Entity& selected_entity, omega::Entity excluded_entity)
+HierarchyPanel::HierarchyPanel(omega::Engine& engine, omega::Entity& selected_entity, omega::Entity& excluded_entity)
+    : m_engine(engine), m_selected_entity(selected_entity), m_excluded_entity(excluded_entity)
+{}
+
+const char* HierarchyPanel::title() const
 {
-    m_excluded_entity = excluded_entity;
+    return "Hierarchy";
+}
 
-    const bool visible = slot.begin("Hierarchy");
-    if (visible)
+void HierarchyPanel::render()
+{
     {
-
-        // Toolbar
-        omega::HierarchySystem& hierarchy = engine.hierarchy();
+        omega::HierarchySystem& hierarchy = m_engine.hierarchy();
 
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Entities");
@@ -31,17 +33,17 @@ void HierarchyPanel::render(PanelSlot& slot, omega::Engine& engine,
         ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - button_width);
 
         if (ImGui::Button("+", ImVec2(button_width, 0.0f)))
-            engine.entities().create_entity();
+            m_engine.entities().create_entity();
 
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
 
         // Entity tree
-        for (omega::Entity entity : engine.entities())
+        for (omega::Entity entity : m_engine.entities())
         {
             if (!hierarchy.has_parent(entity))
-                render_entity(entity, hierarchy, selected_entity);
+                render_entity(entity, hierarchy, m_selected_entity);
         }
 
         // Empty-space drop target
@@ -51,7 +53,7 @@ void HierarchyPanel::render(PanelSlot& slot, omega::Engine& engine,
 
         // Deselect when clicking empty space
         if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
-            selected_entity = omega::Entity{};
+            m_selected_entity = omega::Entity{};
 
         // Allow dropping entities to make them roots
         if (ImGui::BeginDragDropTarget())
@@ -67,16 +69,15 @@ void HierarchyPanel::render(PanelSlot& slot, omega::Engine& engine,
         }
     }
 
-    slot.end();
-
     if (m_pending_delete.has_value())
     {
-        engine.entities().destroy_entity(*m_pending_delete);
+        m_engine.entities().destroy_entity(*m_pending_delete);
         m_pending_delete.reset();
     }
 }
 
-void HierarchyPanel::render_entity(omega::Entity entity, omega::HierarchySystem& hierarchy, omega::Entity& selected_entity)
+void HierarchyPanel::render_entity(omega::Entity entity, omega::HierarchySystem& hierarchy,
+                                   omega::Entity& selected_entity)
 {
     if (entity == m_excluded_entity)
         return;

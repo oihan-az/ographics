@@ -2,6 +2,7 @@
 #define OMEGA_EDITOR_PANEL_HIERARCHY_HPP
 
 #include <omega/core/entity/entity.hpp>
+#include <omega_editor/layout/panel_content.hpp>
 
 #include <optional>
 
@@ -18,14 +19,18 @@ namespace omega_editor
 
 class PanelSlot;
 
-class HierarchyPanel
+class HierarchyPanel : public PanelContent
 {
   public:
-    void render(PanelSlot& slot, omega::Engine& engine, 
-                omega::Entity& selected_entity, omega::Entity excluded_entity = omega::Entity{});
+    HierarchyPanel(omega::Engine& engine, omega::Entity& selected_entity, omega::Entity& excluded_entity);
+
+    const char* title() const override;
+    void render() override;
 
   private:
-    omega::Entity m_excluded_entity{};
+    omega::Engine& m_engine;
+    omega::Entity& m_selected_entity;
+    omega::Entity& m_excluded_entity;
 
     std::optional<omega::Entity> m_pending_delete;
 

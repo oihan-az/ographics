@@ -41,7 +41,11 @@ Editor::Editor(omega::Engine& engine)
 void Editor::initialize()
 {
     create_editor_camera();
+
     register_component_editors();
+
+    m_hierarchy_panel.set_content(m_hierarchy_content);
+    m_properties_panel.add_content(m_inspection_content);
 }
 
 void Editor::render()
@@ -56,9 +60,8 @@ void Editor::render()
     // Editor panels
     if (!m_camera_viewport.fullscreen())
     {
-        m_hierarchy_panel.render(m_left_slot, m_engine, m_selected_entity, m_camera_entity);
-
-        m_inspection_panel.render(m_right_slot, m_engine, m_selected_entity, m_component_editors);
+        m_hierarchy_panel.render();
+        m_properties_panel.render();
     }
 
     // Viewport layout

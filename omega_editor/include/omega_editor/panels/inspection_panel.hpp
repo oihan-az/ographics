@@ -1,7 +1,8 @@
 #ifndef OMEGA_EDITOR_PANEL_INSPECTION_HPP
 #define OMEGA_EDITOR_PANEL_INSPECTION_HPP
 
-#include <omega_editor/panels/component_editor.hpp>
+#include <omega_editor/layout/panel_content.hpp>
+#include <omega_editor/component_editor/component_editor.hpp>
 
 #include <optional>
 #include <typeindex>
@@ -20,21 +21,25 @@ namespace omega_editor
 class ComponentEditorRegistry;
 class PanelSlot;
 
-class InspectionPanel
+class InspectionPanel : public PanelContent
 {
   public:
-    void render(PanelSlot& slot, omega::Engine& engine, omega::Entity& selected_entity,
-                ComponentEditorRegistry& component_editor_registry);
+    InspectionPanel(omega::Engine& engine, omega::Entity& selected_entity, ComponentEditorRegistry& registry);
+
+    const char* title() const override;
+    void render() override;
 
   private:
+    omega::Engine& m_engine;
+    omega::Entity& m_selected_entity;
+    ComponentEditorRegistry& m_registry;
+
     enum class ComponentAction
     {
         None,
         Add,
         Remove
     };
-
-    float m_width_ratio = 0.20f;
 
     ComponentAction m_pending_action = ComponentAction::None;
     std::optional<std::type_index> m_pending_type;

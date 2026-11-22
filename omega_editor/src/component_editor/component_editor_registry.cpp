@@ -1,4 +1,4 @@
-#include <omega_editor/panels/component_editor_registry.hpp>
+#include <omega_editor/component_editor/component_editor_registry.hpp>
 
 namespace omega_editor
 {

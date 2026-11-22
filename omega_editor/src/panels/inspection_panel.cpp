@@ -1,5 +1,5 @@
 #include <omega_editor/panels/inspection_panel.hpp>
-#include <omega_editor/panels/component_editor_registry.hpp>
+#include <omega_editor/component_editor/component_editor_registry.hpp>
 #include <omega_editor/layout/panel_slot.hpp>
 
 #include <omega/engine/engine.hpp>
@@ -299,16 +299,22 @@ ConfirmationResult draw_component_confirmation(const omega_editor::ComponentEdit
 namespace omega_editor
 {
 
-void InspectionPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Entity& selected_entity,
-                             ComponentEditorRegistry& component_editor_registry)
+InspectionPanel::InspectionPanel(omega::Engine& engine, omega::Entity& selected_entity, ComponentEditorRegistry& registry)
+    : m_engine(engine), m_selected_entity(selected_entity), m_registry(registry)
 {
-    const bool visible = slot.begin("Inspector");
+}
 
-    if (visible)
+const char* InspectionPanel::title() const
+{
+    return "Inspector";
+}
+
+void InspectionPanel::render()
+{
     {
-        omega::ComponentSystem& components = engine.components();
+        omega::ComponentSystem& components = m_engine.components();
 
-        const bool valid_selection = selected_entity.is_valid() && engine.entities().is_alive(selected_entity);
+        const bool valid_selection = m_selected_entity.is_valid() && m_engine.entities().is_alive(m_selected_entity);
 
         if (!valid_selection)
         {
@@ -319,15 +325,15 @@ void InspectionPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Enti
         }
         else
         {
-            ImGui::Text("Entity %u", selected_entity.index);
+            ImGui::Text("Entity %u", m_selected_entity.index);
             ImGui::Separator();
 
             // Existing components
             const auto navigation_target = m_navigation_target;
             m_navigation_target.reset();
-            for (ComponentEditor& editor : component_editor_registry.editors())
+            for (ComponentEditor& editor : m_registry.editors())
             {
-                if (!editor.has(selected_entity, components))
+                if (!editor.has(m_selected_entity, components))
                     continue;
 
                 ImGui::PushID(editor.name.c_str());
@@ -370,11 +376,11 @@ void InspectionPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Enti
                     if (opened)
                     {
                         // Draw properties
-                        editor.draw(selected_entity, components);
+                        editor.draw(m_selected_entity, components);
 
                         // Draw relationships and receive any navigation request
-                        if (auto target = draw_component_relationships(editor, selected_entity, components,
-                                                                       component_editor_registry))
+                        if (auto target = draw_component_relationships(editor, m_selected_entity, components,
+                                                                       m_registry))
                         {
                             m_navigation_target = *target;
                         }
@@ -394,9 +400,9 @@ void InspectionPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Enti
 
             if (ImGui::BeginPopup("AddComponentPopup"))
             {
-                for (ComponentEditor& editor : component_editor_registry.editors())
+                for (ComponentEditor& editor : m_registry.editors())
                 {
-                    if (editor.has(selected_entity, components))
+                    if (editor.has(m_selected_entity, components))
                         continue;
 
                     if (ImGui::MenuItem(editor.name.c_str()))
@@ -411,7 +417,7 @@ void InspectionPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Enti
         }
 
         ComponentEditor* editor =
-            m_pending_type.has_value() ? find_component_editor(*m_pending_type, component_editor_registry) : nullptr;
+            m_pending_type.has_value() ? find_component_editor(*m_pending_type, m_registry) : nullptr;
 
         // Evaluate pending operation
         if (valid_selection && m_pending_action != ComponentAction::None && editor != nullptr && !m_confirmation_open)
@@ -422,15 +428,15 @@ void InspectionPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Enti
             if (adding && editor->prepare)
                 editor->prepare(components);
 
-            const auto affected = affected_components(editor->type, selected_entity, components, adding);
+            const auto affected = affected_components(editor->type, m_selected_entity, components, adding);
 
             if (affected.empty())
             {
                 // No cascading effect: perform immediately
                 if (adding)
-                    editor->create(selected_entity, components);
+                    editor->create(m_selected_entity, components);
                 else
-                    editor->remove(selected_entity, components);
+                    editor->remove(m_selected_entity, components);
 
                 clear_pending_action();
             }
@@ -443,20 +449,19 @@ void InspectionPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Enti
         }
 
         // Confirmation popup
-        editor =
-            m_pending_type.has_value() ? find_component_editor(*m_pending_type, component_editor_registry) : nullptr;
+        editor = m_pending_type.has_value() ? find_component_editor(*m_pending_type, m_registry) : nullptr;
         if (valid_selection && editor != nullptr && m_pending_action != ComponentAction::None && m_confirmation_open)
         {
             const bool adding = m_pending_action == ComponentAction::Add;
 
             const ConfirmationResult result =
-                draw_component_confirmation(*editor, selected_entity, components, component_editor_registry, adding);
+                draw_component_confirmation(*editor, m_selected_entity, components, m_registry, adding);
             if (result == ConfirmationResult::Confirmed)
             {
                 if (adding)
-                    editor->create(selected_entity, components);
+                    editor->create(m_selected_entity, components);
                 else
-                    editor->remove(selected_entity, components);
+                    editor->remove(m_selected_entity, components);
 
                 clear_pending_action();
             }
@@ -469,8 +474,6 @@ void InspectionPanel::render(PanelSlot& slot, omega::Engine& engine, omega::Enti
         if (m_confirmation_open && !ImGui::IsPopupOpen("Confirm component change"))
             clear_pending_action();
     }
-
-    slot.end();
 }
 
 void InspectionPanel::clear_pending_action()

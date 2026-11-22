@@ -4,9 +4,11 @@
 #include <omega_editor/layout/panel_slot.hpp>
 #include <omega_editor/layout/camera_viewport.hpp>
 #include <omega_editor/layout/viewport_toolbar.hpp>
+#include <omega_editor/layout/panel.hpp>
+#include <omega_editor/layout/tabbed_panel.hpp>
 #include <omega_editor/panels/hierarchy_panel.hpp>
 #include <omega_editor/panels/inspection_panel.hpp>
-#include <omega_editor/panels/component_editor_registry.hpp>
+#include <omega_editor/component_editor/component_editor_registry.hpp>
 #include <omega_editor/gizmos/transform_gizmo.hpp>
 
 namespace omega
@@ -31,21 +33,23 @@ class Editor
     const CameraViewport& camera_viewport() const;
 
   private:
-    void create_editor_camera();
-    omega::Entity m_camera_entity{};
-
     omega::Engine& m_engine;
-
     omega::Entity m_selected_entity;
+
+    void create_editor_camera();
+    omega::Entity m_camera_entity;
 
     void register_component_editors();
     ComponentEditorRegistry m_component_editors;
 
-    HierarchyPanel m_hierarchy_panel;
-    InspectionPanel m_inspection_panel;
-
     PanelSlot m_left_slot{PanelAnchor::Left, {{0.20f, 0.15f, 0.35f}, {}}};
     PanelSlot m_right_slot{PanelAnchor::Right, {{0.20f, 0.15f, 0.35f}, {}}};
+
+    HierarchyPanel m_hierarchy_content{m_engine, m_selected_entity, m_camera_entity};
+    InspectionPanel m_inspection_content{m_engine, m_selected_entity, m_component_editors};
+
+    Panel m_hierarchy_panel{m_left_slot, "Hierarchy"};
+    TabbedPanel m_properties_panel{m_right_slot, "Properties"};
 
     CameraViewport m_camera_viewport;
     ViewportToolbar m_viewport_toolbar;

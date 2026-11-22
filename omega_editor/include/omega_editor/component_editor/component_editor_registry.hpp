@@ -1,7 +1,7 @@
 #ifndef OMEGA_EDITOR_COMPONENT_EDITOR_REGISTRY_HPP
 #define OMEGA_EDITOR_COMPONENT_EDITOR_REGISTRY_HPP
 
-#include <omega_editor/panels/component_editor.hpp>
+#include <omega_editor/component_editor/component_editor.hpp>
 
 #include <functional>
 #include <vector>
