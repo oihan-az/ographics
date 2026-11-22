@@ -42,45 +42,60 @@ void CameraViewport::update(const ViewportRect& available)
 
 void CameraViewport::set_aspect_ratio(AspectRatioPreset preset)
 {
-    if (m_aspect_ratio == preset)
-        return;
-
-    m_aspect_ratio = preset;
-
     if (!m_components.has<omega::PerspectiveCamera>(m_camera_entity))
         return;
 
+    const auto it = std::find_if(aspect_ratio_presets.begin(), aspect_ratio_presets.end(),
+                                 [preset](const auto& info) { return info.preset == preset; });
+
+    if (it == aspect_ratio_presets.end())
+        return;
+
     auto camera = m_components.get<omega::PerspectiveCamera>(m_camera_entity);
-    camera->proj.aspect_ratio = aspect_ratio();
+    if (camera->proj.aspect_ratio == it->ratio)
+        return;
+
+    camera->proj.aspect_ratio = it->ratio;
 
     m_components.mark_dirty<omega::PerspectiveCamera>(m_camera_entity);
 }
 
-AspectRatioPreset CameraViewport::aspect_ratio_preset() const
+std::optional<AspectRatioPreset> CameraViewport::aspect_ratio_preset() const
 {
-    return m_aspect_ratio;
+    constexpr float epsilon = 0.0001f;
+
+    const float ratio = aspect_ratio();
+    for (const auto& info : aspect_ratio_presets)
+    {
+        if (std::abs(ratio - info.ratio) < epsilon)
+            return info.preset;
+    }
+
+    return std::nullopt;
 }
 
 float CameraViewport::aspect_ratio() const
 {
-    for (const auto& info : aspect_ratio_presets)
-    {
-        if (info.preset == m_aspect_ratio)
-            return info.ratio;
-    }
+    if (!m_components.has<omega::PerspectiveCamera>(m_camera_entity))
+        return 16.0f / 9.0f;
 
-    return 16.0f / 9.0f;
+    const auto camera = m_components.get<omega::PerspectiveCamera>(m_camera_entity);
+    return camera->proj.aspect_ratio;
 }
 
 const char* CameraViewport::aspect_ratio_label() const
 {
+    const auto preset = aspect_ratio_preset();
+    if (!preset)
+        return "Custom";
+
     for (const auto& info : aspect_ratio_presets)
     {
-        if (info.preset == m_aspect_ratio)
+        if (info.preset == *preset)
             return info.label;
     }
 
-    return "16:9";
+    return "Custom";
 }
 
 void CameraViewport::set_fullscreen(bool fullscreen)

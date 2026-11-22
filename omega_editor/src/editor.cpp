@@ -191,7 +191,7 @@ void Editor::register_component_editors()
                 changed = true;
             }
 
-            changed |= ImGui::DragFloat("Aspect Ratio", &proj.aspect_ratio, 0.01f, 0.01f);
+            changed |= ImGui::DragFloat("Aspect Ratio", &proj.aspect_ratio, 0.01f, 0.01f, 10.0f);
             changed |= ImGui::DragFloat("Near Plane", &proj.near_plane, 0.01f, 0.001f);
             changed |= ImGui::DragFloat("Far Plane", &proj.far_plane, 1.0f, proj.near_plane);
 

@@ -58,7 +58,7 @@ ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport)
         {
             ImDrawList* draw = ImGui::GetWindowDrawList();
 
-                // Viewport information
+            // Viewport information
             ImGui::SetCursorPosY((toolbar_height - ImGui::GetTextLineHeight()) * 0.5f);
 
             ImGui::SetNextItemWidth(75.0f);
@@ -66,6 +66,7 @@ ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport)
             // Aspect ratio picker
             {
                 const char* label = viewport.aspect_ratio_label();
+                const auto active_preset = viewport.aspect_ratio_preset();
 
                 constexpr float padding_x = 8.0f;
                 constexpr float chevron_width = 12.0f;
@@ -106,7 +107,7 @@ ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport)
                 {
                     for (const auto& info : aspect_ratio_presets)
                     {
-                        const bool selected = viewport.aspect_ratio_preset() == info.preset;
+                        const bool selected = active_preset && *active_preset == info.preset;
 
                         if (ImGui::Selectable(info.label, selected))
                             viewport.set_aspect_ratio(info.preset);

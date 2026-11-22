@@ -6,6 +6,7 @@
 #include <imgui.h>
 
 #include <array>
+#include <optional>
 
 namespace omega
 {
@@ -60,11 +61,10 @@ class CameraViewport
     CameraViewport(omega::ComponentSystem& components);
 
     void set_camera(omega::Entity camera_entity);
-
     void update(const ViewportRect& available);
 
     void set_aspect_ratio(AspectRatioPreset preset);
-    AspectRatioPreset aspect_ratio_preset() const;
+    std::optional<AspectRatioPreset> aspect_ratio_preset() const;
     float aspect_ratio() const;
     const char* aspect_ratio_label() const;
 
@@ -79,7 +79,6 @@ class CameraViewport
     omega::Entity m_camera_entity{};
 
     ViewportRect m_rect;
-    AspectRatioPreset m_aspect_ratio = AspectRatioPreset::Ratio16_9;
     bool m_fullscreen = false;
 };
 
