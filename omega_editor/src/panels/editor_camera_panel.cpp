@@ -1,5 +1,6 @@
 #include <omega_editor/panels/editor_camera_panel.hpp>
 #include <omega_editor/component_editor/component_editor.hpp>
+#include <omega_editor/layout/camera_viewport.hpp>
 
 #include <omega/core/math/angle.hpp>
 #include <omega/core/math/quaternion.hpp>
@@ -14,7 +15,8 @@
 namespace omega_editor
 {
 
-EditorCameraPanel::EditorCameraPanel(omega::Engine& engine, omega::Entity& camera_entity, ComponentEditorRegistry& registry)
+EditorCameraPanel::EditorCameraPanel(omega::Engine& engine, const omega::Entity& camera_entity,
+                                                   ComponentEditorRegistry& registry)
     : m_engine(engine), m_camera_entity(camera_entity), m_registry(registry)
 {
 }
@@ -25,6 +27,11 @@ const char* EditorCameraPanel::title() const
 }
 
 void EditorCameraPanel::render()
+{
+    render_components();
+}
+
+void EditorCameraPanel::render_components()
 {
     auto& components = m_engine.components();
 

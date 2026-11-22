@@ -49,14 +49,15 @@ class Editor
     PanelSlot m_left_slot{PanelAnchor::Left, {{0.20f, 0.15f, 0.35f}, {}}};
     PanelSlot m_right_slot{PanelAnchor::Right, {{0.20f, 0.15f, 0.35f}, {}}};
 
+    Panel m_hierarchy_panel{m_left_slot, "Hierarchy"};
+    TabbedPanel m_properties_panel{m_right_slot, "Properties"};
+ 
+    CameraViewport m_camera_viewport;
+
     HierarchyPanel m_hierarchy_content{m_engine, m_selected_entity, m_camera_entity};
     InspectionPanel m_inspection_content{m_engine, m_selected_entity, m_component_editors};
     EditorCameraPanel m_editor_camera_content{m_engine, m_camera_entity, m_component_editors};
 
-    Panel m_hierarchy_panel{m_left_slot, "Hierarchy"};
-    TabbedPanel m_properties_panel{m_right_slot, "Properties"};
-
-    CameraViewport m_camera_viewport;
     ViewportToolbar m_viewport_toolbar;
     void update_camera_viewport();
 

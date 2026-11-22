@@ -202,9 +202,16 @@ void ViewportToolbar::show()
 void ViewportToolbar::draw_camera_picker(CameraViewport& viewport, bool& changed)
 {
     const CameraSelection active = viewport.camera();
-    const CameraSelection editor_camera{m_editor_camera, omega::CameraType::Perspective};
+    const CameraSelection editor_perspective{m_editor_camera, omega::CameraType::Perspective};
+    const CameraSelection editor_orthographic{m_editor_camera, omega::CameraType::Orthographic};
+    const bool editor_selected = active.entity == m_editor_camera;
 
-    const bool editor_selected = active == editor_camera;
+    const auto editor_camera_label = [](const CameraSelection& selection)
+    {
+        const char* type = selection.type == omega::CameraType::Perspective ? "Perspective" : "Orthographic";
+
+        return std::string("Editor Camera") + " - " + type;
+    };
 
     const auto camera_label = [](const CameraSelection& selection)
     {
@@ -213,7 +220,7 @@ void ViewportToolbar::draw_camera_picker(CameraViewport& viewport, bool& changed
         return "Entity " + std::to_string(selection.entity.index) + " - " + type;
     };
 
-    const std::string label = editor_selected ? "Editor Camera" : camera_label(active);
+    const std::string label = editor_selected ? editor_camera_label(active) : camera_label(active);
 
     ImGui::SetCursorPosY((30.0f - 24.0f) * 0.5f);
 
@@ -226,14 +233,22 @@ void ViewportToolbar::draw_camera_picker(CameraViewport& viewport, bool& changed
     if (!ImGui::BeginPopup("##CameraSelection"))
         return;
 
-    if (ImGui::Selectable("Editor Camera", editor_selected) && !editor_selected)
+    const auto draw_editor_camera = [&](const char* name, CameraSelection selection)
     {
-        viewport.set_camera(editor_camera);
-        changed = true;
-    }
+        const bool selected = viewport.camera() == selection;
 
-    if (editor_selected)
-        ImGui::SetItemDefaultFocus();
+        if (ImGui::Selectable(name, selected) && !selected)
+        {
+            viewport.set_camera(selection);
+            changed = true;
+        }
+
+        if (selected)
+            ImGui::SetItemDefaultFocus();
+    };
+
+    draw_editor_camera("Editor Camera - Perspective", editor_perspective);
+    draw_editor_camera("Editor Camera - Orthographic", editor_orthographic);
 
     ImGui::Separator();
 

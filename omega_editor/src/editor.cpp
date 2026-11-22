@@ -68,23 +68,24 @@ void Editor::render()
     }
 
     // Viewport toolbar
-    const auto action = m_viewport_toolbar.render(m_camera_viewport);
+    const ViewportToolbarAction action = m_viewport_toolbar.render(m_camera_viewport);
     switch (action)
     {
     case ViewportToolbarAction::ToggleFullscreen:
+    {
         m_camera_viewport.toggle_fullscreen();
         m_viewport_toolbar.show();
         break;
-
+    }
     case ViewportToolbarAction::CameraChanged:
+    {
         m_camera_changed = true;
         break;
-
+    }
     case ViewportToolbarAction::None:
         break;
     }
 
-    // Viewport
     update_camera_viewport();
 
     if (!m_camera_viewport.fullscreen())
@@ -126,6 +127,16 @@ void Editor::create_editor_camera()
     camera.proj.far_plane = 100.0f;
 
     m_engine.components().add(m_camera_entity, camera);
+
+    omega::OrthogonalCamera orthographic;
+    orthographic.proj.left = -8.0f;
+    orthographic.proj.right = 8.0f;
+    orthographic.proj.bottom = -4.5f;
+    orthographic.proj.top = 4.5f;
+    orthographic.proj.near_plane = 0.1f;
+    orthographic.proj.far_plane = 100.0f;
+
+    m_engine.components().add(m_camera_entity, orthographic);
 
     m_camera_viewport.set_camera({m_camera_entity, omega::CameraType::Perspective});
 }
