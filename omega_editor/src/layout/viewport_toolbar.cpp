@@ -95,6 +95,15 @@ ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport)
         // Camera selection
         ImGui::SetCursorPosY((toolbar_height - button_height) * 0.5f);
 
+        constexpr float icon_size = 16.0f;
+        ImGui::SetCursorPosY((toolbar_height - icon_size) * 0.5f);
+        const ImVec2 icon_position = ImGui::GetCursorScreenPos();
+        ImGui::Dummy(ImVec2(icon_size, icon_size));
+        icons::draw_camera(ImGui::GetWindowDrawList(), icon_position, icon_size,
+                           ImGui::GetColorU32(ImGuiCol_TextDisabled));
+
+        ImGui::SameLine(0.0f, 4.0f);
+
         draw_camera_picker(viewport, camera_changed);
 
         if (viewport.camera().type == omega::CameraType::Perspective)

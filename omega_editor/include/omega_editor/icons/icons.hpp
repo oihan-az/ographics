@@ -7,8 +7,8 @@ namespace omega_editor::icons
 {
 
 void draw_fullscreen(ImDrawList* draw, ImVec2 center, bool fullscreen, ImU32 color);
-
 void draw_chevron(ImDrawList* draw, ImVec2 center, bool down, ImU32 color);
+void draw_camera(ImDrawList* draw_list, ImVec2 position, float size, ImU32 color);
 
 } // namespace omega_editor::icons
 
