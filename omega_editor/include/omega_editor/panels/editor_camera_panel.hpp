@@ -16,21 +16,26 @@ namespace omega_editor
 {
 
 class CameraViewport;
+class EditorCameraControls;
 
 class EditorCameraPanel : public PanelContent
 {
   public:
-    EditorCameraPanel(omega::Engine& engine, const omega::Entity& camera_entity,
-                             ComponentEditorRegistry& registry);
+    EditorCameraPanel(omega::Engine& engine, 
+                      const omega::Entity& camera_entity, EditorCameraControls& controls,
+                      ComponentEditorRegistry& registry);
 
     const char* title() const override;
     void render() override;
 
   private:
     void render_components();
+    void render_navigation_settings();
+    void render_navigation_bindings();
 
     omega::Engine& m_engine;
     const omega::Entity& m_camera_entity;
+    EditorCameraControls& m_controls;
     ComponentEditorRegistry& m_registry;
 };
 

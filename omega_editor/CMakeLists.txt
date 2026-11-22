@@ -30,6 +30,7 @@ target_sources(
         "src/component_editor/component_editor_registry.cpp"
         "src/icons/icons.cpp"
         "src/gizmos/transform_gizmo.cpp"
+        "src/camera/editor_camera_controller.cpp"
  )
 
 find_package(imgui CONFIG REQUIRED)

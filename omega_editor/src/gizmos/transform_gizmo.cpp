@@ -34,9 +34,17 @@ void TransformGizmo::handle_shortcuts()
 
 void TransformGizmo::render(const CameraViewport& viewport, omega::Entity selected_entity, const glm::mat4& view_matrix,
                             const glm::mat4& projection_matrix, omega::ComponentSystem& components,
-                            omega::TransformSystem& transforms, omega::HierarchySystem& hierarchy)
+                            omega::TransformSystem& transforms, omega::HierarchySystem& hierarchy,
+                            bool navigation_active)
 {
-    handle_shortcuts();
+    const ImGuiIO& io = ImGui::GetIO();
+    const bool allow_gizmo = !navigation_active && !io.KeyAlt;
+    if (allow_gizmo && !ImGui::IsMouseDown(ImGuiMouseButton_Right) && !ImGui::IsMouseDown(ImGuiMouseButton_Middle))
+    {
+        handle_shortcuts();
+    }
+
+    ImGuizmo::Enable(allow_gizmo);
 
     if (selected_entity == omega::Entity{})
         return;
@@ -49,7 +57,7 @@ void TransformGizmo::render(const CameraViewport& viewport, omega::Entity select
     if (rect.size.x <= 0.0f || rect.size.y <= 0.0f)
         return;
 
-    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::SetOrthographic(viewport.camera().type == omega::CameraType::Orthographic);
     ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList());
 
     ImGuizmo::SetRect(rect.position.x, rect.position.y, rect.size.x, rect.size.y);

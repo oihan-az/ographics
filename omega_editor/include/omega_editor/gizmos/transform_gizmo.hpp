@@ -25,7 +25,8 @@ class TransformGizmo
   public:
     void render(const CameraViewport& viewport, omega::Entity selected_entity, const glm::mat4& view_matrix,
                 const glm::mat4& projection_matrix, omega::ComponentSystem& components,
-                omega::TransformSystem& transforms, omega::HierarchySystem& hierarchy);
+                omega::TransformSystem& transforms, omega::HierarchySystem& hierarchy, 
+                bool navigation_active);
 
   private:
     void handle_shortcuts();

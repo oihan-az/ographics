@@ -10,4 +10,9 @@ Vector4 normalize(const Vector4& vec)
     return glm::normalize(vec);
 }
 
+float dot(const Vector4& x, const Vector4& y)
+{
+    return glm::dot(x, y);
+}
+
 } // namespace omega

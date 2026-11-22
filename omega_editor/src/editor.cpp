@@ -91,6 +91,8 @@ void Editor::render()
     if (!m_camera_viewport.fullscreen())
         draw_viewport_outline(m_camera_viewport.rect());
 
+    update_editor_camera();
+
     if (m_camera_viewport.camera().entity == m_camera_entity)
         render_transform_gizmo();
 }
@@ -343,6 +345,11 @@ void Editor::register_component_editors()
     );
 }
 
+void Editor::update_editor_camera()
+{
+    m_editor_camera_controller.update(ImGui::GetIO().DeltaTime, m_camera_viewport, m_editor_camera_controls, m_engine, m_camera_entity, m_selected_entity);
+}
+
 void Editor::update_camera_viewport()
 {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -371,11 +378,12 @@ void Editor::update_camera_viewport()
 
 void Editor::render_transform_gizmo() 
 {
-    const auto selection = m_camera_viewport.camera();
+    const CameraSelection selection = m_camera_viewport.camera();
 
     const omega::CameraData& camera_data = m_engine.cameras().get_camera_data(selection.entity, selection.type);
     m_transform_gizmo.render(m_camera_viewport, m_selected_entity, camera_data.view, camera_data.projection,
-                             m_engine.components(), m_engine.transforms(), m_engine.hierarchy());
+                             m_engine.components(), m_engine.transforms(), m_engine.hierarchy(),
+                             m_editor_camera_controller.is_navigating());
 }
 
 } // namespace omega_editor

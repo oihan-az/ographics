@@ -9,6 +9,7 @@ namespace omega
 using Vector3 = glm::vec3;
 
 Vector3 normalize(const Vector3& vec);
+float dot(const Vector3& x, const Vector3& y);
 
 } // namespace omega
 
