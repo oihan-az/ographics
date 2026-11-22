@@ -15,12 +15,7 @@
 #include <omega_editor/camera/editor_camera_controls.hpp>
 #include <omega_editor/camera/editor_camera_controller.hpp>
 
-namespace omega
-{
-
-class Engine;
-
-} // namespace omega
+#include <omega/engine/engine.hpp>
 
 namespace omega_editor
 {
@@ -64,7 +59,7 @@ class Editor
     HierarchyPanel m_hierarchy_content{m_engine, m_selected_entity, m_camera_entity};
     InspectionPanel m_inspection_content{m_engine, m_selected_entity, m_component_editors};
     EditorCameraPanel m_editor_camera_content{m_engine, m_camera_entity, m_editor_camera_controls, m_component_editors};
-    PerformancePanel m_performance_content{m_engine};
+    PerformancePanel m_performance_content{m_engine.performance()};
 
     ViewportToolbar m_viewport_toolbar;
     void update_camera_viewport();

@@ -6,10 +6,13 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
-#include <cstdint>
+#include <string_view>
+#include <vector>
 
 namespace omega
 {
+
+class ScopedCpuTimer;
 
 class PerformanceSystem
 {
@@ -19,12 +22,9 @@ class PerformanceSystem
 
     static constexpr std::size_t history_capacity = 240;
 
-    CpuMetricHandle register_cpu_metric(const std::string& name);
-
     void begin_frame();
     void end_frame();
-
-    void record_cpu_time(CpuMetricHandle handle, Clock::duration duration);
+    void cancel_frame();
 
     const PerformanceMetrics& metrics() const;
 
@@ -34,9 +34,18 @@ class PerformanceSystem
     bool frame_active() const;
 
   private:
+    friend class ScopedCpuTimer;
+
+    CpuScopeId begin_cpu_scope(std::string_view name);
+    void end_cpu_scope(CpuScopeId id, Clock::duration elapsed);
+
+    void calculate_cpu_self_times();
     void update_frame_statistics();
 
-    PerformanceMetrics m_metrics{};
+    PerformanceMetrics m_write_metrics{};
+    PerformanceMetrics m_read_metrics{};
+
+    std::vector<CpuScopeId> m_scope_stack;
 
     std::array<double, history_capacity> m_frame_history{};
 
@@ -44,25 +53,27 @@ class PerformanceSystem
     std::size_t m_history_count = 0;
 
     TimePoint m_frame_start{};
-
     bool m_frame_active = false;
 };
 
 class ScopedCpuTimer
 {
   public:
-    ScopedCpuTimer(PerformanceSystem& performance, CpuMetricHandle metric);
+    ScopedCpuTimer(PerformanceSystem& performance, std::string_view name);
+
     ~ScopedCpuTimer();
 
     ScopedCpuTimer(const ScopedCpuTimer&) = delete;
     ScopedCpuTimer& operator=(const ScopedCpuTimer&) = delete;
+    ScopedCpuTimer(ScopedCpuTimer&&) = delete;
+    ScopedCpuTimer& operator=(ScopedCpuTimer&&) = delete;
 
   private:
     PerformanceSystem& m_performance;
-    CpuMetricHandle m_metric;
-    PerformanceSystem::Clock::time_point m_start;
+    CpuScopeId m_scope = invalid_cpu_scope;
+    PerformanceSystem::TimePoint m_start{};
 };
 
 } // namespace omega
 
-#endif // OMEGA_CORE_PERFORMANCE_SYSTEM_HPP
+#endif

@@ -2,24 +2,32 @@
 #define OMEGA_CORE_PERFORMANCE_METRICS_HPP
 
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
 namespace omega
 {
 
-using CpuMetricHandle = std::uint32_t;
+using CpuScopeId = std::uint32_t;
+
+inline constexpr CpuScopeId invalid_cpu_scope = std::numeric_limits<CpuScopeId>::max();
 
 struct CpuMetric
 {
-    std::string name;
+    std::string_view name;
+    CpuScopeId parent = invalid_cpu_scope;
+
     double elapsed_ms = 0.0;
+    double self_ms = 0.0;
+
+    std::uint32_t calls = 0;
 };
 
 struct CpuMetrics
 {
     double frame_ms = 0.0;
-    std::vector<CpuMetric> stages;
+    std::vector<CpuMetric> scopes;
 };
 
 struct FrameStatistics
@@ -42,4 +50,4 @@ struct PerformanceMetrics
 
 } // namespace omega
 
-#endif // OMEGA_CORE_PERFORMANCE_METRICS_HPP
+#endif

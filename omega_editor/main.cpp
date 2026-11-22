@@ -111,39 +111,31 @@ int main()
     engine.graphics().renderer().setup<omega_editor::UIPipeline>(pipeline_desc);
     engine.graphics().renderer().compile();
 
-    auto& performance = engine.performance();
-    const omega::CpuMetricHandle engine_update_metric = performance.register_cpu_metric("Engine/Update");
-
     while (!engine.should_close())
     {
         if (!engine.start_frame())
             continue;
 
-        {
-            omega::ScopedCpuTimer timer(performance, engine_update_metric);
+        engine.update();
 
-            engine.update();
+        {
+            omega::ScopedCpuTimer timer(engine.performance(), "Editor");
+
+            imgui_layer.begin_frame();
+            ImGuizmo::BeginFrame();
+
+            editor.render();
+
+           if (editor.camera_changed())
+                pipeline.set_camera(editor.camera_viewport().camera().entity, editor.camera_viewport().camera().type);
+
+            imgui_layer.end_frame();
+
+            const omega_editor::ViewportRect& rect = editor.camera_viewport().rect();
+            omega::RenderRegion region{static_cast<uint32_t>(rect.position.x), static_cast<uint32_t>(rect.position.y),
+                                       static_cast<uint32_t>(rect.size.x), static_cast<uint32_t>(rect.size.y)};
+            pipeline.set_viewport(region);
         }
-
-        imgui_layer.begin_frame();
-        ImGuizmo::BeginFrame();
-
-        editor.render();
-
-        if (editor.camera_changed())
-            pipeline.set_camera(editor.camera_viewport().camera().entity, editor.camera_viewport().camera().type);
-
-        imgui_layer.end_frame();
-
-        const omega_editor::ViewportRect& rect = editor.camera_viewport().rect();
-        omega::RenderRegion region
-        {
-            static_cast<uint32_t>(rect.position.x), 
-            static_cast<uint32_t>(rect.position.y),
-            static_cast<uint32_t>(rect.size.x),
-            static_cast<uint32_t>(rect.size.y)
-        };
-        pipeline.set_viewport(region);
 
         engine.render();
 

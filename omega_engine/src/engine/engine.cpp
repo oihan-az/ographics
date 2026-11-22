@@ -20,18 +20,48 @@ void Engine::initialize()
 
 void Engine::update()
 {
-    m_events.swap_all_buffers();
+    ScopedCpuTimer timer(m_performance, "Engine Update");
 
-    m_entities.update();
-    m_hierarchy.update();
-    m_components.update();
-    m_transforms.update();
-    m_cameras.update();
-    m_graphics.update();
+    {
+        ScopedCpuTimer timer(m_performance, "Events");
+        m_events.swap_all_buffers();
+    }
+
+    {
+        ScopedCpuTimer timer(m_performance, "Entities");
+        m_entities.update();
+    }
+
+    {
+        ScopedCpuTimer timer(m_performance, "Hierarchy");
+        m_hierarchy.update();
+    }
+
+    {
+        ScopedCpuTimer timer(m_performance, "Components");
+        m_components.update();
+    }
+
+    {
+        ScopedCpuTimer timer(m_performance, "Transforms");
+        m_transforms.update();
+    }
+
+    {
+        ScopedCpuTimer timer(m_performance, "Cameras");
+        m_cameras.update();
+    }
+
+    {
+        ScopedCpuTimer timer(m_performance, "Graphics");
+        m_graphics.update();
+    }
 }
 
 void Engine::render()
 {
+    ScopedCpuTimer timer(m_performance, "Engine Render");
+
     m_graphics.render();
 }
 
@@ -39,22 +69,41 @@ bool Engine::start_frame()
 {
     m_performance.begin_frame();
 
-    m_platform.window().poll_events();
+    bool ready = true;
 
-    m_graphics.start_frame();
-
-    if (m_graphics.needs_swapchain_recreation())
     {
-        const uint32_t width = m_platform.window().width();
-        const uint32_t height = m_platform.window().height();
-        if (width == 0 || height == 0)
-            return false;
+        ScopedCpuTimer timer(m_performance, "Engine Start Frame");
 
-        m_graphics.recreate_swapchain(width, height);
-        return false;
+        {
+            ScopedCpuTimer timer(m_performance, "Poll Events");
+            m_platform.window().poll_events();
+        }
+
+        {
+            ScopedCpuTimer timer(m_performance, "Graphics Start Frame");
+            m_graphics.start_frame();
+        }
+
+        if (m_graphics.needs_swapchain_recreation())
+        {
+            const uint32_t width = m_platform.window().width();
+            const uint32_t height = m_platform.window().height();
+
+            if (width != 0 && height != 0)
+            {
+                ScopedCpuTimer timer(m_performance, "Swapchain Recreation");
+
+                m_graphics.recreate_swapchain(width, height);
+            }
+
+            ready = false;
+        }
     }
 
-    return true;
+    if (!ready)
+        m_performance.cancel_frame();
+
+    return ready;
 }
 
 void Engine::end_frame()
