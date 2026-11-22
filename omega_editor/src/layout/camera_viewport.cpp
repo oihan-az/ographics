@@ -14,9 +14,14 @@ CameraViewport::CameraViewport(omega::ComponentSystem& components)
 {
 }
 
-void CameraViewport::set_camera(omega::Entity camera_entity)
+void CameraViewport::set_camera(CameraSelection camera)
 {
-    m_camera_entity = camera_entity;
+    m_camera = camera;
+}
+
+CameraSelection CameraViewport::camera() const
+{
+    return m_camera;
 }
 
 void CameraViewport::update(const ViewportRect& available)
@@ -42,7 +47,10 @@ void CameraViewport::update(const ViewportRect& available)
 
 void CameraViewport::set_aspect_ratio(AspectRatioPreset preset)
 {
-    if (!m_components.has<omega::PerspectiveCamera>(m_camera_entity))
+    if (m_camera.type != omega::CameraType::Perspective)
+        return;
+
+    if (!m_components.has<omega::PerspectiveCamera>(m_camera.entity))
         return;
 
     const auto it = std::find_if(aspect_ratio_presets.begin(), aspect_ratio_presets.end(),
@@ -51,13 +59,14 @@ void CameraViewport::set_aspect_ratio(AspectRatioPreset preset)
     if (it == aspect_ratio_presets.end())
         return;
 
-    auto camera = m_components.get<omega::PerspectiveCamera>(m_camera_entity);
+    auto camera = m_components.get<omega::PerspectiveCamera>(m_camera.entity);
+
     if (camera->proj.aspect_ratio == it->ratio)
         return;
 
     camera->proj.aspect_ratio = it->ratio;
 
-    m_components.mark_dirty<omega::PerspectiveCamera>(m_camera_entity);
+    m_components.mark_dirty<omega::PerspectiveCamera>(m_camera.entity);
 }
 
 std::optional<AspectRatioPreset> CameraViewport::aspect_ratio_preset() const
@@ -76,11 +85,37 @@ std::optional<AspectRatioPreset> CameraViewport::aspect_ratio_preset() const
 
 float CameraViewport::aspect_ratio() const
 {
-    if (!m_components.has<omega::PerspectiveCamera>(m_camera_entity))
-        return 16.0f / 9.0f;
+    switch (m_camera.type)
+    {
+    case omega::CameraType::Perspective:
+    {
+        if (!m_components.has<omega::PerspectiveCamera>(m_camera.entity))
+            break;
 
-    const auto camera = m_components.get<omega::PerspectiveCamera>(m_camera_entity);
-    return camera->proj.aspect_ratio;
+        const auto camera = m_components.get<omega::PerspectiveCamera>(m_camera.entity);
+
+        return camera->proj.aspect_ratio;
+    }
+
+    case omega::CameraType::Orthographic:
+    {
+        if (!m_components.has<omega::OrthogonalCamera>(m_camera.entity))
+            break;
+
+        const auto camera = m_components.get<omega::OrthogonalCamera>(m_camera.entity);
+        const auto& proj = camera->proj;
+
+        const float width = proj.right - proj.left;
+        const float height = proj.top - proj.bottom;
+
+        if (std::abs(height) < 0.0001f)
+            break;
+
+        return std::abs(width / height);
+    }
+    }
+
+    return 16.0f / 9.0f;
 }
 
 const char* CameraViewport::aspect_ratio_label() const

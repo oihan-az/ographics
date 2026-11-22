@@ -95,7 +95,8 @@ int main()
     // Renderer
     omega_editor::UIPipelineDesc pipeline_desc
     {
-        editor.editor_camera(),
+        editor.camera_viewport().camera().entity,
+        editor.camera_viewport().camera().type,
         imgui_layer,
         engine.components(),
         engine.events(),
@@ -121,6 +122,9 @@ int main()
         ImGuizmo::BeginFrame();
 
         editor.render();
+
+        if (editor.camera_changed())
+            pipeline.set_camera(editor.camera_viewport().camera().entity, editor.camera_viewport().camera().type);
 
         imgui_layer.end_frame();
 

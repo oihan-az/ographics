@@ -11,6 +11,7 @@ void RasterPipeline::setup(RasterPipelineDesc& desc)
     GeometryRenderFeatureDesc geometry_render_desc
     {
         desc.camera,
+        desc.camera_type,
         desc.components,
         desc.events,
         desc.transforms,

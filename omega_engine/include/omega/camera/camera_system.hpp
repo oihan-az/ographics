@@ -6,6 +6,7 @@
 #include <omega/core/math/matrix4.hpp>
 
 #include <omega/camera/camera.hpp>
+#include <omega/camera/camera_type.hpp>
 #include <omega/transform/transform_system.hpp>
 #include <omega/transform/transform_event.hpp>
 
@@ -34,9 +35,10 @@ class CameraSystem
 
     void update();
 
-    CameraData get_camera_data(Entity entity);
+    CameraData get_camera_data(Entity entity, CameraType type);
 
   private:
+    void invalidate(Entity entity, CameraType type);
     void invalidate(Entity entity);
 
   private:
@@ -46,7 +48,7 @@ class CameraSystem
     TransformSystem& m_transforms;
     ComponentSystem& m_components;
     HierarchySystem& m_hierarchy;
-    EntitySystem& m_entitites;
+    EntitySystem& m_entities;
     EventSystem& m_events;
 };
 

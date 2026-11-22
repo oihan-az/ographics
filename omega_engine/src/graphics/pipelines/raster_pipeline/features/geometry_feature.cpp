@@ -129,6 +129,12 @@ void GeometryRenderFeature::on_swapchain_recreated(orenderer::RenderFeatureConte
     raster_desc.height = swapchain.height();
 }
 
+void GeometryRenderFeature::set_camera(omega::Entity camera, CameraType camera_type)
+{
+    m_desc.camera = camera;
+    m_desc.camera_type = camera_type;
+}
+
 void GeometryRenderFeature::create_output_resources(orendergraph::RenderGraph& rg)
 {
     ogfx::Swapchain& swapchain = m_desc.graphics.swapchain();
@@ -711,7 +717,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             }
 
             // Camera
-            const CameraData camera = m_desc.cameras.get_camera_data(m_desc.camera);
+            const CameraData camera = m_desc.cameras.get_camera_data(m_desc.camera, m_desc.camera_type);
 
             // Renderables
             const std::vector<Entity> entities = m_desc.components.entities_with<Renderable>();

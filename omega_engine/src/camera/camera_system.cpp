@@ -13,7 +13,7 @@ namespace omega
 CameraSystem::CameraSystem(EventSystem& events, ComponentSystem& components, 
                            HierarchySystem& hierarchy, EntitySystem& entities,
                            TransformSystem& transforms)
-    : m_events(events), m_components(components), m_hierarchy(hierarchy), m_entitites(entities), m_transforms(transforms)
+    : m_events(events), m_components(components), m_hierarchy(hierarchy), m_entities(entities), m_transforms(transforms)
 {
 }
 
@@ -63,76 +63,104 @@ void CameraSystem::update()
     }
 }
 
-CameraData CameraSystem::get_camera_data(Entity entity)
+CameraData CameraSystem::get_camera_data(Entity entity, CameraType type)
 {
-    // Return default data for entities that are no longer alive
-    if (!m_entitites.is_alive(entity))
+    if (!m_entities.is_alive(entity))
         return CameraData{};
 
-    const PerspectiveCamera* perspective_camera = m_components.get<PerspectiveCamera>(entity);
-    const OrthogonalCamera* orthogonal_camera = m_components.get<OrthogonalCamera>(entity);
-
-    // A camera entity must have exactly one camera component
-    if ((perspective_camera == nullptr) == (orthogonal_camera == nullptr))
-        return CameraData{};
-
-    auto& perspective_storage = m_components.get_storage<PerspectiveCamera>();
-    auto& orthogonal_storage = m_components.get_storage<OrthogonalCamera>();
-
-    // Reuse cached data when it is still valid
     uint32_t dense_idx = 0;
-    bool is_perspective = (perspective_camera != nullptr);
-    if (is_perspective)
+    Matrix4 projection_matrix{1.0f};
+
+    DenseIndexedCache<CameraData>* cache = nullptr;
+
+    switch (type)
     {
-        dense_idx = perspective_storage.get_index(entity);
-        if (!m_perspective_cache.is_dirty(dense_idx))
-            return *m_perspective_cache.get(dense_idx);
+    case CameraType::Perspective:
+    {
+        const auto* camera = m_components.get<PerspectiveCamera>(entity);
+
+        if (!camera)
+            return CameraData{};
+
+        auto& storage = m_components.get_storage<PerspectiveCamera>();
+
+        dense_idx = storage.get_index(entity);
+        cache = &m_perspective_cache;
+
+        if (!cache->is_dirty(dense_idx))
+            return *cache->get(dense_idx);
+
+        projection_matrix = mtx_perspective_projection(*camera);
+        break;
     }
-    else
+
+    case CameraType::Orthographic:
     {
-        dense_idx = orthogonal_storage.get_index(entity);
-        if (!m_orthogonal_cache.is_dirty(dense_idx))
-            return *m_orthogonal_cache.get(dense_idx);
+        const auto* camera = m_components.get<OrthogonalCamera>(entity);
+
+        if (!camera)
+            return CameraData{};
+
+        auto& storage = m_components.get_storage<OrthogonalCamera>();
+
+        dense_idx = storage.get_index(entity);
+        cache = &m_orthogonal_cache;
+
+        if (!cache->is_dirty(dense_idx))
+            return *cache->get(dense_idx);
+
+        projection_matrix = mtx_orthogonal_projection(*camera);
+        break;
+    }
+
+    default:
+        return CameraData{};
     }
 
     // Calculate the view matrix from the entity's world transform
-    Matrix4 world_matrix = m_transforms.get_world_matrix(entity);
-    Matrix4 view_matrix = inverse(world_matrix);
+    const Matrix4 world_matrix = m_transforms.get_world_matrix(entity);
+    const Matrix4 view_matrix = inverse(world_matrix);
 
-    // Calculate the appropriate projection matrix
-    Matrix4 projection_matrix;
-    if (is_perspective)
-        projection_matrix = mtx_perspective_projection(*perspective_camera);
-    else
-        projection_matrix = mtx_orthogonal_projection(*orthogonal_camera);
-
-    // Calculate the view-projection matrix
     CameraData data;
     data.view = view_matrix;
     data.projection = projection_matrix;
     data.view_projection = projection_matrix * view_matrix;
 
-    // Update the cache
-    if (is_perspective)
-        m_perspective_cache.set(dense_idx, data);
-    else
-        m_orthogonal_cache.set(dense_idx, data);
+    cache->set(dense_idx, data);
 
     return data;
 }
 
-void CameraSystem::invalidate(Entity entity)
+void CameraSystem::invalidate(Entity entity, CameraType type)
 {
-    if (m_components.has<PerspectiveCamera>(entity))
+    switch (type)
     {
+    case CameraType::Perspective:
+    {
+        if (!m_components.has<PerspectiveCamera>(entity))
+            break;
+
         auto& storage = m_components.get_storage<PerspectiveCamera>();
         m_perspective_cache.invalidate(storage.get_index(entity));
+        break;
     }
-    else if (m_components.has<OrthogonalCamera>(entity))
+
+    case CameraType::Orthographic:
     {
+        if (!m_components.has<OrthogonalCamera>(entity))
+            break;
+
         auto& storage = m_components.get_storage<OrthogonalCamera>();
         m_orthogonal_cache.invalidate(storage.get_index(entity));
+        break;
     }
+    }
+}
+
+void CameraSystem::invalidate(Entity entity)
+{
+    invalidate(entity, CameraType::Perspective);
+    invalidate(entity, CameraType::Orthographic);
 }
 
 } // namespace omega

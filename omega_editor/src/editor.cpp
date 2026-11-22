@@ -34,7 +34,7 @@ namespace omega_editor
 {
 
 Editor::Editor(omega::Engine& engine)
-    : m_engine(engine), m_camera_viewport(engine.components())
+    : m_engine(engine), m_camera_viewport(engine.components()), m_viewport_toolbar(engine.components(), m_camera_entity)
 {
 }
 
@@ -51,6 +51,8 @@ void Editor::initialize()
 
 void Editor::render()
 {
+    m_camera_changed = validate_camera_selection();
+
     // Fullscreen shortcut
     if (ImGui::IsKeyPressed(ImGuiKey_F11, false))
     {
@@ -65,21 +67,31 @@ void Editor::render()
         m_properties_panel.render();
     }
 
-    // Viewport layout
+    // Viewport toolbar
+    const auto action = m_viewport_toolbar.render(m_camera_viewport);
+    switch (action)
+    {
+    case ViewportToolbarAction::ToggleFullscreen:
+        m_camera_viewport.toggle_fullscreen();
+        m_viewport_toolbar.show();
+        break;
+
+    case ViewportToolbarAction::CameraChanged:
+        m_camera_changed = true;
+        break;
+
+    case ViewportToolbarAction::None:
+        break;
+    }
+
+    // Viewport
     update_camera_viewport();
 
     if (!m_camera_viewport.fullscreen())
         draw_viewport_outline(m_camera_viewport.rect());
 
-    // Viewport toolbar
-    const ViewportToolbarAction action = m_viewport_toolbar.render(m_camera_viewport);
-    if (action == ViewportToolbarAction::ToggleFullscreen)
-    {
-        m_camera_viewport.toggle_fullscreen();
-        m_viewport_toolbar.show();
-    }
-
-    render_transform_gizmo();
+    if (m_camera_viewport.camera().entity == m_camera_entity)
+        render_transform_gizmo();
 }
 
 omega::Entity Editor::editor_camera() const
@@ -90,6 +102,11 @@ omega::Entity Editor::editor_camera() const
 const CameraViewport& Editor::camera_viewport() const
 {
     return m_camera_viewport;
+}
+
+bool Editor::camera_changed() const
+{
+    return m_camera_changed;
 }
 
 void Editor::create_editor_camera() 
@@ -110,10 +127,47 @@ void Editor::create_editor_camera()
 
     m_engine.components().add(m_camera_entity, camera);
 
-    m_camera_viewport.set_camera(m_camera_entity);
+    m_camera_viewport.set_camera({m_camera_entity, omega::CameraType::Perspective});
 }
 
-void Editor::register_component_editors() 
+bool Editor::validate_camera_selection()
+{
+    const CameraSelection selection = m_camera_viewport.camera();
+
+    if (selection.entity == m_camera_entity && selection.type == omega::CameraType::Perspective)
+        return false;
+
+    auto& components = m_engine.components();
+
+    bool valid = m_engine.entities().is_alive(selection.entity);
+
+    if (valid)
+    {
+        switch (selection.type)
+        {
+        case omega::CameraType::Perspective:
+            valid = components.has<omega::PerspectiveCamera>(selection.entity);
+            break;
+
+        case omega::CameraType::Orthographic:
+            valid = components.has<omega::OrthogonalCamera>(selection.entity);
+            break;
+
+        default:
+            valid = false;
+            break;
+        }
+    }
+
+    if (valid)
+        return false;
+
+    m_camera_viewport.set_camera({m_camera_entity, omega::CameraType::Perspective});
+
+    return true;
+}
+
+void Editor::register_component_editors()
 {
     m_component_editors.register_component<omega::Transform>
     (
@@ -306,7 +360,9 @@ void Editor::update_camera_viewport()
 
 void Editor::render_transform_gizmo() 
 {
-    const omega::CameraData& camera_data = m_engine.cameras().get_camera_data(m_camera_entity);
+    const auto selection = m_camera_viewport.camera();
+
+    const omega::CameraData& camera_data = m_engine.cameras().get_camera_data(selection.entity, selection.type);
     m_transform_gizmo.render(m_camera_viewport, m_selected_entity, camera_data.view, camera_data.projection,
                              m_engine.components(), m_engine.transforms(), m_engine.hierarchy());
 }

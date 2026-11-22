@@ -32,6 +32,7 @@ class Editor
 
     omega::Entity editor_camera() const;
     const CameraViewport& camera_viewport() const;
+    bool camera_changed() const;
 
   private:
     omega::Engine& m_engine;
@@ -39,6 +40,8 @@ class Editor
 
     void create_editor_camera();
     omega::Entity m_camera_entity;
+    bool m_camera_changed = false;
+    bool validate_camera_selection();
 
     void register_component_editors();
     ComponentEditorRegistry m_component_editors;

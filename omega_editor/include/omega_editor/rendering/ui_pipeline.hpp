@@ -4,6 +4,7 @@
 #include <orenderer/render_pipeline.hpp>
 
 #include <omega/core/entity/entity.hpp>
+#include <omega/camera/camera_type.hpp>
 
 namespace omega
 {
@@ -15,6 +16,7 @@ class CameraSystem;
 class GraphicsSystem;
 class PlatformSystem;
 class ToSwapchain;
+class GeometryRenderFeature;
 struct RenderRegion;
 
 } // namespace omega
@@ -26,7 +28,8 @@ class ImGuiLayer;
 
 struct UIPipelineDesc
 {
-    omega::Entity editor_camera;
+    omega::Entity camera;
+    omega::CameraType camera_type;
 
     ImGuiLayer& imgui_layer;
 
@@ -46,9 +49,11 @@ class UIPipeline : public orenderer::RenderPipeline
     void setup(UIPipelineDesc& desc);
 
     void set_viewport(const omega::RenderRegion& region);
+    void set_camera(omega::Entity camera, omega::CameraType camera_type);
 
   private:
     omega::ToSwapchain* m_to_swapchain;
+    omega::GeometryRenderFeature* m_geometry_render_feature;
 };
 
 } // namespace omega_editor

@@ -15,6 +15,8 @@
 
 #include <omega/renderable/renderable.hpp>
 
+#include <omega/camera/camera_type.hpp>
+
 #include <omega/graphics/resources/gpu_dynamic_buffer.hpp>
 #include <omega/graphics/resources/gpu_component_buffer.hpp>
 #include <omega/graphics/resources/resource_set_cache.hpp>
@@ -56,6 +58,7 @@ template <typename Handle, typename Hash> class ResourceSetCache;
 struct GeometryRenderFeatureDesc
 {
     Entity camera;
+    CameraType camera_type;
 
     ComponentSystem& components;
     EventSystem& events;
@@ -71,6 +74,8 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
 
     void build(orenderer::RenderFeatureContext& ctx) override;
     void on_swapchain_recreated(orenderer::RenderFeatureContext& ctx) override;
+
+    void set_camera(omega::Entity camera, CameraType camera_type);
 
     const orendergraph::ResourceHandle<ogfx::Image> out_image() const { return m_out_image; }
 

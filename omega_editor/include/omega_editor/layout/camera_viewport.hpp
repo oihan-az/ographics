@@ -2,6 +2,7 @@
 #define OMEGA_EDITOR_CAMERA_VIEWPORT_HPP
 
 #include <omega/core/entity/entity.hpp>
+#include <omega/camera/camera_type.hpp>
 
 #include <imgui.h>
 
@@ -55,12 +56,21 @@ struct ViewportRect
     ImVec2 size{0.0f, 0.0f};
 };
 
+struct CameraSelection
+{
+    omega::Entity entity{};
+    omega::CameraType type = omega::CameraType::Perspective;
+
+    bool operator==(const CameraSelection&) const = default;
+};
+
 class CameraViewport
 {
   public:
     CameraViewport(omega::ComponentSystem& components);
 
-    void set_camera(omega::Entity camera_entity);
+    void set_camera(CameraSelection camera);
+    CameraSelection camera() const;
     void update(const ViewportRect& available);
 
     void set_aspect_ratio(AspectRatioPreset preset);
@@ -76,7 +86,7 @@ class CameraViewport
 
   private:
     omega::ComponentSystem& m_components;
-    omega::Entity m_camera_entity{};
+    CameraSelection m_camera;
 
     ViewportRect m_rect;
     bool m_fullscreen = false;

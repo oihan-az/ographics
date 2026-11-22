@@ -5,6 +5,8 @@
 
 #include <omega/core/entity/entity.hpp>
 
+#include <omega/camera/camera_type.hpp>
+
 namespace omega
 {
 
@@ -17,6 +19,7 @@ class GraphicsSystem;
 struct RasterPipelineDesc
 {
     Entity camera;
+    CameraType camera_type;
 
     ComponentSystem& components;
     EventSystem& events;
