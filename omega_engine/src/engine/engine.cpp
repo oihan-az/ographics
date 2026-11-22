@@ -37,6 +37,8 @@ void Engine::render()
 
 bool Engine::start_frame()
 {
+    m_performance.begin_frame();
+
     m_platform.window().poll_events();
 
     m_graphics.start_frame();
@@ -58,6 +60,8 @@ bool Engine::start_frame()
 void Engine::end_frame()
 {
     m_graphics.end_frame();
+
+    m_performance.end_frame();
 }
 
 void Engine::wait()
@@ -108,6 +112,11 @@ PlatformSystem& Engine::platform()
 GraphicsSystem& Engine::graphics()
 {
     return m_graphics;
+}
+
+PerformanceSystem& Engine::performance()
+{
+    return m_performance;
 }
 
 } // namespace omega

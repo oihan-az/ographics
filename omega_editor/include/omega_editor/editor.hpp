@@ -9,6 +9,7 @@
 #include <omega_editor/panels/hierarchy_panel.hpp>
 #include <omega_editor/panels/inspection_panel.hpp>
 #include <omega_editor/panels/editor_camera_panel.hpp>
+#include <omega_editor/panels/performance_panel.hpp>
 #include <omega_editor/component_editor/component_editor_registry.hpp>
 #include <omega_editor/gizmos/transform_gizmo.hpp>
 #include <omega_editor/camera/editor_camera_controls.hpp>
@@ -63,6 +64,7 @@ class Editor
     HierarchyPanel m_hierarchy_content{m_engine, m_selected_entity, m_camera_entity};
     InspectionPanel m_inspection_content{m_engine, m_selected_entity, m_component_editors};
     EditorCameraPanel m_editor_camera_content{m_engine, m_camera_entity, m_editor_camera_controls, m_component_editors};
+    PerformancePanel m_performance_content{m_engine};
 
     ViewportToolbar m_viewport_toolbar;
     void update_camera_viewport();

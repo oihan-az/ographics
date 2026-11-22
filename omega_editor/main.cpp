@@ -111,12 +111,19 @@ int main()
     engine.graphics().renderer().setup<omega_editor::UIPipeline>(pipeline_desc);
     engine.graphics().renderer().compile();
 
+    auto& performance = engine.performance();
+    const omega::CpuMetricHandle engine_update_metric = performance.register_cpu_metric("Engine/Update");
+
     while (!engine.should_close())
     {
         if (!engine.start_frame())
             continue;
 
-        engine.update();
+        {
+            omega::ScopedCpuTimer timer(performance, engine_update_metric);
+
+            engine.update();
+        }
 
         imgui_layer.begin_frame();
         ImGuizmo::BeginFrame();

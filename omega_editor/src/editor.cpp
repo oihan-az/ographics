@@ -47,6 +47,7 @@ void Editor::initialize()
     m_hierarchy_panel.set_content(m_hierarchy_content);
     m_properties_panel.add_content(m_inspection_content);
     m_properties_panel.add_content(m_editor_camera_content);
+    m_properties_panel.add_content(m_performance_content);
 }
 
 void Editor::render()

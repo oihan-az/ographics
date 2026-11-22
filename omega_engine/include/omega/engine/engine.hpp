@@ -5,6 +5,7 @@
 #include <omega/core/entity/entity_system.hpp>
 #include <omega/core/hierarchy/hierarchy_system.hpp>
 #include <omega/core/component/component_system.hpp>
+#include <omega/core/performance/performance_system.hpp>
 
 #include <omega/transform/transform_system.hpp>
 #include <omega/camera/camera_system.hpp>
@@ -48,6 +49,7 @@ class Engine
     CameraSystem& cameras();
     PlatformSystem& platform();
     GraphicsSystem& graphics();
+    PerformanceSystem& performance();
 
   private:
     EventSystem m_events;
@@ -58,6 +60,7 @@ class Engine
     CameraSystem m_cameras;
     PlatformSystem m_platform;
     GraphicsSystem m_graphics;
+    PerformanceSystem m_performance;
 };
 
 } // namespace omega

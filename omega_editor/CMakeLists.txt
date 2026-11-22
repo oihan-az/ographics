@@ -27,6 +27,7 @@ target_sources(
         "src/panels/hierarchy_panel.cpp"
         "src/panels/inspection_panel.cpp"
         "src/panels/editor_camera_panel.cpp"
+        "src/panels/performance_panel.cpp"
         "src/component_editor/component_editor_registry.cpp"
         "src/icons/icons.cpp"
         "src/gizmos/transform_gizmo.cpp"

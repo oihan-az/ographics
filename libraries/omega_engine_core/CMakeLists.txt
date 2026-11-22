@@ -55,6 +55,8 @@ target_sources(
         "src/component/component_system.cpp"
 
         "src/memory/range_allocator.cpp"
+
+        "src/performance/performance_system.cpp"
 )
 
 find_package(glm CONFIG REQUIRED)
