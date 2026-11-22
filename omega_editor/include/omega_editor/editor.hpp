@@ -8,6 +8,7 @@
 #include <omega_editor/layout/tabbed_panel.hpp>
 #include <omega_editor/panels/hierarchy_panel.hpp>
 #include <omega_editor/panels/inspection_panel.hpp>
+#include <omega_editor/panels/editor_camera_panel.hpp>
 #include <omega_editor/component_editor/component_editor_registry.hpp>
 #include <omega_editor/gizmos/transform_gizmo.hpp>
 
@@ -47,6 +48,7 @@ class Editor
 
     HierarchyPanel m_hierarchy_content{m_engine, m_selected_entity, m_camera_entity};
     InspectionPanel m_inspection_content{m_engine, m_selected_entity, m_component_editors};
+    EditorCameraPanel m_editor_camera_content{m_engine, m_camera_entity, m_component_editors};
 
     Panel m_hierarchy_panel{m_left_slot, "Hierarchy"};
     TabbedPanel m_properties_panel{m_right_slot, "Properties"};
