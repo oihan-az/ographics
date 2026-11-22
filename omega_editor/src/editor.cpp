@@ -68,7 +68,7 @@ void Editor::render()
     }
 
     // Viewport toolbar
-    const ViewportToolbarAction action = m_viewport_toolbar.render(m_camera_viewport);
+    const ViewportToolbarAction action = m_viewport_toolbar.render(m_camera_viewport, m_transform_gizmo);
     switch (action)
     {
     case ViewportToolbarAction::ToggleFullscreen:

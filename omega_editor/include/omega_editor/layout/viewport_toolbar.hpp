@@ -12,6 +12,7 @@ namespace omega_editor
 {
 
 class CameraViewport;
+class TransformGizmo;
 
 enum class ViewportToolbarAction
 {
@@ -25,7 +26,7 @@ class ViewportToolbar
   public:
     ViewportToolbar(omega::ComponentSystem& components, const omega::Entity& editor_camera);
 
-    ViewportToolbarAction render(CameraViewport& viewport);
+    ViewportToolbarAction render(CameraViewport& viewport, TransformGizmo& gizmo);
 
     void show();
 
@@ -34,6 +35,7 @@ class ViewportToolbar
     const omega::Entity& m_editor_camera;
 
     void draw_camera_picker(CameraViewport& viewport, bool& changed);
+    void draw_transform_tools(TransformGizmo& gizmo);
 
     bool m_hidden = false;
 };

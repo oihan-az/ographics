@@ -1,6 +1,7 @@
 #include <omega_editor/layout/camera_viewport.hpp>
 #include <omega_editor/layout/viewport_toolbar.hpp>
 #include <omega_editor/icons/icons.hpp>
+#include <omega_editor/gizmos/transform_gizmo.hpp>
 
 #include <omega/core/component/component_system.hpp>
 #include <omega/camera/camera.hpp>
@@ -48,6 +49,92 @@ bool flat_picker_button(const char* id, const char* label)
     return clicked;
 }
 
+void toolbar_separator()
+{
+    constexpr float toolbar_height = 30.0f;
+    constexpr float separator_height = 16.0f;
+    constexpr float separator_width = 1.0f;
+
+    ImGui::SetCursorPosY((toolbar_height - separator_height) * 0.5f);
+
+    const ImVec2 position = ImGui::GetCursorScreenPos();
+
+    ImGui::Dummy(ImVec2(separator_width, separator_height));
+
+    ImGui::GetWindowDrawList()->AddLine(position, ImVec2(position.x, position.y + separator_height),
+                                        ImGui::GetColorU32(ImGuiCol_Separator));
+}
+
+using IconDrawFunction = void (*)(ImDrawList*, ImVec2, float, ImU32);
+
+bool operation_button(const char* id, const char* tooltip, bool selected, IconDrawFunction draw_icon)
+{
+    constexpr float button_size = 24.0f;
+    constexpr float icon_size = 16.0f;
+
+    const float toolbar_height = 30.0f;
+
+    ImGui::SetCursorPosY((toolbar_height - button_size) * 0.5f);
+
+    const ImVec2 position = ImGui::GetCursorScreenPos();
+
+    const bool clicked = ImGui::InvisibleButton(id, ImVec2(button_size, button_size));
+
+    const bool hovered = ImGui::IsItemHovered();
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+    if (selected || hovered)
+    {
+        const ImU32 background = selected ? IM_COL32(65, 85, 110, 180) : ImGui::GetColorU32(ImGuiCol_ButtonHovered);
+
+        draw_list->AddRectFilled(position, ImVec2(position.x + button_size, position.y + button_size), background,
+                                 4.0f);
+    }
+
+    const ImU32 color = selected ? IM_COL32(190, 215, 245, 255) : ImGui::GetColorU32(hovered ? ImGuiCol_Text : ImGuiCol_TextDisabled);
+
+    const ImVec2 icon_position{position.x + (button_size - icon_size) * 0.5f,
+                               position.y + (button_size - icon_size) * 0.5f};
+
+    draw_icon(draw_list, icon_position, icon_size, color);
+
+    if (hovered)
+        ImGui::SetTooltip("%s", tooltip);
+
+    return clicked;
+}
+
+bool toolbar_icon_button(const char* id, const char* tooltip, ImVec2 size,
+                         const std::function<void(ImDrawList*, ImVec2, ImU32)>& draw_icon)
+{
+    const ImVec2 position = ImGui::GetCursorScreenPos();
+
+    const bool clicked = ImGui::InvisibleButton(id, size);
+    const bool hovered = ImGui::IsItemHovered();
+    const bool held = ImGui::IsItemActive();
+
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+
+    if (hovered || held)
+    {
+        const ImU32 background = ImGui::GetColorU32(held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered);
+
+        draw->AddRectFilled(position, {position.x + size.x, position.y + size.y}, background, 4.0f);
+    }
+
+    const ImU32 color = ImGui::GetColorU32(hovered || held ? ImGuiCol_Text : ImGuiCol_TextDisabled);
+
+    const ImVec2 center{position.x + size.x * 0.5f, position.y + size.y * 0.5f};
+
+    draw_icon(draw, center, color);
+
+    if (hovered && tooltip)
+        ImGui::SetTooltip("%s", tooltip);
+
+    return clicked;
+}
+
 } // namespace
 
 namespace omega_editor
@@ -58,7 +145,7 @@ ViewportToolbar::ViewportToolbar(omega::ComponentSystem& components, const omega
 {
 }
 
-ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport)
+ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport, TransformGizmo& gizmo)
 {
     const auto& rect = viewport.rect();
 
@@ -108,7 +195,6 @@ ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport)
 
         if (viewport.camera().type == omega::CameraType::Perspective)
         {
-
             // Aspect ratio selection
             ImGui::SameLine(0.0f, 6.0f);
             ImGui::SetCursorPosY((toolbar_height - button_height) * 0.5f);
@@ -140,6 +226,12 @@ ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport)
                 ImGui::SetTooltip("Camera viewport aspect ratio");
         }
 
+        ImGui::SameLine(0.0f, 10.0f);
+        toolbar_separator();
+        ImGui::SameLine(0.0f, 10.0f);
+
+        draw_transform_tools(gizmo);
+
         // Right-side controls
         const float controls_width = viewport.fullscreen() ? 94.0f : 70.0f;
 
@@ -151,18 +243,13 @@ ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport)
         ImGui::SetCursorPosY((toolbar_height - button_height) * 0.5f);
 
         // Fullscreen button
-        if (ImGui::InvisibleButton("##Fullscreen", ImVec2(22.0f, button_height)))
-            action = ViewportToolbarAction::ToggleFullscreen;
-
-        const ImVec2 min = ImGui::GetItemRectMin();
-        const ImVec2 max = ImGui::GetItemRectMax();
-
-        icons::draw_fullscreen(draw, {(min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f}, viewport.fullscreen(),
-                               IM_COL32(225, 230, 240, 240));
-
-        if (ImGui::IsItemHovered())
+        constexpr float button_size = 24.0f;
+        ImGui::SetCursorPosY((toolbar_height - button_size) * 0.5f);
+        if (toolbar_icon_button("##Fullscreen", viewport.fullscreen() ? "Exit Fullscreen (F11)" : "Fullscreen (F11)",
+                                ImVec2(button_size, button_size), [&](ImDrawList* draw, ImVec2 center, ImU32 color)
+                                { icons::draw_fullscreen(draw, center, viewport.fullscreen(), color); }))
         {
-            ImGui::SetTooltip(viewport.fullscreen() ? "Exit fullscreen (F11)" : "Enter fullscreen (F11)");
+            action = ViewportToolbarAction::ToggleFullscreen;
         }
 
         // Shortcut hint
@@ -176,19 +263,14 @@ ViewportToolbarAction ViewportToolbar::render(CameraViewport& viewport)
         if (viewport.fullscreen())
         {
             ImGui::SameLine(0.0f, 10.0f);
-            ImGui::SetCursorPosY((toolbar_height - button_height) * 0.5f);
+            ImGui::SetCursorPosY((toolbar_height - button_size) * 0.5f);
 
-            if (ImGui::InvisibleButton("##HideToolbar", ImVec2(22.0f, button_height)))
+            if (toolbar_icon_button("##HideToolbar", "Hide Toolbar", ImVec2(button_size, button_size),
+                                    [&](ImDrawList* draw, ImVec2 center, ImU32 color)
+                                    { icons::draw_chevron(draw, center, false, color); }))
+            {
                 m_hidden = true;
-
-            const ImVec2 hide_min = ImGui::GetItemRectMin();
-            const ImVec2 hide_max = ImGui::GetItemRectMax();
-
-            icons::draw_chevron(draw, {(hide_min.x + hide_max.x) * 0.5f, (hide_min.y + hide_max.y) * 0.5f}, false,
-                                IM_COL32(150, 160, 175, 220));
-
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Hide toolbar");
+            }
         }
     }
 
@@ -288,6 +370,30 @@ void ViewportToolbar::draw_camera_picker(CameraViewport& viewport, bool& changed
     draw_cameras(m_components.entities_with<omega::OrthogonalCamera>(), omega::CameraType::Orthographic);
 
     ImGui::EndPopup();
+}
+
+void ViewportToolbar::draw_transform_tools(TransformGizmo& gizmo)
+{
+    const ImGuizmo::OPERATION active = gizmo.operation();
+
+    if (operation_button("##Translate", "Translate (W)", active == ImGuizmo::TRANSLATE, icons::draw_translate))
+    {
+        gizmo.set_operation(ImGuizmo::TRANSLATE);
+    }
+
+    ImGui::SameLine(0.0f, 2.0f);
+
+    if (operation_button("##Rotate", "Rotate (E)", active == ImGuizmo::ROTATE, icons::draw_rotate))
+    {
+        gizmo.set_operation(ImGuizmo::ROTATE);
+    }
+
+    ImGui::SameLine(0.0f, 2.0f);
+
+    if (operation_button("##Scale", "Scale (R)", active == ImGuizmo::SCALE, icons::draw_scale))
+    {
+        gizmo.set_operation(ImGuizmo::SCALE);
+    }
 }
 
 } // namespace omega_editor

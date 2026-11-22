@@ -110,4 +110,14 @@ void TransformGizmo::render(const CameraViewport& viewport, omega::Entity select
     components.mark_dirty<omega::Transform>(selected_entity);
 }
 
+ImGuizmo::OPERATION TransformGizmo::operation() const
+{
+    return m_operation;
+}
+
+void TransformGizmo::set_operation(ImGuizmo::OPERATION operation)
+{
+    m_operation = operation;
+}
+
 } // namespace omega_editor

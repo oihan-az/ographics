@@ -28,6 +28,9 @@ class TransformGizmo
                 omega::TransformSystem& transforms, omega::HierarchySystem& hierarchy, 
                 bool navigation_active);
 
+    ImGuizmo::OPERATION operation() const;
+    void set_operation(ImGuizmo::OPERATION operation);
+
   private:
     void handle_shortcuts();
 
