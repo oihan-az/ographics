@@ -108,8 +108,7 @@ bool validate_texture_asset(const TextureAsset& asset)
         return false;
 
     const uint64_t expected_subresource_count = static_cast<uint64_t>(asset.mip_levels) * (asset.type == ogfx::ImageType::Image3D ? 1 : asset.array_layers);
-
-    if (asset.subresources.size() != expected_subresource_count)
+    if (asset.subresources.size() > expected_subresource_count)
         return false;
 
     std::unordered_set<uint64_t> seen_subresources;

@@ -1,10 +1,13 @@
-#include "lighting/lighting.hlsli"
+#include "pbr/pbr.hlsli"
+#include "pbr/specular_aa.hlsli"
+#include "normal_mapping/normal_mapping.hlsli"
 
 struct PSInput
 {
     float4 position : SV_Position;
     float2 uv : TEXCOORD0;
     float3 normal : NORMAL;
+    float3 tangent : TANGENT;
     float3 world_position : POSITION1;
 };
 
@@ -59,6 +62,8 @@ struct FragmentConstants
     uint padding0;
     uint padding1;
     uint padding2;
+    
+    float4 camera_position;
 };
 
 [[vk::push_constant]]
@@ -74,11 +79,53 @@ PSOutput PSMain(PSInput input)
 {
     PSOutput output;
 
-    LightingSurface surface;
-    surface.position = input.world_position;
-    surface.normal = normalize(input.normal);
+    const uint flags = constants.texture_flags;
 
-    float3 lighting = evaluate_lighting(
+    // Base color
+    float4 base_color = constants.base_color;
+    if ((flags & HAS_BASE_COLOR) != 0)
+    {
+        base_color *= base_color_texture.Sample(material_sampler, input.uv);
+    }
+
+    // Normal
+    float3 N = normalize(input.normal);
+    if ((flags & HAS_NORMAL) != 0)
+    {
+        float3 sampled_normal = normal_texture.Sample(material_sampler, input.uv).xyz;
+        N = normal_mapping(input.normal, input.tangent, sampled_normal, constants.factors.z);
+    }
+    
+    // Metallic and roughness
+    float metallic = constants.factors.x;
+    float roughness = constants.factors.y;
+    if ((flags & HAS_METALLIC_ROUGHNESS) != 0)
+    {
+        float4 mr = metallic_roughness_texture.Sample(material_sampler, input.uv);
+        roughness *= mr.g;
+        metallic *= mr.b;
+    }
+    metallic = saturate(metallic);
+    roughness = filter_specular_roughness(N, roughness);
+    
+    // Emissive
+    float3 emissive = constants.emissive.rgb;
+    if ((flags & HAS_EMISSIVE) != 0)
+    {
+        emissive *= emissive_texture.Sample(material_sampler, input.uv).rgb;
+    }
+
+    // PBR surface
+    PbrSurface surface;
+    surface.position = input.world_position;
+    surface.normal = N;
+    surface.base_color = base_color.rgb;
+    surface.metallic = metallic;
+    surface.roughness = roughness;
+    surface.view_direction = normalize(constants.camera_position.xyz - input.world_position);
+
+    // Direct lighting
+    float3 lighting = evaluate_pbr_lighting(
         surface,
         directional_lights,
         constants.directional_light_count,
@@ -88,15 +135,9 @@ PSOutput PSMain(PSInput input)
         constants.spot_light_count
     );
 
-    const uint flags = constants.texture_flags;
-    
-    float4 base_color = constants.base_color;
-    if ((flags & HAS_BASE_COLOR) != 0)
-    {
-        base_color *= base_color_texture.Sample(material_sampler, input.uv);
-    }
-    
-    output.color = float4(base_color.rgb * lighting, base_color.a);
+    // Final color
+    const float ambient = 0.4f;
+    output.color = float4(lighting + emissive + (ambient * base_color.rgb), base_color.a);
 
     return output;
 }

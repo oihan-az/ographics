@@ -4,6 +4,7 @@
 #include <stb_image.h>
 
 #include <array>
+#include <bit>
 
 namespace omega
 {
@@ -162,7 +163,7 @@ bool create_texture_asset(void* pixels, int width, int height, int channels, Pix
     result.width = static_cast<uint32_t>(width);
     result.height = static_cast<uint32_t>(height);
     result.depth = 1;
-    result.mip_levels = 1;
+    result.mip_levels = std::bit_width(std::max(result.width, result.height));
     result.array_layers = 1;
 
     result.subresources.push_back(std::move(subresource));

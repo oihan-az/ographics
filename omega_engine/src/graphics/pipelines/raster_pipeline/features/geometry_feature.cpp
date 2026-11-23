@@ -334,7 +334,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
             // Fragment shader constants
             ogfx::InlineConstantRange fragment_constants_range;
             fragment_constants_range.offset = sizeof(DrawConstants);
-            fragment_constants_range.size = sizeof(LightingConstants) + sizeof(MaterialConstants);
+            fragment_constants_range.size = sizeof(LightingConstants) + sizeof(MaterialConstants) + sizeof(Vector4);
             fragment_constants_range.stages = ogfx::ShaderStageFlags::Fragment;
 
             desc.inline_constants_ranges.push_back(fragment_constants_range);
@@ -570,7 +570,6 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 auto release_renderable = [&](Entity entity)
                 {
                     const auto it = frame.renderable_materials.find(entity);
-
                     if (it == frame.renderable_materials.end())
                         return;
 
@@ -776,6 +775,17 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             // Camera
             const CameraData camera = m_desc.cameras.get_camera_data(m_desc.camera, m_desc.camera_type);
+            Transform* transform = m_desc.components.get<Transform>(m_desc.camera);
+            const Vector4 camera_position = Vector4(transform->position, 1.0f);
+
+            ogfx::InlineConstantsInfo camera_constants_info{};
+            camera_constants_info.layout = ctx.pipeline_layout;
+            camera_constants_info.stages = ogfx::ShaderStageFlags::Fragment;
+            camera_constants_info.offset = sizeof(DrawConstants) + sizeof(LightingConstants) + sizeof(MaterialConstants);
+            camera_constants_info.size = sizeof(Vector4);
+            camera_constants_info.data = &camera_position;
+
+            cmd.set_inline_constants(camera_constants_info);
 
             // Renderables
             const std::vector<Entity> entities = m_desc.components.entities_with<PbrOpaqueRenderable>();

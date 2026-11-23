@@ -3,6 +3,7 @@ struct VSInput
     float3 position : POSITION;
     float2 uv : TEXCOORD0;
     float3 normal : NORMAL;
+    float3 tangent : TANGENT;
 };
 
 struct VSOutput
@@ -10,6 +11,7 @@ struct VSOutput
     float4 position : SV_Position;
     float2 uv : TEXCOORD0;
     float3 normal : NORMAL;
+    float3 tangent : TANGENT;
     float3 world_position : POSITION1;
 };
 
@@ -48,8 +50,11 @@ VSOutput VSMain(VSInput input)
     output.world_position = world_position.xyz;
     output.uv = input.uv;
 
-    float3x3 normal_matrix = inverse_transpose((float3x3) constants.model);
+    float3x3 model_matrix = (float3x3) constants.model;
+    float3x3 normal_matrix = inverse_transpose(model_matrix);
+    
     output.normal = normalize(mul(normal_matrix, input.normal));
+    output.tangent = normalize(mul(model_matrix, input.tangent));
 
     return output;
 }
