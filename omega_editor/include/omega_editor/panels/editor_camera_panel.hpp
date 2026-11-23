@@ -1,6 +1,8 @@
 #ifndef OMEGA_EDITOR_CAMERA_PANEL_HPP
 #define OMEGA_EDITOR_CAMERA_PANEL_HPP
 
+#include <omega/core/entity/entity.hpp>
+
 #include <omega_editor/layout/panel_content.hpp>
 #include <omega_editor/component_editor/component_editor_registry.hpp>
 
@@ -8,7 +10,6 @@ namespace omega
 {
 
 class Engine;
-class Entity;
 
 } // namespace omega
 

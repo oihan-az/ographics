@@ -1,33 +1,15 @@
 #ifndef OMEGA_ENTITY_HPP
 #define OMEGA_ENTITY_HPP
 
-#include <cstdint>
-#include <limits>
-#include <functional>
+#include <omega/core/handle.hpp>
 
 namespace omega
 {
 
-struct Entity
-{
-    static constexpr uint32_t invalid_index = std::numeric_limits<uint32_t>::max();
+struct EntityTag;
 
-    uint32_t index = invalid_index;
-    uint32_t generation = 0;
-
-    bool is_valid() const { return index != invalid_index; }
-    static Entity invalid() { return {}; }
-
-    bool operator==(const Entity&) const = default;
-};
-
-struct EntityHash
-{
-    size_t operator()(const Entity& entity) const noexcept
-    {
-        return entity.index ^ (entity.generation << 1);
-    }
-};
+using Entity = Handle<EntityTag>;
+using EntityHash = HandleHash<EntityTag>;
 
 } // namespace omega
 

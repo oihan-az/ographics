@@ -1,6 +1,8 @@
 #ifndef OMEGA_EDITOR_HPP
 #define OMEGA_EDITOR_HPP
 
+#include <omega/core/entity/entity.hpp>
+
 #include <omega_editor/layout/panel_slot.hpp>
 #include <omega_editor/layout/camera_viewport.hpp>
 #include <omega_editor/layout/viewport_toolbar.hpp>

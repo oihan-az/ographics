@@ -1,6 +1,7 @@
 #ifndef OMEGA_EDITOR_PANEL_INSPECTION_HPP
 #define OMEGA_EDITOR_PANEL_INSPECTION_HPP
 
+#include <omega/core/entity/entity.hpp>
 #include <omega_editor/layout/panel_content.hpp>
 #include <omega_editor/component_editor/component_editor.hpp>
 
@@ -11,7 +12,6 @@ namespace omega
 {
 
 class Engine;
-class Entity;
 
 } // namespace omega
 
