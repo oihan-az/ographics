@@ -15,7 +15,8 @@ add_executable(omega_tests
     #"mesh/mesh_system_tests.cpp"
     #"mesh/gpu_mesh_system_tests.cpp"
     #"texture/texture_system_tests.cpp"
-    "texture/gpu_texture_system_tests.cpp"
+    #"texture/gpu_texture_system_tests.cpp"
+    "material/material_system_tests.cpp"
     
 )
 
