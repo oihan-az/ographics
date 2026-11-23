@@ -13,7 +13,9 @@
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
 
-#include <omega/renderable/renderable.hpp>
+#include <omega/renderable/pbr_opaque_renderable.hpp>
+#include <omega/material/materials/pbr_opaque_material.hpp>
+#include <omega/material/material_handle.hpp>
 
 #include <omega/camera/camera_type.hpp>
 
@@ -55,7 +57,7 @@ class GraphicsSystem;
 template <typename T> class ComponentStorage;
 template <typename Handle, typename Hash> class ResourceSetCache;
 
-struct GeometryRenderFeatureDesc
+struct PbrOpaqueRenderFeatureDesc
 {
     Entity camera;
     CameraType camera_type;
@@ -67,10 +69,10 @@ struct GeometryRenderFeatureDesc
     GraphicsSystem& graphics;
 };
 
-class GeometryRenderFeature : public orenderer::IRenderFeature
+class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
 {
   public:
-    GeometryRenderFeature(const GeometryRenderFeatureDesc& desc);
+    PbrOpaqueRenderFeature(const PbrOpaqueRenderFeatureDesc& desc);
 
     void build(orenderer::RenderFeatureContext& ctx) override;
     void on_swapchain_recreated(orenderer::RenderFeatureContext& ctx) override;
@@ -80,9 +82,13 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
     const orendergraph::ResourceHandle<ogfx::Image> out_image() const { return m_out_image; }
 
   private:
-    GeometryRenderFeatureDesc m_desc;
+    using PbrMaterialHandle = MaterialHandle<PbrOpaqueMaterial>;
+    using PbrMaterialHash = MaterialHandleHash<PbrOpaqueMaterial>;
+    PbrMaterialHandle m_default_material{};
 
-    FrameEventQueue<ComponentEvent<Renderable>> m_renderable_events;
+    PbrOpaqueRenderFeatureDesc m_desc;
+
+    FrameEventQueue<ComponentEvent<PbrOpaqueRenderable>> m_renderable_events;
     FrameEventQueue<ComponentEvent<DirectionalLight>> m_directional_light_events;
     FrameEventQueue<ComponentEvent<PointLight>> m_point_light_events;
     FrameEventQueue<ComponentEvent<SpotLight>> m_spot_light_events;
@@ -97,10 +103,10 @@ class GeometryRenderFeature : public orenderer::IRenderFeature
         orendergraph::ResourceWriteDesc point_buffer_write;
         orendergraph::ResourceWriteDesc spot_buffer_write;
 
-        std::unordered_map<Entity, TextureHandle, EntityHash> m_renderable_textures;
-        std::unique_ptr<ResourceSetCache<TextureHandle, TextureHandleHash>> m_texture_resource_sets;
+        std::unordered_map<Entity, PbrMaterialHandle, EntityHash> renderable_materials;
+        std::unique_ptr<ResourceSetCache<PbrMaterialHandle, PbrMaterialHash>> material_resource_sets;
 
-        std::unordered_set<TextureHandle, TextureHandleHash> pending_textures;
+        std::unordered_set<PbrMaterialHandle, PbrMaterialHash> pending_materials;
 
         FrameResources(ComponentSystem& components, EventSystem& events)
             : directional_lights(components), point_lights(components), spot_lights(components)

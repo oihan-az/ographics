@@ -11,7 +11,7 @@ namespace omega_editor
 
 void UIPipeline::setup(UIPipelineDesc& desc)
 {
-    omega::GeometryRenderFeatureDesc geometry_render_desc
+    omega::PbrOpaqueRenderFeatureDesc pbr_opaque_desc
     {
         desc.camera,
         desc.camera_type,
@@ -22,11 +22,11 @@ void UIPipeline::setup(UIPipelineDesc& desc)
         desc.graphics,
     };
     
-    m_geometry_render_feature = &add_feature<omega::GeometryRenderFeature>(geometry_render_desc);
+    m_pbr_opaque_feature = &add_feature<omega::PbrOpaqueRenderFeature>(pbr_opaque_desc);
 
     omega::ToSwapchainDesc to_swapchain_desc
     {
-        m_geometry_render_feature->out_image(),
+        m_pbr_opaque_feature->out_image(),
         desc.graphics
     };
 
@@ -50,7 +50,7 @@ void UIPipeline::set_viewport(const omega::RenderRegion& region)
 
 void UIPipeline::set_camera(omega::Entity camera, omega::CameraType camera_type)
 {
-    m_geometry_render_feature->set_camera(camera, camera_type);
+    m_pbr_opaque_feature->set_camera(camera, camera_type);
 }
 
 } // namespace omega_editor

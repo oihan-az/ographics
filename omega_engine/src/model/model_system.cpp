@@ -6,7 +6,10 @@
 #include <omega/graphics/graphics_system.hpp>
 #include <omega/mesh/mesh_system.hpp>
 #include <omega/texture/texture_system.hpp>
-#include <omega/renderable/renderable.hpp>
+#include <omega/material/material_system.hpp>
+#include <omega/material/material_handle.hpp>
+#include <omega/material/materials/pbr_opaque_material.hpp>
+#include <omega/renderable/pbr_opaque_renderable.hpp>
 #include <omega/transform/transform.hpp>
 #include <omega/assets/model_importer.hpp>
 
@@ -16,7 +19,7 @@
 namespace omega
 {
 
-ModelSystem::ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components, GraphicsSystem& graphics,
+ModelSystem::ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components, GraphicsSystem& graphics, 
                          ModelImporter& importer)
     : m_entities(entities), m_hierarchy(hierarchy), m_components(components), m_graphics(graphics),
       m_importer(importer)
@@ -152,6 +155,44 @@ bool ModelSystem::instantiate(ModelHandle model, Entity& root)
         texture_handles.push_back(handle);
     }
 
+    auto resolve_texture = [&](uint32_t index) -> TextureHandle
+    {
+        if (index == invalid_imported_index)
+            return TextureHandle{};
+
+        return texture_handles[index];
+    };
+
+    // Create each imported material only once
+    std::vector<MaterialHandle<PbrOpaqueMaterial>> material_handles;
+    material_handles.reserve(imported_model->materials.size());
+    for (const ImportedPbrOpaqueMaterial& imported : imported_model->materials)
+    {
+        PbrOpaqueMaterial material;
+
+        material.base_color_factor = imported.base_color_factor;
+        material.metallic_factor = imported.metallic_factor;
+        material.roughness_factor = imported.roughness_factor;
+
+        material.emissive_factor = imported.emissive_factor;
+        material.normal_scale = imported.normal_scale;
+        material.occlusion_strength = imported.occlusion_strength;
+
+        material.base_color_texture = resolve_texture(imported.base_color_texture);
+
+        material.metallic_roughness_texture = resolve_texture(imported.metallic_roughness_texture);
+
+        material.normal_texture = resolve_texture(imported.normal_texture);
+
+        material.occlusion_texture = resolve_texture(imported.occlusion_texture);
+
+        material.emissive_texture = resolve_texture(imported.emissive_texture);
+
+        const auto handle = m_graphics.materials().create(material);
+
+        material_handles.push_back(handle);
+    }
+
     std::vector<Entity> node_entities(imported_model->nodes.size());
     std::vector<Entity> created_entities;
 
@@ -219,15 +260,11 @@ bool ModelSystem::instantiate(ModelHandle model, Entity& root)
                     return false;
                 }
 
-                Renderable renderable{};
+                PbrOpaqueRenderable renderable{};
                 renderable.mesh = mesh_handle;
+                renderable.material = material_handles[primitive.material];
 
-                if (primitive.albedo_texture != std::numeric_limits<uint32_t>::max())
-                    renderable.texture = texture_handles[primitive.albedo_texture];
-                else
-                    renderable.texture = m_graphics.missing_texture();
-
-                if (!m_components.add<Renderable>(renderable_entity, renderable))
+                if (!m_components.add<PbrOpaqueRenderable>(renderable_entity, renderable))
                 {
                     rollback();
                     return false;

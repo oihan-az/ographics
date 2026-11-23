@@ -18,7 +18,6 @@ struct TextureSubresource
     std::vector<std::byte> data;
 };
 
-
 struct TextureAsset
 {
     ogfx::ImageType type = ogfx::ImageType::Image2D;

@@ -18,21 +18,32 @@
 #include <omega/mesh/gpu_mesh_system.hpp>
 #include <omega/mesh/vertex.hpp>
 #include <omega/texture/gpu_texture_system.hpp>
+#include <omega/material/material_system.hpp>
 
 #include <omega/graphics/graphics_system.hpp>
-#include <omega/renderable/renderable.hpp>
 #include <omega/graphics/resources/gpu_light_data.hpp>
 
 #include <filesystem>
+#include <array>
 
 namespace omega
 {
+
+namespace
+{
+
+constexpr uint32_t material_texture_count = 5;
+
+std::array<TextureHandle, material_texture_count> get_material_textures(const PbrOpaqueMaterial& material)
+{
+    return {material.base_color_texture, material.metallic_roughness_texture, material.normal_texture,
+            material.occlusion_texture, material.emissive_texture};
+}
 
 struct DrawConstants
 {
     Matrix4 model;
     Matrix4 view_projection;
-    Vector4 color;
 };
 
 struct LightingConstants
@@ -43,7 +54,27 @@ struct LightingConstants
     uint32_t padding = 0;
 };
 
-GeometryRenderFeature::GeometryRenderFeature(const GeometryRenderFeatureDesc& desc)
+struct MaterialConstants
+{
+    Vector4 factors;
+    Vector4 base_color;
+    Vector4 emissive;
+
+    uint32_t texture_flags = 0;
+    uint32_t padding0 = 0;
+    uint32_t padding1 = 0;
+    uint32_t padding2 = 0;
+};
+
+constexpr uint32_t has_base_color = 1u << 0;
+constexpr uint32_t has_metallic_roughness = 1u << 1;
+constexpr uint32_t has_normal = 1u << 2;
+constexpr uint32_t has_occlusion = 1u << 3;
+constexpr uint32_t has_emissive = 1u << 4;
+
+} // namespace
+
+PbrOpaqueRenderFeature::PbrOpaqueRenderFeature(const PbrOpaqueRenderFeatureDesc& desc)
     : m_desc(desc), 
       m_renderable_events(m_desc.graphics.max_frames_in_flight()), 
       m_directional_light_events(m_desc.graphics.max_frames_in_flight()),
@@ -51,7 +82,7 @@ GeometryRenderFeature::GeometryRenderFeature(const GeometryRenderFeatureDesc& de
       m_spot_light_events(m_desc.graphics.max_frames_in_flight())
 {}
 
-void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx) 
+void PbrOpaqueRenderFeature::build(orenderer::RenderFeatureContext& ctx)
 {
     orendergraph::RenderGraph& rg = ctx.render_graph();
 
@@ -77,10 +108,13 @@ void GeometryRenderFeature::build(orenderer::RenderFeatureContext& ctx)
     rg.get_resource_allocator().create_pool(pool_desc);
 
     create_resources(rg);
+
+    m_default_material = m_desc.graphics.materials().create(PbrOpaqueMaterial{});
+
     add_node(rg);
 }
 
-void GeometryRenderFeature::on_swapchain_recreated(orenderer::RenderFeatureContext& ctx)
+void PbrOpaqueRenderFeature::on_swapchain_recreated(orenderer::RenderFeatureContext& ctx)
 {
     create_output_resources(ctx.render_graph());
 
@@ -129,13 +163,13 @@ void GeometryRenderFeature::on_swapchain_recreated(orenderer::RenderFeatureConte
     raster_desc.height = swapchain.height();
 }
 
-void GeometryRenderFeature::set_camera(omega::Entity camera, CameraType camera_type)
+void PbrOpaqueRenderFeature::set_camera(omega::Entity camera, CameraType camera_type)
 {
     m_desc.camera = camera;
     m_desc.camera_type = camera_type;
 }
 
-void GeometryRenderFeature::create_output_resources(orendergraph::RenderGraph& rg)
+void PbrOpaqueRenderFeature::create_output_resources(orendergraph::RenderGraph& rg)
 {
     ogfx::Swapchain& swapchain = m_desc.graphics.swapchain();
 
@@ -193,7 +227,7 @@ void GeometryRenderFeature::create_output_resources(orendergraph::RenderGraph& r
     }
 }
 
-void GeometryRenderFeature::create_resources(orendergraph::RenderGraph& rg)
+void PbrOpaqueRenderFeature::create_resources(orendergraph::RenderGraph& rg)
 {
     create_output_resources(rg);
 
@@ -204,7 +238,7 @@ void GeometryRenderFeature::create_resources(orendergraph::RenderGraph& rg)
     }
 }
 
-void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
+void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
 {
     // Geometry pass
     m_geometry_node = rg.add_node<orendergraph::RasterContext>
@@ -249,8 +283,8 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             // Shaders
             const std::filesystem::path shader_dir = "shaders/";
-            const std::filesystem::path vertex_shader_path = shader_dir / ("geometry.vert." OGRAPHICS_SHADER_FORMAT);
-            const std::filesystem::path fragment_shader_path = shader_dir / ("geometry.frag." OGRAPHICS_SHADER_FORMAT);
+            const std::filesystem::path vertex_shader_path = shader_dir / ("pbr_opaque.vert." OGRAPHICS_SHADER_FORMAT);
+            const std::filesystem::path fragment_shader_path = shader_dir / ("pbr_opaque.frag." OGRAPHICS_SHADER_FORMAT);
             const std::vector<uint8_t> vertex_bytecode = load_shader(vertex_shader_path);
             const std::vector<uint8_t> fragment_bytecode = load_shader(fragment_shader_path);
 
@@ -300,7 +334,7 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             // Fragment shader constants
             ogfx::InlineConstantRange fragment_constants_range;
             fragment_constants_range.offset = sizeof(DrawConstants);
-            fragment_constants_range.size = sizeof(LightingConstants);
+            fragment_constants_range.size = sizeof(LightingConstants) + sizeof(MaterialConstants);
             fragment_constants_range.stages = ogfx::ShaderStageFlags::Fragment;
 
             desc.inline_constants_ranges.push_back(fragment_constants_range);
@@ -328,15 +362,19 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             desc.resource_set_layouts_desc.push_back(set_layout_desc);
 
-            ogfx::ResourceSetLayoutDesc texture_set_layout_desc;
+            ogfx::ResourceSetLayoutDesc material_set_layout_desc;
 
-            ogfx::ResourceBindingDesc texture_binding;
-            texture_binding.binding = 0;
-            texture_binding.type = ogfx::ResourceType::SampledTexture;
-            texture_binding.stages = ogfx::ShaderStageFlags::Fragment;
-            texture_set_layout_desc.bindings.push_back(texture_binding);
+            for (uint32_t i = 0; i < material_texture_count; ++i)
+            {
+                ogfx::ResourceBindingDesc texture_binding{};
+                texture_binding.binding = i;
+                texture_binding.type = ogfx::ResourceType::SampledTexture;
+                texture_binding.stages = ogfx::ShaderStageFlags::Fragment;
 
-            desc.resource_set_layouts_desc.push_back(texture_set_layout_desc);
+                material_set_layout_desc.bindings.push_back(texture_binding);
+            }
+
+            desc.resource_set_layouts_desc.push_back(material_set_layout_desc);
 
             ogfx::ResourceSetLayoutDesc sampler_set_layout_desc;
 
@@ -456,28 +494,29 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
     auto& ctx = m_geometry_node->context();
     for (FrameResources& frame : m_frame_resources)
     {
-        frame.m_texture_resource_sets = std::make_unique<ResourceSetCache<TextureHandle, TextureHandleHash>>(rg.device(), rg.get_resource_allocator(), *ctx.resource_set_layouts[1]);
+        frame.material_resource_sets = std::make_unique<ResourceSetCache<PbrMaterialHandle, PbrMaterialHash>>(rg.device(), rg.get_resource_allocator(), *ctx.resource_set_layouts[1]);
 
-        if (!frame.m_texture_resource_sets->acquire(m_desc.graphics.missing_texture()))
-            continue;
-
-        // Request residency if necessary
-        if (!m_desc.graphics.gpu_textures().is_resident(m_desc.graphics.missing_texture()) &&
-            !m_desc.graphics.gpu_textures().is_pending(m_desc.graphics.missing_texture()) &&
-            !m_desc.graphics.gpu_textures().is_uploading(m_desc.graphics.missing_texture()))
-        {
-            m_desc.graphics.gpu_textures().make_resident(m_desc.graphics.missing_texture());
-        }
-
-        // Update the resource set
-        ogfx::ImageBinding texture_binding{};
-        texture_binding.binding = 0;
-        texture_binding.image_state = ogfx::ImageState::ShaderRead;
-        texture_binding.image_view = m_desc.graphics.gpu_textures().get_view(m_desc.graphics.missing_texture_view());
-
-        ogfx::ResourceSetWriteInfo write_info{};
-        write_info.textures.push_back(texture_binding);
-        frame.m_texture_resource_sets->update(m_desc.graphics.missing_texture(), write_info);
+        // TODO: handle default pbr material
+        //if (!frame.m_texture_resource_sets->acquire(m_desc.graphics.missing_texture()))
+        //    continue;
+        //
+        //// Request residency if necessary
+        //if (!m_desc.graphics.gpu_textures().is_resident(m_desc.graphics.missing_texture()) &&
+        //    !m_desc.graphics.gpu_textures().is_pending(m_desc.graphics.missing_texture()) &&
+        //    !m_desc.graphics.gpu_textures().is_uploading(m_desc.graphics.missing_texture()))
+        //{
+        //    m_desc.graphics.gpu_textures().make_resident(m_desc.graphics.missing_texture());
+        //}
+        //
+        //// Update the resource set
+        //ogfx::ImageBinding texture_binding{};
+        //texture_binding.binding = 0;
+        //texture_binding.image_state = ogfx::ImageState::ShaderRead;
+        //texture_binding.image_view = m_desc.graphics.gpu_textures().get_view(m_desc.graphics.missing_texture_view());
+        //
+        //ogfx::ResourceSetWriteInfo write_info{};
+        //write_info.textures.push_back(texture_binding);
+        //frame.m_texture_resource_sets->update(m_desc.graphics.missing_texture(), write_info);
     }
 
     m_geometry_node->set_pre_execute
@@ -527,113 +566,70 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             {
                 m_renderable_events.capture(m_desc.events);
 
-                auto texture_resource_sets = frame.m_texture_resource_sets.get();
+                auto* material_resource_sets = frame.material_resource_sets.get();
+                auto release_renderable = [&](Entity entity)
+                {
+                    const auto it = frame.renderable_materials.find(entity);
+
+                    if (it == frame.renderable_materials.end())
+                        return;
+
+                    const PbrMaterialHandle previous_material = it->second;
+
+                    frame.renderable_materials.erase(it);
+
+                    material_resource_sets->release(previous_material);
+
+                    if (material_resource_sets->reference_count(previous_material) == 0)
+                        frame.pending_materials.erase(previous_material);
+                };
+
                 const auto& frame_events = m_renderable_events.get_events(frame_index);
                 for (const auto& event : frame_events)
                 {
                     switch (event.type)
                     {
-                    case ComponentEventType::Modified:
-                    {
-                        auto it = frame.m_renderable_textures.find(event.entity);
-                        if (it != frame.m_renderable_textures.end())
-                        {
-                            const TextureHandle previous_texture = it->second;
-                            if (texture_resource_sets->release(previous_texture))
-                            {
-                                bool referenced_in_other_frame = false;
-                                for (const FrameResources& other_frame : m_frame_resources)
-                                {
-                                    if (other_frame.m_texture_resource_sets->reference_count(previous_texture) > 0)
-                                    {
-                                        referenced_in_other_frame = true;
-                                        break;
-                                    }
-                                }
-
-                                if (!referenced_in_other_frame)
-                                {
-                                    auto view_it = m_texture_views.find(previous_texture);
-                                    if (view_it != m_texture_views.end())
-                                    {
-                                        m_desc.graphics.gpu_textures().release_view(view_it->second);
-                                        m_texture_views.erase(view_it);
-                                    }
-                                }
-                            }
-                        }
-
-                        // fallthrough
-                    }
-                    case ComponentEventType::Added:
-                    {
-                        const Renderable* renderable = m_desc.components.get<Renderable>(event.entity);
-                        if (!renderable)
-                            continue;
-
-                        const TextureHandle texture = renderable->texture;
-
-                        const bool needs_update = texture_resource_sets->reference_count(texture) == 0;
-
-                        if (!texture_resource_sets->acquire(texture))
-                            break;
-
-                        frame.m_renderable_textures[event.entity] = texture;
-
-                        // Request residency if necessary
-                        if (!m_desc.graphics.gpu_textures().is_resident(texture) && 
-                            !m_desc.graphics.gpu_textures().is_pending(texture) &&
-                            !m_desc.graphics.gpu_textures().is_uploading(texture))
-                        {
-                            m_desc.graphics.gpu_textures().make_resident(texture);
-                        }
-
-                        // Request a view if one doesn't already exist
-                        if (!m_texture_views.contains(texture))
-                        {
-                            const TextureViewHandle view = m_desc.graphics.gpu_textures().create_view(texture, TextureViewDesc{});
-                            if (view.is_valid())
-                            {
-                                m_texture_views.emplace(texture, view);
-                            }
-                        }
-
-                        if (needs_update && m_texture_views.contains(texture))
-                            frame.pending_textures.insert(texture);
-
-                        break;
-                    }
                     case ComponentEventType::Removed:
                     {
-                        auto it = frame.m_renderable_textures.find(event.entity);
-                        if (it != frame.m_renderable_textures.end())
-                        {
-                            const TextureHandle previous_texture = it->second;
-                            if (texture_resource_sets->release(previous_texture))
-                            {
-                                bool referenced_in_other_frame = false;
-                                for (const FrameResources& other_frame : m_frame_resources)
-                                {
-                                    if (other_frame.m_texture_resource_sets->reference_count(previous_texture) > 0)
-                                    {
-                                        referenced_in_other_frame = true;
-                                        break;
-                                    }
-                                }
+                        release_renderable(event.entity);
+                        break;
+                    }
 
-                                if (!referenced_in_other_frame)
-                                {
-                                    auto view_it = m_texture_views.find(previous_texture);
-                                    if (view_it != m_texture_views.end())
-                                    {
-                                        m_desc.graphics.gpu_textures().release_view(view_it->second);
-                                        m_texture_views.erase(view_it);
-                                    }
-                                }
+                    case ComponentEventType::Added:
+                    case ComponentEventType::Modified:
+                    {
+                        const PbrOpaqueRenderable* renderable = m_desc.components.get<PbrOpaqueRenderable>(event.entity);
+
+                        if (!renderable || !m_desc.graphics.materials().get(renderable->material))
+                        {
+                            release_renderable(event.entity);
+                            break;
+                        }
+
+                        const PbrMaterialHandle material = renderable->material;
+
+                        const auto it = frame.renderable_materials.find(event.entity);
+                        if (it != frame.renderable_materials.end())
+                        {
+                            if (it->second == material)
+                            {
+                                if (event.type == ComponentEventType::Modified)
+                                    frame.pending_materials.insert(material);
+
+                                break;
                             }
 
-                            frame.m_renderable_textures.erase(it);
+                            release_renderable(event.entity);
                         }
+
+                        const bool needs_update = material_resource_sets->reference_count(material) == 0;
+                        if (!material_resource_sets->acquire(material))
+                            break;
+
+                        frame.renderable_materials[event.entity] = material;
+
+                        if (needs_update)
+                            frame.pending_materials.insert(material);
 
                         break;
                     }
@@ -642,28 +638,90 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
                 m_renderable_events.clear(frame_index);
 
-                const std::vector<TextureHandle> pending(frame.pending_textures.begin(), frame.pending_textures.end());
-                for (TextureHandle texture : pending)
+                auto& gpu_textures = m_desc.graphics.gpu_textures();
+
+                const std::vector<PbrMaterialHandle> pending_materials(frame.pending_materials.begin(), frame.pending_materials.end());
+                for (PbrMaterialHandle material_handle : pending_materials)
                 {
-                    auto view_it = m_texture_views.find(texture);
-                    if (view_it == m_texture_views.end())
+                    const PbrOpaqueMaterial* material = m_desc.graphics.materials().get(material_handle);
+                    if (!material)
                         continue;
 
-                    const ogfx::ImageView* image_view = m_desc.graphics.gpu_textures().get_view(view_it->second);
-                    if (!image_view)
-                        continue;
+                    const auto textures = get_material_textures(*material);
 
-                    ogfx::ImageBinding texture_binding{};
-                    texture_binding.binding = 0;
-                    texture_binding.image_state = ogfx::ImageState::ShaderRead;
-                    texture_binding.image_view = image_view;
+                    bool all_views_ready = true;
 
                     ogfx::ResourceSetWriteInfo write_info{};
-                    write_info.textures.push_back(texture_binding);
 
-                    frame.m_texture_resource_sets->update(texture, write_info);
-                    frame.pending_textures.erase(texture);
+                    for (uint32_t i = 0; i < textures.size(); ++i)
+                    {
+                        TextureHandle texture = textures[i];
+
+                        // Missing optional textures use the default texture
+                        if (!texture.is_valid())
+                        {
+                            texture = m_desc.graphics.missing_texture();
+                        }
+
+                        // Request residency if necessary
+                        if (!gpu_textures.is_resident(texture) && 
+                            !gpu_textures.is_pending(texture) &&
+                            !gpu_textures.is_uploading(texture))
+                        {
+                            gpu_textures.make_resident(texture);
+                        }
+
+                        const ogfx::ImageView* image_view = nullptr;
+                        if (texture == m_desc.graphics.missing_texture())
+                        {
+                            image_view = gpu_textures.get_view(m_desc.graphics.missing_texture_view());
+                        }
+                        else
+                        {
+                            // Request a view if it doesn't exist yet
+                            auto view_it = m_texture_views.find(texture);
+                            if (view_it == m_texture_views.end() || !gpu_textures.is_view_valid(view_it->second))
+                            {
+                                const TextureViewHandle view = gpu_textures.create_view(texture, TextureViewDesc{});
+
+                                if (view.is_valid())
+                                    m_texture_views[texture] = view;
+                            }
+
+                            view_it = m_texture_views.find(texture);
+                            if (view_it != m_texture_views.end())
+                                image_view = gpu_textures.get_view(view_it->second);
+                        }
+
+                        // This texture isn't ready yet
+                        if (!image_view)
+                        {
+                            all_views_ready = false;
+                            continue;
+                        }
+
+                        // This texture is ready
+                        ogfx::ImageBinding binding{};
+                        binding.binding = i;
+                        binding.image_state = ogfx::ImageState::ShaderRead;
+                        binding.image_view = image_view;
+
+                        write_info.textures.push_back(binding);
+                    }
+
+                    // Update every texture binding that is ready
+                    if (!write_info.textures.empty())
+                    {
+                        frame.material_resource_sets->update(material_handle, write_info);
+                    }
+
+                    // The material is ready only when all bindings have been initialized
+                    if (all_views_ready)
+                    {
+                        frame.pending_materials.erase(material_handle);
+                    }
                 }
+
             }
 
             orendergraph::NodePreExecute<orendergraph::RasterContext>::execute(rg, cmd, node);
@@ -720,10 +778,10 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
             const CameraData camera = m_desc.cameras.get_camera_data(m_desc.camera, m_desc.camera_type);
 
             // Renderables
-            const std::vector<Entity> entities = m_desc.components.entities_with<Renderable>();
+            const std::vector<Entity> entities = m_desc.components.entities_with<PbrOpaqueRenderable>();
             for (Entity entity : entities)
             {
-                const Renderable* renderable = m_desc.components.get<Renderable>(entity);
+                const PbrOpaqueRenderable* renderable = m_desc.components.get<PbrOpaqueRenderable>(entity);
 
                 // GPU mesh
                 if (!m_desc.graphics.gpu_meshes().is_resident(renderable->mesh))
@@ -763,7 +821,6 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 DrawConstants constants{};
                 constants.model = m_desc.transforms.get_world_matrix(entity);
                 constants.view_projection = camera.view_projection;
-                constants.color = Vector4(renderable->color.x, renderable->color.y, renderable->color.z, 1.0f);
 
                 ogfx::InlineConstantsInfo constants_info{};
                 constants_info.layout = ctx.pipeline_layout;
@@ -774,24 +831,65 @@ void GeometryRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
                 cmd.set_inline_constants(constants_info);
 
-                // Texture
-                TextureHandle texture = renderable->texture;
-                if (frame.pending_textures.contains(texture))
+                const PbrOpaqueMaterial* material = m_desc.graphics.materials().get(renderable->material);
+                if (!material)
+                    continue;
+
+                PbrMaterialHandle material_handle = renderable->material;
+
+                // An unresolved material uses the default material instead
+                if (frame.pending_materials.contains(material_handle) || !frame.material_resource_sets->get(material_handle))
                 {
-                    texture = m_desc.graphics.missing_texture();
+                    material_handle = m_default_material;
                 }
 
-                const ogfx::ResourceSet* texture_resource_set = frame.m_texture_resource_sets->get(texture);
-                if (!texture_resource_set)
+                const ogfx::ResourceSet* material_resource_set = frame.material_resource_sets->get(material_handle);
+                if (!material_resource_set)
                     continue;
 
                 ogfx::ResourceSetBindInfo texture_resource_set_info{};
                 texture_resource_set_info.layout = ctx.pipeline_layout;
                 texture_resource_set_info.pipeline_type = ogfx::PipelineType::Graphics;
                 texture_resource_set_info.set_index = 1;
-                texture_resource_set_info.resource_set = const_cast<ogfx::ResourceSet*>(texture_resource_set);
+                texture_resource_set_info.resource_set = const_cast<ogfx::ResourceSet*>(material_resource_set);
 
                 cmd.bind_resource_set(texture_resource_set_info);
+
+                // Material constants
+                PbrOpaqueMaterial* draw_material = m_desc.graphics.materials().get(material_handle);
+                MaterialConstants material_constants{};
+
+                material_constants.base_color = draw_material->base_color_factor;
+
+                material_constants.factors = Vector4(draw_material->metallic_factor, draw_material->roughness_factor,
+                                                     draw_material->normal_scale, draw_material->occlusion_strength);
+
+                material_constants.emissive = Vector4(draw_material->emissive_factor.x, draw_material->emissive_factor.y,
+                                                      draw_material->emissive_factor.z, 0.0f);
+
+                if (draw_material->base_color_texture.is_valid())
+                    material_constants.texture_flags |= has_base_color;
+
+                if (draw_material->metallic_roughness_texture.is_valid())
+                    material_constants.texture_flags |= has_metallic_roughness;
+
+                if (draw_material->normal_texture.is_valid())
+                    material_constants.texture_flags |= has_normal;
+
+                if (draw_material->occlusion_texture.is_valid())
+                    material_constants.texture_flags |= has_occlusion;
+
+                if (draw_material->emissive_texture.is_valid())
+                    material_constants.texture_flags |= has_emissive;
+
+                ogfx::InlineConstantsInfo material_info{};
+                material_info.layout = ctx.pipeline_layout;
+                material_info.stages = ogfx::ShaderStageFlags::Fragment;
+                material_info.offset = sizeof(DrawConstants) + sizeof(LightingConstants);
+                material_info.size = sizeof(MaterialConstants);
+                material_info.data = &material_constants;
+
+                cmd.set_inline_constants(material_info);
 
                 // Draw
                 if (draw_data.is_indexed())

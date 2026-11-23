@@ -336,6 +336,11 @@ TextureViewHandle GraphicsSystem::missing_texture_view() const
     return m_missing_texture_view;
 }
 
+MaterialSystem& GraphicsSystem::materials()
+{
+    return m_materials;
+}
+
 ogfx::CommandBuffer& GraphicsSystem::current_command_buffer()
 {
     return *m_frames[m_current_frame].command_buffer;

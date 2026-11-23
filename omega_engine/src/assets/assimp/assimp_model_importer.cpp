@@ -9,6 +9,9 @@
 #include <assimp/scene.h>
 #include <assimp/material.h>
 
+#include <map>
+#include <utility>
+
 namespace omega
 {
 
@@ -68,7 +71,7 @@ Transform convert_transform(const aiMatrix4x4& matrix)
     return result;
 }
 
-ImportedMesh convert_mesh(const aiMesh& source, uint32_t albedo_texture)
+ImportedMesh convert_mesh(const aiMesh& source)
 {
     if (!source.HasPositions() || source.mNumVertices == 0)
         throw std::runtime_error("Assimp mesh has no vertex positions.");
@@ -78,7 +81,7 @@ ImportedMesh convert_mesh(const aiMesh& source, uint32_t albedo_texture)
 
     ImportedPrimitive primitive;
 
-    primitive.albedo_texture = albedo_texture;
+    primitive.material = source.mMaterialIndex;
 
     MeshAsset& asset = primitive.mesh;
 
@@ -130,45 +133,169 @@ ImportedMesh convert_mesh(const aiMesh& source, uint32_t albedo_texture)
 
 constexpr uint32_t invalid_texture_index = std::numeric_limits<uint32_t>::max();
 
-uint32_t load_material_albedo(const aiScene& scene, const aiMaterial& material, const std::filesystem::path& directory,
-                              ImportedModel& model)
+
+enum class MaterialTextureColorSpace
 {
-    aiString texture_path;
-    aiReturn status = material.GetTexture(aiTextureType_BASE_COLOR, 0, &texture_path);
-    if (status != AI_SUCCESS)
+    Linear,
+    SRGB
+};
+
+class TextureImportRegistry
+{
+  public:
+    TextureImportRegistry(const aiScene& scene, const std::filesystem::path& directory, ImportedModel& model)
+        : m_scene(scene), m_directory(directory), m_model(model)
     {
-        status = material.GetTexture(aiTextureType_DIFFUSE, 0, &texture_path);
     }
 
-    if (status != AI_SUCCESS)
-        return invalid_texture_index;
-
-    TextureAsset texture;
-    const aiTexture* embedded = scene.GetEmbeddedTexture(texture_path.C_Str());
-    if (embedded)
+    uint32_t load(const aiMaterial& material, aiTextureType type, MaterialTextureColorSpace color_space)
     {
-        // TODO: support embedded textures
-        return invalid_texture_index;
-    }
-    else
-    {
-        std::filesystem::path file_path(texture_path.C_Str());
+        const auto path = get_texture_path(material, type);
 
-        if (file_path.is_relative())
-            file_path = directory / file_path;
+        if (path.empty())
+            return invalid_imported_index;
 
-        if (!TextureLoader::load(file_path, texture))
+        const TextureKey key{path, color_space};
+
+        if (const auto it = m_indices.find(key); it != m_indices.end())
+            return it->second;
+
+        // Embedded textures are not supported yet
+        aiString source_path;
+
+        if (material.GetTexture(type, 0, &source_path) != AI_SUCCESS)
+            return invalid_imported_index;
+
+        if (m_scene.GetEmbeddedTexture(source_path.C_Str()))
+            return invalid_imported_index;
+
+        TextureAsset texture;
+
+        if (!TextureLoader::load(path, texture))
+            return invalid_imported_index;
+
+        if (color_space == MaterialTextureColorSpace::SRGB)
         {
-            return invalid_texture_index;
+            switch (texture.format)
+            {
+            case ogfx::Format::RGBA8_UNORM:
+                texture.format = ogfx::Format::RGBA8_SRGB;
+                break;
+
+            default:
+                break;
+            }
         }
+
+        if (m_model.textures.size() >= invalid_imported_index)
+            return invalid_imported_index;
+
+        const uint32_t index = static_cast<uint32_t>(m_model.textures.size());
+
+        m_model.textures.push_back(ImportedTexture{.texture = std::move(texture)});
+
+        m_indices.emplace(key, index);
+
+        return index;
     }
 
-    if (model.textures.size() >= invalid_texture_index)
-        return invalid_texture_index;
+    uint32_t find(const aiMaterial& material, aiTextureType type, MaterialTextureColorSpace color_space) const
+    {
+        const auto path = get_texture_path(material, type);
 
-    const uint32_t texture_index = static_cast<uint32_t>(model.textures.size());
-    model.textures.push_back(ImportedTexture{.texture = std::move(texture)});
-    return texture_index;
+        if (path.empty())
+            return invalid_imported_index;
+
+        const TextureKey key{path, color_space};
+
+        const auto it = m_indices.find(key);
+
+        return it != m_indices.end() ? it->second : invalid_imported_index;
+    }
+
+  private:
+    using TextureKey = std::pair<std::filesystem::path, MaterialTextureColorSpace>;
+
+    std::filesystem::path get_texture_path(const aiMaterial& material, aiTextureType type) const
+    {
+        aiString source;
+
+        if (material.GetTexture(type, 0, &source) != AI_SUCCESS)
+            return {};
+
+        std::filesystem::path path(source.C_Str());
+
+        if (path.is_relative())
+            path = m_directory / path;
+
+        return path.lexically_normal();
+    }
+
+    const aiScene& m_scene;
+    const std::filesystem::path m_directory;
+    ImportedModel& m_model;
+
+    std::map<TextureKey, uint32_t> m_indices;
+};
+
+void load_material_textures(const aiMaterial& material, TextureImportRegistry& textures)
+{
+    // Base color, with legacy diffuse fallback
+    const uint32_t base_color = textures.load(material, aiTextureType_BASE_COLOR, MaterialTextureColorSpace::SRGB);
+    if (base_color == invalid_imported_index)
+    {
+        textures.load(material, aiTextureType_DIFFUSE, MaterialTextureColorSpace::SRGB);
+    }
+
+    textures.load(material, aiTextureType_METALNESS, MaterialTextureColorSpace::Linear);
+
+    textures.load(material, aiTextureType_NORMALS, MaterialTextureColorSpace::Linear);
+
+    textures.load(material, aiTextureType_LIGHTMAP, MaterialTextureColorSpace::Linear);
+
+    textures.load(material, aiTextureType_EMISSIVE, MaterialTextureColorSpace::SRGB);
+}
+
+ImportedPbrOpaqueMaterial convert_material(const aiMaterial& source, const TextureImportRegistry& textures)
+{
+    ImportedPbrOpaqueMaterial result;
+
+    aiColor4D base_color{1.0f, 1.0f, 1.0f, 1.0f};
+
+    if (source.Get(AI_MATKEY_BASE_COLOR, base_color) == AI_SUCCESS)
+    {
+        result.base_color_factor = {base_color.r, base_color.g, base_color.b, base_color.a};
+    }
+
+    float metallic = 1.0f;
+    if (source.Get(AI_MATKEY_METALLIC_FACTOR, metallic) == AI_SUCCESS)
+        result.metallic_factor = metallic;
+
+    float roughness = 1.0f;
+    if (source.Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == AI_SUCCESS)
+        result.roughness_factor = roughness;
+
+    aiColor3D emissive{0.0f, 0.0f, 0.0f};
+    if (source.Get(AI_MATKEY_COLOR_EMISSIVE, emissive) == AI_SUCCESS)
+    {
+        result.emissive_factor = {emissive.r, emissive.g, emissive.b};
+    }
+
+    result.base_color_texture = textures.find(source, aiTextureType_BASE_COLOR, MaterialTextureColorSpace::SRGB);
+    if (result.base_color_texture == invalid_imported_index)
+    {
+        result.base_color_texture = textures.find(source, aiTextureType_DIFFUSE, MaterialTextureColorSpace::SRGB);
+    }
+
+    result.metallic_roughness_texture = textures.find(source, aiTextureType_METALNESS, MaterialTextureColorSpace::Linear);
+
+    result.normal_texture = textures.find(source, aiTextureType_NORMALS, MaterialTextureColorSpace::Linear);
+
+    result.occlusion_texture = textures.find(source, aiTextureType_LIGHTMAP, MaterialTextureColorSpace::Linear);
+
+    result.emissive_texture = textures.find(source, aiTextureType_EMISSIVE, MaterialTextureColorSpace::SRGB);
+
+    return result;
 }
 
 } // namespace
@@ -191,12 +318,18 @@ ImportedModel ModelImporter::import(const std::filesystem::path& path)
     ImportedModel result;
     result.name = path.stem().string();
 
-    // Load material textures
-    const std::filesystem::path directory = path.parent_path();
-    std::vector<uint32_t> material_textures(scene->mNumMaterials, invalid_texture_index);
+    // Load unique texture assets
+    TextureImportRegistry textures(*scene, path.parent_path(), result);
     for (uint32_t i = 0; i < scene->mNumMaterials; ++i)
     {
-        material_textures[i] = load_material_albedo(*scene, *scene->mMaterials[i], directory, result);
+        load_material_textures(*scene->mMaterials[i], textures);
+    }
+
+    // Convert materials using imported texture indices
+    result.materials.reserve(scene->mNumMaterials);
+    for (uint32_t i = 0; i < scene->mNumMaterials; ++i)
+    {
+        result.materials.push_back(convert_material(*scene->mMaterials[i], textures));
     }
 
     // Convert meshes
@@ -204,13 +337,7 @@ ImportedModel ModelImporter::import(const std::filesystem::path& path)
     for (uint32_t i = 0; i < scene->mNumMeshes; ++i)
     {
         const aiMesh& mesh = *scene->mMeshes[i];
-
-        uint32_t albedo_texture = invalid_texture_index;
-
-        if (mesh.mMaterialIndex < material_textures.size())
-            albedo_texture = material_textures[mesh.mMaterialIndex];
-
-        result.meshes.push_back(convert_mesh(mesh, albedo_texture));
+        result.meshes.push_back(convert_mesh(mesh));
     }
 
     // Flatten the Assimp node tree into an indexed node array

@@ -16,7 +16,7 @@ class CameraSystem;
 class GraphicsSystem;
 class PlatformSystem;
 class ToSwapchain;
-class GeometryRenderFeature;
+class PbrOpaqueRenderFeature;
 struct RenderRegion;
 
 } // namespace omega
@@ -53,7 +53,7 @@ class UIPipeline : public orenderer::RenderPipeline
 
   private:
     omega::ToSwapchain* m_to_swapchain;
-    omega::GeometryRenderFeature* m_geometry_render_feature;
+    omega::PbrOpaqueRenderFeature* m_pbr_opaque_feature;
 };
 
 } // namespace omega_editor

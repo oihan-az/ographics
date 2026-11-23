@@ -9,7 +9,6 @@ struct VSOutput
 {
     float4 position : SV_Position;
     float2 uv : TEXCOORD0;
-    float4 color : COLOR;
     float3 normal : NORMAL;
     float3 world_position : POSITION1;
 };
@@ -18,7 +17,6 @@ struct VertexConstants
 {
     float4x4 model;
     float4x4 view_projection;
-    float4 color;
 };
 
 [[vk::push_constant]]
@@ -43,16 +41,11 @@ VSOutput VSMain(VSInput input)
 {
     VSOutput output;
 
-    float4 world_position = mul(
-        constants.model,
-        float4(input.position, 1.0));
+    float4 world_position = mul(constants.model, float4(input.position, 1.0));
 
-    output.position = mul(
-        constants.view_projection,
-        world_position);
+    output.position = mul(constants.view_projection, world_position);
 
     output.world_position = world_position.xyz;
-    output.color = constants.color;
     output.uv = input.uv;
 
     float3x3 normal_matrix = inverse_transpose((float3x3) constants.model);

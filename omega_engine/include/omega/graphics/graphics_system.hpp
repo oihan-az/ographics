@@ -14,6 +14,7 @@
 #include <omega/mesh/gpu_mesh_system.hpp>
 #include <omega/texture/texture_system.hpp>
 #include <omega/texture/gpu_texture_system.hpp>
+#include <omega/material/material_system.hpp>
 
 #include <omega/core/performance/performance_system.hpp>
 
@@ -73,6 +74,8 @@ class GraphicsSystem
     TextureHandle missing_texture() const;
     TextureViewHandle missing_texture_view() const;
 
+    MaterialSystem& materials();
+
     ogfx::CommandBuffer& current_command_buffer();
 
   private:
@@ -115,6 +118,8 @@ class GraphicsSystem
 
     TextureHandle m_missing_texture;
     TextureViewHandle m_missing_texture_view;
+
+    MaterialSystem m_materials;
 
     void wait_frame();
     void complete_uploads();

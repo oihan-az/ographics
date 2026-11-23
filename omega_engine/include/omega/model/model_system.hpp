@@ -20,7 +20,7 @@ class ModelImporter;
 class ModelSystem
 {
   public:
-    ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components, GraphicsSystem& graphics,
+    ModelSystem(EntitySystem& entities, HierarchySystem& hierarchy, ComponentSystem& components, GraphicsSystem& graphics, 
                 ModelImporter& importer);
 
     ModelHandle load(const std::filesystem::path& path);
