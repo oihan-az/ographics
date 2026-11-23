@@ -90,11 +90,14 @@ PSOutput PSMain(PSInput input)
 
     // Normal
     float3 N = normalize(input.normal);
+    float mip_variance = 0.0f;
     if ((flags & HAS_NORMAL) != 0)
     {
         float3 sampled_normal = normal_texture.Sample(material_sampler, input.uv).xyz;
+        mip_variance = normal_map_variance(sampled_normal);
         N = normal_mapping(input.normal, input.tangent, sampled_normal, constants.factors.z);
     }
+    float geometric_variance = geometric_normal_variance(N);
     
     // Metallic and roughness
     float metallic = constants.factors.x;
@@ -106,7 +109,8 @@ PSOutput PSMain(PSInput input)
         metallic *= mr.b;
     }
     metallic = saturate(metallic);
-    roughness = filter_specular_roughness(N, roughness);
+    roughness = filter_specular_roughness(roughness, geometric_variance + mip_variance);
+
     
     // Emissive
     float3 emissive = constants.emissive.rgb;
@@ -138,6 +142,6 @@ PSOutput PSMain(PSInput input)
     // Final color
     const float ambient = 0.4f;
     output.color = float4(lighting + emissive + (ambient * base_color.rgb), base_color.a);
-
+    
     return output;
 }
