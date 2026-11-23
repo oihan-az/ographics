@@ -213,7 +213,7 @@ bool ModelSystem::instantiate(ModelHandle model, Entity& root)
 
                 created_entities.push_back(renderable_entity);
 
-                if (!m_components.add<Transform>(renderable_entity, Transform{}))
+                if (!m_components.add<Transform>(renderable_entity, node.local_transform))
                 {
                     rollback();
                     return false;

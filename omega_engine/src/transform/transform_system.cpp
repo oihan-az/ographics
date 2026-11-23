@@ -279,10 +279,6 @@ void TransformSystem::invalidate(Entity entity)
     m_events.publish(WorldTransformChangedEvent{entity});
 }
 
-// -----------------------------------------------------------------------------
-// Descendant propagation
-// -----------------------------------------------------------------------------
-
 void TransformSystem::mark_hierarchy_dirty(Entity entity)
 {
     if (!m_entities.is_alive(entity))
