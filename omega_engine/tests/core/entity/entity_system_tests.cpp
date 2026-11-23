@@ -81,11 +81,11 @@ TEST_F(EntitySystemTest, CreateEntity_IsNotImmediatelyAlive)
     EXPECT_FALSE(entities.is_alive(entity));
 }
 
-TEST_F(EntitySystemTest, CreateEntity_IsDestructible)
+TEST_F(EntitySystemTest, CreateEntity_IsValid)
 {
     Entity entity = entities.create_entity();
 
-    EXPECT_TRUE(entities.is_destructible(entity));
+    EXPECT_TRUE(entities.is_valid(entity));
 }
 
 TEST_F(EntitySystemTest, CreateEntity_DoesNotImmediatelyIncreaseCount)
@@ -149,13 +149,13 @@ TEST_F(EntitySystemTest, DestroyEntity_ImmediatelyMakesEntityNotAlive)
     EXPECT_FALSE(entities.is_alive(entity));
 }
 
-TEST_F(EntitySystemTest, DestroyEntity_ImmediatelyMakesEntityNotDestructible)
+TEST_F(EntitySystemTest, DestroyEntity_ImmediatelyMakesEntityNotValid)
 {
     Entity entity = create_alive_entity();
 
     entities.destroy_entity(entity);
 
-    EXPECT_FALSE(entities.is_destructible(entity));
+    EXPECT_FALSE(entities.is_valid(entity));
 }
 
 TEST_F(EntitySystemTest, DestroyEntity_CannotBeDestroyedTwice)
@@ -639,11 +639,11 @@ TEST_F(EntitySystemTest, InvalidHandle_IsAliveReturnsFalse)
     EXPECT_FALSE(entities.is_alive(invalid));
 }
 
-TEST_F(EntitySystemTest, InvalidHandle_IsDestructibleReturnsFalse)
+TEST_F(EntitySystemTest, InvalidHandle_IsValidReturnsFalse)
 {
     Entity invalid{.index = 1000, .generation = 0};
 
-    EXPECT_FALSE(entities.is_destructible(invalid));
+    EXPECT_FALSE(entities.is_valid(invalid));
 }
 
 TEST_F(EntitySystemTest, InvalidHandle_DestroyReturnsFalse)
@@ -658,7 +658,7 @@ TEST_F(EntitySystemTest, InvalidHandle_MaxIndexReturnsFalse)
     Entity invalid{.index = std::numeric_limits<uint32_t>::max(), .generation = 0};
 
     EXPECT_FALSE(entities.is_alive(invalid));
-    EXPECT_FALSE(entities.is_destructible(invalid));
+    EXPECT_FALSE(entities.is_valid(invalid));
     EXPECT_FALSE(entities.destroy_entity(invalid));
 }
 
@@ -669,7 +669,7 @@ TEST_F(EntitySystemTest, InvalidHandle_WrongGenerationReturnsFalse)
     Entity invalid{.index = entity.index, .generation = entity.generation + 1};
 
     EXPECT_FALSE(entities.is_alive(invalid));
-    EXPECT_FALSE(entities.is_destructible(invalid));
+    EXPECT_FALSE(entities.is_valid(invalid));
     EXPECT_FALSE(entities.destroy_entity(invalid));
 }
 

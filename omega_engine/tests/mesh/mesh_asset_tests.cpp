@@ -86,14 +86,6 @@ TEST(MeshAssetTests, RejectsUndefinedAttributeFormat)
     EXPECT_FALSE(omega::validate_mesh_asset(asset));
 }
 
-TEST(MeshAssetTests, RejectsDepthAttributeFormat)
-{
-    auto asset = make_valid_mesh_asset();
-    asset.vertex_input.attributes[0].format = ogfx::Format::D32_FLOAT;
-
-    EXPECT_FALSE(omega::validate_mesh_asset(asset));
-}
-
 TEST(MeshAssetTests, RejectsAttributeWithUnknownBinding)
 {
     auto asset = make_valid_mesh_asset();

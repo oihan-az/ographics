@@ -228,12 +228,12 @@ TEST(MaterialSystemTests, DoesNotCreatePoolWhenLookingUpMaterial)
 
     omega::MaterialHandle<TestMaterial> handle{0, 0};
 
-    // No material of this type has been created.
+    // No material of this type has been created
     EXPECT_EQ(system.get(handle), nullptr);
     EXPECT_FALSE(system.has(handle));
     EXPECT_FALSE(system.destroy(handle));
 
-    // Creating a material should still use the first slot.
+    // Creating a material should still use the first slot
     const auto created = system.create(TestMaterial{});
 
     EXPECT_EQ(created.index, 0);

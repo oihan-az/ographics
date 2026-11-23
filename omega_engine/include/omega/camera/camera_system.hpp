@@ -36,6 +36,7 @@ class CameraSystem
     void update();
 
     CameraData get_camera_data(Entity entity, CameraType type);
+    CameraData get_camera_data(Entity entity);
 
   private:
     void invalidate(Entity entity, CameraType type);

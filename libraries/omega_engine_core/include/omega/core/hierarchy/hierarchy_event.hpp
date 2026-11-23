@@ -15,6 +15,8 @@ struct HierarchyParentChangedEvent
 struct HierarchyModifiedEvent
 {
     Entity entity;
+    Entity old_parent;
+    Entity new_parent;
 };
 
 } // namespace omega

@@ -131,6 +131,20 @@ CameraData CameraSystem::get_camera_data(Entity entity, CameraType type)
     return data;
 }
 
+CameraData CameraSystem::get_camera_data(Entity entity)
+{
+    if (!m_entities.is_alive(entity))
+        return CameraData{};
+
+    if (m_components.has<PerspectiveCamera>(entity))
+        return get_camera_data(entity, CameraType::Perspective);
+
+    if (m_components.has<OrthogonalCamera>(entity))
+        return get_camera_data(entity, CameraType::Orthographic);
+
+    return CameraData{};
+}
+
 void CameraSystem::invalidate(Entity entity, CameraType type)
 {
     switch (type)

@@ -98,10 +98,14 @@ bool ComponentSystem::remove(Entity entity)
     if (!has<T>(entity))
         return false;
 
-    const auto order = m_dependency_graph.removal_order(std::type_index(typeid(T)));
+    const std::type_index component_type = typeid(T);
+    const auto order = m_dependency_graph.removal_order(component_type);;
 
     for (const auto& type : order)
     {
+        if (type == component_type)
+            continue;
+
         const auto* node = m_dependency_graph.find(type);
         if (node->operations.has(entity))
             node->operations.remove(entity);
@@ -119,16 +123,21 @@ bool ComponentSystem::mark_dirty(Entity entity, ComponentModifiedOrigin origin)
     if (!has<T>(entity))
         return false;
 
+    const std::type_index component_type = typeid(T);
+    const auto order = m_dependency_graph.removal_order(component_type);
+
     // Reverse removal order: changed component first
-    const auto order = m_dependency_graph.removal_order(std::type_index(typeid(T)));
     for (auto it = order.rbegin(); it != order.rend(); ++it)
     {
+        if (*it == component_type)
+            continue;
+
         const auto* node = m_dependency_graph.find(*it);
         if (node->operations.has(entity))
             node->operations.mark_dirty(entity, origin);
     }
 
-    return get_storage<T>().mark_dirty(entity);
+    return get_storage<T>().mark_dirty(entity, origin);
 }
 
 template<typename T>

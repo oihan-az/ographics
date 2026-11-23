@@ -28,8 +28,7 @@ class GpuTextureSystemTests : public ::testing::Test
         ogfx::InstanceDesc instance_desc;
         instance_desc.application_name = "ogfx Instance Test";
         instance_desc.engine_name = "ographics";
-        instance_desc.debug = true;
-        instance_desc.extensions = {};
+        instance_desc.extensions = ogfx::InstanceExtension::DebugUtils;
 
         s_instance = std::make_unique<ogfx::Instance>(instance_desc);
 

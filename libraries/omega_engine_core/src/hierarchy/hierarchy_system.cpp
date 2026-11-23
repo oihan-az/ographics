@@ -64,17 +64,22 @@ void HierarchySystem::update()
             if (auto* children_ptr = m_children.get(destroyed))
                 children = *children_ptr;
 
+            const Entity previous_parent = destroyed;
             for (Entity child : children)
             {
                 m_parents.erase(child);
 
+                Entity new_parent = Entity::invalid();
+
                 if (surviving_parent.is_valid() && m_entities.is_alive(surviving_parent))
                 {
-                    m_parents.insert(child, surviving_parent);
-                    add_child_to_parent(child, surviving_parent);
+                    new_parent = surviving_parent;
+
+                    m_parents.insert(child, new_parent);
+                    add_child_to_parent(child, new_parent);
                 }
 
-                m_events.publish(HierarchyModifiedEvent{child});
+                m_events.publish(HierarchyModifiedEvent{.entity = child, .old_parent = previous_parent, .new_parent = new_parent});
             }
 
             // Remove the destroyed entity from its own parent's child list
@@ -255,7 +260,7 @@ void HierarchySystem::apply_parent_change(const PendingParentChange& change)
         m_parents.erase(child);
     }
 
-    m_events.publish(HierarchyModifiedEvent{child});
+    m_events.publish(HierarchyModifiedEvent{.entity = child, .old_parent = old_parent, .new_parent = new_parent});
 }
 
 } // namespace omega

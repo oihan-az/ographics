@@ -33,6 +33,11 @@ void Engine::update()
     }
 
     {
+        ScopedCpuTimer timer(m_performance, "Transform hierarchy");
+        m_transforms.prepare_hierarchy_changes();
+    }
+
+    {
         ScopedCpuTimer timer(m_performance, "Hierarchy");
         m_hierarchy.update();
     }
