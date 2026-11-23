@@ -39,6 +39,8 @@ enum class BorderColor
     OpaqueWhite
 };
 
+inline constexpr float LOD_CLAMP_NONE = 1000.0f;
+
 struct SamplerDesc
 {
     Filter min_filter = Filter::Linear;
@@ -53,9 +55,9 @@ struct SamplerDesc
 
     float mip_lod_bias = 0.0f;
     float min_lod = 0.0f;
-    float max_lod = 0.0f;
-    bool anisotropy_enable = false;
-    float max_anisotropy = 1.0f;
+    float max_lod = LOD_CLAMP_NONE;
+    bool anisotropy_enable = true;
+    float max_anisotropy = 8.0f;
 };
 
 class Sampler

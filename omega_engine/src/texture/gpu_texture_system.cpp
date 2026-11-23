@@ -8,6 +8,8 @@
 #include <ogfx/commands/barrier_commands.hpp>
 #include <ogfx/command_buffer.hpp>
 
+#include <algorithm>
+
 namespace omega
 {
 
@@ -276,6 +278,7 @@ uint32_t GpuTextureSystem::texture_view_count() const
     return m_texture_view_count;
 }
 
+
 bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer& cmd, UploadBatch& batch)
 {
     const TextureData* texture_data = m_texture_system.get(handle);
@@ -288,6 +291,32 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
 
     TextureSlot& slot = m_texture_slots[handle.index];
 
+    // Determine whether all mip levels have been provided
+    std::vector<bool> supplied(static_cast<size_t>(asset.mip_levels) * asset.array_layers, false);
+    for (const TextureSubresource& subresource : asset.subresources)
+    {
+        if (subresource.mip_level >= asset.mip_levels || subresource.array_layer >= asset.array_layers)
+            return false;
+
+        const size_t index = static_cast<size_t>(subresource.array_layer) * asset.mip_levels + subresource.mip_level;
+
+        if (supplied[index])
+            return false;
+
+        supplied[index] = true;
+    }
+
+    // Mip 0 must exist for every array layer
+    for (uint32_t layer = 0; layer < asset.array_layers; ++layer)
+    {
+        if (!supplied[static_cast<size_t>(layer) * asset.mip_levels])
+            return false;
+    }
+
+    const bool complete_mip_chain = std::all_of(supplied.begin(), supplied.end(), [](bool value) { return value; });
+    const bool generate_mips = asset.mip_levels > 1 && !complete_mip_chain;
+
+    // Create the image.
     ogfx::ImageDesc image_desc{};
     image_desc.type = asset.type;
     image_desc.width = asset.width;
@@ -297,12 +326,15 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
     image_desc.array_layers = asset.array_layers;
     image_desc.format = asset.format;
     image_desc.usage = ogfx::ImageUsage::TransferDst | ogfx::ImageUsage::Sampled;
+    if (generate_mips)
+        image_desc.usage |= ogfx::ImageUsage::TransferSrc;
 
     auto image = std::make_unique<ogfx::Image>(m_physical_device, m_device, image_desc);
+
     image->allocate_memory();
     image->bind_memory();
 
-    // Pack all subresources into one staging buffer
+    // Pack all supplied subresources into one staging buffer
     std::vector<uint64_t> offsets;
     offsets.reserve(asset.subresources.size());
     uint64_t total_size = 0;
@@ -311,14 +343,12 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
         offsets.push_back(total_size);
 
         if (subresource.data.size() > std::numeric_limits<uint64_t>::max() - total_size)
-        {
             return false;
-        }
 
         total_size += subresource.data.size();
     }
 
-    if (total_size == 0)
+    if (total_size == 0 || total_size > std::numeric_limits<size_t>::max())
         return false;
 
     ogfx::BufferDesc staging_desc{};
@@ -326,6 +356,7 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
     staging_desc.usage = ogfx::BufferUsage::TransferSrc;
     staging_desc.memory_properties = ogfx::MemoryProperty::HostVisible | ogfx::MemoryProperty::HostCoherent;
     auto staging_buffer = std::make_unique<ogfx::Buffer>(m_physical_device, m_device, staging_desc);
+
     staging_buffer->allocate_memory();
     staging_buffer->bind_memory();
 
@@ -339,8 +370,10 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
     ogfx::BufferWriteInfo write_info{};
     write_info.data = staging_data.data();
     write_info.size = total_size;
+
     staging_buffer->write(write_info);
 
+    // Transition the complete image to TransferDst
     ogfx::ImageTransitionInfo transition_to_transfer{};
     transition_to_transfer.image = image.get();
     transition_to_transfer.aspect = ogfx::ImageAspect::Color;
@@ -353,9 +386,10 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
 
     cmd.transition_image(transition_to_transfer);
 
-    for (size_t i = 0; i < asset.subresources.size(); ++i)
+    // Upload one supplied subresource
+    auto upload_subresource = [&](size_t index)
     {
-        const TextureSubresource& subresource = asset.subresources[i];
+        const TextureSubresource& subresource = asset.subresources[index];
 
         const uint32_t mip_width = std::max(1u, asset.width >> subresource.mip_level);
         const uint32_t mip_height = std::max(1u, asset.height >> subresource.mip_level);
@@ -363,9 +397,8 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
 
         ogfx::BufferToImageCopyInfo copy_info{};
         copy_info.buffer = staging_buffer.get();
-        copy_info.buffer_offset = offsets[i];
+        copy_info.buffer_offset = offsets[index];
         copy_info.image = image.get();
-
         copy_info.width = mip_width;
         copy_info.height = mip_height;
         copy_info.depth = asset.type == ogfx::ImageType::Image3D ? mip_depth : 1;
@@ -375,21 +408,76 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
         copy_info.array_layer_count = 1;
 
         cmd.copy_buffer_to_image(copy_info);
+    };
+
+    if (generate_mips)
+    {
+        // Upload mip 0 for every array layer
+        for (size_t i = 0; i < asset.subresources.size(); ++i)
+        {
+            if (asset.subresources[i].mip_level == 0)
+                upload_subresource(i);
+        }
+
+        // Generate the full mip chain
+        // The helper leaves every mip level in ShaderRead
+        ogfx::GenerateMipmapsInfo mipmap_info{};
+        mipmap_info.image = image.get();
+        cmd.generate_mipmaps(mipmap_info);
+
+        // Override generated levels with supplied mip data
+        for (size_t i = 0; i < asset.subresources.size(); ++i)
+        {
+            const TextureSubresource& subresource = asset.subresources[i];
+            if (subresource.mip_level == 0)
+                continue;
+
+            // ShaderRead to TransferDst for this subresource
+            ogfx::ImageTransitionInfo transition{};
+            transition.image = image.get();
+            transition.aspect = ogfx::ImageAspect::Color;
+            transition.old_state = ogfx::ImageState::ShaderRead;
+            transition.new_state = ogfx::ImageState::TransferDst;
+            transition.base_mip_level = subresource.mip_level;
+            transition.mip_level_count = 1;
+            transition.base_array_layer = subresource.array_layer;
+            transition.array_layer_count = 1;
+
+            cmd.transition_image(transition);
+
+            upload_subresource(i);
+
+            // TransferDst to ShaderRead for this subresource
+            transition.old_state = ogfx::ImageState::TransferDst;
+            transition.new_state = ogfx::ImageState::ShaderRead;
+
+            cmd.transition_image(transition);
+        }
+    }
+    else
+    {
+        // All mip levels were supplied, or the image has one mip
+        // No generation is necessary
+        for (size_t i = 0; i < asset.subresources.size(); ++i)
+        {
+            upload_subresource(i);
+        }
+
+        // Transition all uploaded levels to ShaderRead
+        ogfx::ImageTransitionInfo transition{};
+        transition.image = image.get();
+        transition.aspect = ogfx::ImageAspect::Color;
+        transition.old_state = ogfx::ImageState::TransferDst;
+        transition.new_state = ogfx::ImageState::ShaderRead;
+        transition.base_mip_level = 0;
+        transition.mip_level_count = asset.mip_levels;
+        transition.base_array_layer = 0;
+        transition.array_layer_count = asset.array_layers;
+
+        cmd.transition_image(transition);
     }
 
-    ogfx::ImageTransitionInfo transition_to_shader_read{};
-    transition_to_shader_read.image = image.get();
-    transition_to_shader_read.aspect = ogfx::ImageAspect::Color;
-    transition_to_shader_read.old_state = ogfx::ImageState::TransferDst;
-    transition_to_shader_read.new_state = ogfx::ImageState::ShaderRead;
-    transition_to_shader_read.base_mip_level = 0;
-    transition_to_shader_read.mip_level_count = asset.mip_levels;
-    transition_to_shader_read.base_array_layer = 0;
-    transition_to_shader_read.array_layer_count = asset.array_layers;
-
-    cmd.transition_image(transition_to_shader_read);
-
-    // Create its requested views
+    // Create requested image views
     slot.image = std::move(image);
     for (const TextureViewHandle view_handle : slot.views)
     {
@@ -397,7 +485,6 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
             continue;
 
         TextureViewSlot& view_slot = m_view_slots[view_handle.index];
-
         if (!create_gpu_view(view_slot, *slot.image))
         {
             release_gpu_texture(handle);
@@ -412,6 +499,7 @@ bool GpuTextureSystem::upload_texture(TextureHandle handle, ogfx::CommandBuffer&
 
     return true;
 }
+
 
 void GpuTextureSystem::release_gpu_texture(TextureHandle handle)
 {

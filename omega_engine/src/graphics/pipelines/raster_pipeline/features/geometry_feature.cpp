@@ -681,10 +681,15 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
                             auto view_it = m_texture_views.find(texture);
                             if (view_it == m_texture_views.end() || !gpu_textures.is_view_valid(view_it->second))
                             {
-                                const TextureViewHandle view = gpu_textures.create_view(texture, TextureViewDesc{});
-
-                                if (view.is_valid())
-                                    m_texture_views[texture] = view;
+                                const ogfx::Image* image = gpu_textures.get_image(texture);
+                                if (image)
+                                {
+                                    TextureViewDesc view_desc{};
+                                    view_desc.mip_level_count = image->mip_levels();
+                                    const TextureViewHandle view = gpu_textures.create_view(texture, view_desc);
+                                    if (view.is_valid())
+                                        m_texture_views[texture] = view;
+                                }
                             }
 
                             view_it = m_texture_views.find(texture);
