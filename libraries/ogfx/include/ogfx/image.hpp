@@ -67,6 +67,7 @@ class Image
     [[nodiscard]] uint32_t depth() const { return m_desc.depth; }
     [[nodiscard]] Format format() const { return m_desc.format; }
     [[nodiscard]] uint32_t mip_levels() const { return m_desc.mip_levels; }
+    [[nodiscard]] uint32_t array_layers() const { return m_desc.array_layers; }
 
   private:
     friend class Swapchain;

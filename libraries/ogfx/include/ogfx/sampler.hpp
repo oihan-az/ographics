@@ -56,7 +56,7 @@ struct SamplerDesc
     float mip_lod_bias = 0.0f;
     float min_lod = 0.0f;
     float max_lod = LOD_CLAMP_NONE;
-    bool anisotropy_enable = true;
+    bool anisotropy_enable = false;
     float max_anisotropy = 8.0f;
 };
 

@@ -6,6 +6,8 @@
 #include <omega/core/entity/entity.hpp>
 #include <omega/camera/camera_type.hpp>
 
+#include <omega/atmosphere/atmosphere_settings.hpp>
+
 namespace omega
 {
 
@@ -17,6 +19,7 @@ class GraphicsSystem;
 class PlatformSystem;
 class ToSwapchain;
 class PbrOpaqueRenderFeature;
+class EnvironmentMapGen;
 struct RenderRegion;
 
 } // namespace omega
@@ -30,6 +33,9 @@ struct UIPipelineDesc
 {
     omega::Entity camera;
     omega::CameraType camera_type;
+    omega::Entity sun;
+
+    omega::AtmosphereSettings atmosphere{};
 
     ImGuiLayer& imgui_layer;
 
@@ -54,6 +60,7 @@ class UIPipeline : public orenderer::RenderPipeline
   private:
     omega::ToSwapchain* m_to_swapchain;
     omega::PbrOpaqueRenderFeature* m_pbr_opaque_feature;
+    omega::EnvironmentMapGen* m_environment_map_gen = nullptr;
 };
 
 } // namespace omega_editor

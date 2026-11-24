@@ -3,6 +3,7 @@
 
 #include <omega/graphics/pipelines/raster_pipeline/features/geometry_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/environment_map_gen.hpp>
 
 #include <omega_editor/rendering/ui_feature.hpp>
 
@@ -11,6 +12,18 @@ namespace omega_editor
 
 void UIPipeline::setup(UIPipelineDesc& desc)
 {
+    omega::EnvironmentMapGenDesc environment_desc
+    {
+        desc.camera,
+        desc.sun,
+        desc.atmosphere,
+        desc.components,
+        desc.transforms,
+        desc.graphics
+    };
+
+    m_environment_map_gen = &add_feature<omega::EnvironmentMapGen>(environment_desc);
+
     omega::PbrOpaqueRenderFeatureDesc pbr_opaque_desc
     {
         desc.camera,
@@ -50,6 +63,7 @@ void UIPipeline::set_viewport(const omega::RenderRegion& region)
 
 void UIPipeline::set_camera(omega::Entity camera, omega::CameraType camera_type)
 {
+    m_environment_map_gen->set_camera(camera);
     m_pbr_opaque_feature->set_camera(camera, camera_type);
 }
 

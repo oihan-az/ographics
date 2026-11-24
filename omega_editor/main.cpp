@@ -51,8 +51,8 @@ int main()
         engine.components().add(directional_light_entity, transform);
     
         omega::DirectionalLight directional_light;
-        directional_light.color = {0.2f, 1.0f, 0.2f};
-        directional_light.intensity = 1.0f;
+        directional_light.color = {0.9f, 0.85f, 0.8f};
+        directional_light.intensity = 6.0f;
         engine.components().add(directional_light_entity, directional_light);
     }
 
@@ -87,6 +87,8 @@ int main()
         engine.components().add(spot_light_entity, spot_light);
     }
 
+    omega::AtmosphereSettings atmosphere{};
+
     // Editor
     omega_editor::ImGuiLayer imgui_layer;
     omega_editor::Editor editor(engine);
@@ -97,6 +99,8 @@ int main()
     {
         editor.camera_viewport().camera().entity,
         editor.camera_viewport().camera().type,
+        directional_light_entity,
+        atmosphere,
         imgui_layer,
         engine.components(),
         engine.events(),

@@ -45,6 +45,8 @@ struct ResourceTraits<ogfx::Image> : DefaultResourceTraits<ogfx::Image>
         transition_info.old_state = old_state;
         transition_info.new_state = new_state;
         transition_info.aspect = data.aspect;
+        transition_info.mip_level_count = resource->mip_levels();
+        transition_info.array_layer_count = resource->array_layers();
 
         cmd.transition_image(transition_info);
     }

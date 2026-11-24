@@ -8,8 +8,8 @@ namespace orendergraph
 void ComputeContext::create(RenderGraph& graph, const Desc& desc)
 {
     PipelineContext::create(graph, desc);
-    create_pipeline(graph, desc);
     create_shader(graph, desc);
+    create_pipeline(graph, desc);
 }
 
 void ComputeContext::create_pipeline(RenderGraph& graph, const Desc& desc)
