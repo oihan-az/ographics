@@ -72,7 +72,7 @@ void SkyboxRenderFeature::add_node(orendergraph::RenderGraph& rg)
         {
             rg.read(m_desc.depth_image, ogfx::ImageState::DepthStencil, {ogfx::ImageAspect::Depth});
             rg.read(m_desc.environment_map, ogfx::ImageState::ShaderRead, {ogfx::ImageAspect::Color});
-            rg.write(m_desc.color_image, ogfx::ImageState::RenderTarget, {ogfx::ImageAspect::Color}, ogfx::ImageState::TransferSrc, true);
+            rg.write(m_desc.color_image, ogfx::ImageState::RenderTarget, {ogfx::ImageAspect::Color}, ogfx::ImageState::ShaderRead, true);
 
             // Color attachment: preserve geometry results
             ogfx::RenderPassAttachmentDesc color_attachment{};
@@ -80,7 +80,7 @@ void SkyboxRenderFeature::add_node(orendergraph::RenderGraph& rg)
             color_attachment.load_op = ogfx::LoadOp::Load;
             color_attachment.store_op = ogfx::StoreOp::Store;
             color_attachment.initial_state = ogfx::ImageState::RenderTarget;
-            color_attachment.final_state = ogfx::ImageState::TransferSrc;
+            color_attachment.final_state = ogfx::ImageState::ShaderRead;
             color_attachment.image_aspect = ogfx::ImageAspect::Color;
 
             // Depth attachment: preserve existing geometry depth

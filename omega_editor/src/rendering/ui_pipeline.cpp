@@ -5,6 +5,7 @@
 #include <omega/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/environment_map_gen.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/skybox_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/dithering_feature.hpp>
 
 #include <omega_editor/rendering/ui_feature.hpp>
 
@@ -57,9 +58,18 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     
     m_skybox_feature = &add_feature<omega::SkyboxRenderFeature>(skybox_desc);
 
-    omega::ToSwapchainDesc to_swapchain_desc
+    omega::DitheringFeatureDesc dithering_desc
     {
         m_pbr_opaque_feature->out_image(),
+        m_pbr_opaque_feature->out_image_view(),
+        desc.graphics
+    };
+
+    m_dithering_feature = &add_feature<omega::DitheringFeature>(dithering_desc);
+
+    omega::ToSwapchainDesc to_swapchain_desc
+    {
+        m_dithering_feature->out_image(),
         desc.graphics
     };
 

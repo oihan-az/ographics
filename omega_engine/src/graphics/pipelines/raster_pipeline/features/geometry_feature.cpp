@@ -179,7 +179,7 @@ void PbrOpaqueRenderFeature::create_output_resources(orendergraph::RenderGraph& 
         image_desc.width = swapchain.width();
         image_desc.height = swapchain.height();
         image_desc.format = ogfx::Format::RGBA16_FLOAT;
-        image_desc.usage = ogfx::ImageUsage::ColorAttachment | ogfx::ImageUsage::TransferSrc;
+        image_desc.usage = ogfx::ImageUsage::ColorAttachment | ogfx::ImageUsage::Sampled | ogfx::ImageUsage::TransferSrc;
         if (!m_out_image.is_valid())
             m_out_image = rg.create_resource<ogfx::Image>(image_desc);
         else if(!rg.replace_resource<ogfx::Image>(m_out_image, image_desc)) 
