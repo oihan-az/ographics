@@ -80,6 +80,9 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
     void set_camera(omega::Entity camera, CameraType camera_type);
 
     const orendergraph::ResourceHandle<ogfx::Image> out_image() const { return m_out_image; }
+    const orendergraph::ResourceHandle<ogfx::ImageView> out_image_view() const { return m_out_image_view; }
+    orendergraph::ResourceHandle<ogfx::Image> depth_image() const { return m_depth_image; }
+    orendergraph::ResourceHandle<ogfx::ImageView> depth_image_view() const { return m_depth_image_view; }
 
   private:
     using PbrMaterialHandle = MaterialHandle<PbrOpaqueMaterial>;

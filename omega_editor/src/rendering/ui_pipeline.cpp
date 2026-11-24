@@ -4,6 +4,7 @@
 #include <omega/graphics/pipelines/raster_pipeline/features/geometry_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/environment_map_gen.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/skybox_feature.hpp>
 
 #include <omega_editor/rendering/ui_feature.hpp>
 
@@ -37,6 +38,26 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     
     m_pbr_opaque_feature = &add_feature<omega::PbrOpaqueRenderFeature>(pbr_opaque_desc);
 
+    omega::SkyboxRenderFeatureDesc skybox_desc
+    {
+        desc.camera,
+        desc.camera_type,
+    
+        m_environment_map_gen->environment_map(),
+        m_environment_map_gen->environment_map_view(),
+    
+        m_pbr_opaque_feature->out_image(),
+        m_pbr_opaque_feature->out_image_view(),
+    
+        m_pbr_opaque_feature->depth_image(),
+        m_pbr_opaque_feature->depth_image_view(),
+    
+        desc.cameras,
+        desc.graphics
+    };
+    
+    m_skybox_feature = &add_feature<omega::SkyboxRenderFeature>(skybox_desc);
+
     omega::ToSwapchainDesc to_swapchain_desc
     {
         m_pbr_opaque_feature->out_image(),
@@ -65,6 +86,7 @@ void UIPipeline::set_camera(omega::Entity camera, omega::CameraType camera_type)
 {
     m_environment_map_gen->set_camera(camera);
     m_pbr_opaque_feature->set_camera(camera, camera_type);
+    m_skybox_feature->set_camera(camera, camera_type);
 }
 
 } // namespace omega_editor

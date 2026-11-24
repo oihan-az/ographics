@@ -20,6 +20,7 @@ class PlatformSystem;
 class ToSwapchain;
 class PbrOpaqueRenderFeature;
 class EnvironmentMapGen;
+class SkyboxRenderFeature;
 struct RenderRegion;
 
 } // namespace omega
@@ -61,6 +62,7 @@ class UIPipeline : public orenderer::RenderPipeline
     omega::ToSwapchain* m_to_swapchain;
     omega::PbrOpaqueRenderFeature* m_pbr_opaque_feature;
     omega::EnvironmentMapGen* m_environment_map_gen = nullptr;
+    omega::SkyboxRenderFeature* m_skybox_feature = nullptr;
 };
 
 } // namespace omega_editor

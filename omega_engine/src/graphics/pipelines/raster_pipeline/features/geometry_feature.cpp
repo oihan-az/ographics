@@ -178,7 +178,7 @@ void PbrOpaqueRenderFeature::create_output_resources(orendergraph::RenderGraph& 
         ogfx::ImageDesc image_desc{};
         image_desc.width = swapchain.width();
         image_desc.height = swapchain.height();
-        image_desc.format = ogfx::Format::RGBA8_UNORM;
+        image_desc.format = ogfx::Format::RGBA16_FLOAT;
         image_desc.usage = ogfx::ImageUsage::ColorAttachment | ogfx::ImageUsage::TransferSrc;
         if (!m_out_image.is_valid())
             m_out_image = rg.create_resource<ogfx::Image>(image_desc);
@@ -190,7 +190,6 @@ void PbrOpaqueRenderFeature::create_output_resources(orendergraph::RenderGraph& 
         ogfx::ImageViewDesc image_view_desc{};
         image_view_desc.image = rg.get_resource(m_out_image);
         image_view_desc.aspect = ogfx::ImageAspect::Color;
-        m_out_image_view = rg.create_resource<ogfx::ImageView>(image_view_desc);
         if (!m_out_image_view.is_valid())
             m_out_image_view = rg.create_resource<ogfx::ImageView>(image_view_desc);
         else if (!rg.replace_resource<ogfx::ImageView>(m_out_image_view, image_view_desc))
@@ -206,7 +205,6 @@ void PbrOpaqueRenderFeature::create_output_resources(orendergraph::RenderGraph& 
         image_desc.height = swapchain.height();
         image_desc.format = ogfx::Format::D32_FLOAT;
         image_desc.usage = ogfx::ImageUsage::DepthStencil;
-        m_depth_image = rg.create_resource<ogfx::Image>(image_desc);
         if (!m_depth_image.is_valid())
             m_depth_image = rg.create_resource<ogfx::Image>(image_desc);
         else if (!rg.replace_resource<ogfx::Image>(m_depth_image, image_desc))
@@ -217,7 +215,6 @@ void PbrOpaqueRenderFeature::create_output_resources(orendergraph::RenderGraph& 
         ogfx::ImageViewDesc image_view_desc{};
         image_view_desc.image = rg.get_resource(m_depth_image);
         image_view_desc.aspect = ogfx::ImageAspect::Depth;
-        m_depth_image_view = rg.create_resource<ogfx::ImageView>(image_view_desc);
         if (!m_depth_image_view.is_valid())
             m_depth_image_view = rg.create_resource<ogfx::ImageView>(image_view_desc);
         else if (!rg.replace_resource<ogfx::ImageView>(m_depth_image_view, image_view_desc))
@@ -247,23 +244,23 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
         [this](orendergraph::RenderGraph& rg, orendergraph::RasterContext::Desc& desc)
         {
             // Dependencies
-            rg.write(m_out_image, ogfx::ImageState::RenderTarget, {ogfx::ImageAspect::Color}, ogfx::ImageState::TransferSrc, true);
-            rg.write(m_depth_image, ogfx::ImageState::DepthStencil, {ogfx::ImageAspect::Depth}, ogfx::ImageState::Undefined, true);
+            rg.write(m_out_image, ogfx::ImageState::RenderTarget, {ogfx::ImageAspect::Color}, ogfx::ImageState::RenderTarget, true);
+            rg.write(m_depth_image, ogfx::ImageState::DepthStencil, {ogfx::ImageAspect::Depth}, ogfx::ImageState::DepthStencil, true);
 
             // Render pass
             ogfx::RenderPassAttachmentDesc color_attachment;
-            color_attachment.format = ogfx::Format::RGBA8_UNORM;
+            color_attachment.format = ogfx::Format::RGBA16_FLOAT;
             color_attachment.load_op = ogfx::LoadOp::Clear;
             color_attachment.store_op = ogfx::StoreOp::Store;
-            color_attachment.initial_state = ogfx::ImageState::Undefined;
-            color_attachment.final_state = ogfx::ImageState::TransferSrc;
+            color_attachment.initial_state = ogfx::ImageState::RenderTarget;
+            color_attachment.final_state = ogfx::ImageState::RenderTarget;
             color_attachment.image_aspect = ogfx::ImageAspect::Color;
 
             ogfx::RenderPassAttachmentDesc depth_attachment;
             depth_attachment.format = ogfx::Format::D32_FLOAT;
             depth_attachment.load_op = ogfx::LoadOp::Clear;
             depth_attachment.store_op = ogfx::StoreOp::Store;
-            depth_attachment.initial_state = ogfx::ImageState::Undefined;
+            depth_attachment.initial_state = ogfx::ImageState::DepthStencil;
             depth_attachment.final_state = ogfx::ImageState::DepthStencil;
             depth_attachment.image_aspect = ogfx::ImageAspect::Depth;
 

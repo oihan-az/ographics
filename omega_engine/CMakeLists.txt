@@ -46,6 +46,7 @@ target_sources(
         src/graphics/pipelines/raster_pipeline/features/geometry_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/environment_map_gen.cpp
+        src/graphics/pipelines/raster_pipeline/features/skybox_feature.cpp
 
         src/graphics/resources/gpu_dynamic_buffer.cpp
 

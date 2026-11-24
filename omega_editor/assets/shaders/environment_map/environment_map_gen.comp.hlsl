@@ -125,7 +125,6 @@ float mie_phase(float cos_theta, float g)
 float3 evaluate_atmosphere(float3 origin, float3 direction)
 {
     float atmosphere_near, atmosphere_far;
-
     if (!intersect_sphere(
         origin,
         direction,
@@ -139,9 +138,8 @@ float3 evaluate_atmosphere(float3 origin, float3 direction)
     float start_distance = max(atmosphere_near, 0.0f);
     float end_distance = atmosphere_far;
 
-    // Stop the view ray when it hits the planet.
+    // Stop the view ray when it hits the planet
     float ground_near, ground_far;
-
     if (intersect_sphere(
         origin,
         direction,
@@ -150,9 +148,7 @@ float3 evaluate_atmosphere(float3 origin, float3 direction)
         ground_far))
     {
         if (ground_far > 0.0f)
-        {
             end_distance = min(end_distance, max(ground_near, 0.0f));
-        }
     }
 
     if (end_distance <= start_distance)
@@ -182,7 +178,6 @@ float3 evaluate_atmosphere(float3 origin, float3 direction)
 
         // The planet may obstruct the sun
         float ground_t_near, ground_t_far;
-
         if (intersect_sphere(
             position,
             sun_direction,
@@ -190,11 +185,8 @@ float3 evaluate_atmosphere(float3 origin, float3 direction)
             ground_t_near,
             ground_t_far))
         {
-            if (ground_t_far > 0.0f &&
-                ground_t_near >= 0.0f)
-            {
+            if (ground_t_far > 0.0f && ground_t_near >= 0.0f)
                 continue;
-            }
         }
 
         float2 sun_depth = sun_optical_depth(position, sun_direction);
