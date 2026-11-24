@@ -1,6 +1,9 @@
 #ifndef OMEGA_ENVIRONMENT_MAP_COMP_HLSL
 #define OMEGA_ENVIRONMENT_MAP_COMP_HLSL
 
+#include "../cubemap/cubemap.hlsli"
+#include "../geometry/ray_sphere.hlsli"
+
 struct AtmosphereConstants
 {
     float4 camera_position;
@@ -21,56 +24,6 @@ static const float PI = 3.14159265359f;
 
 static const uint VIEW_SAMPLES = 12;
 static const uint SUN_SAMPLES = 6;
-
-// Convert a cubemap face texel to a world-space direction
-float3 cubemap_direction(uint face, float2 uv)
-{
-    float x = uv.x;
-    float y = uv.y;
-
-    switch (face)
-    {
-        case 0:
-            return normalize(float3(1.0f, -y, -x)); // +X
-        case 1:
-            return normalize(float3(-1.0f, -y, x)); // -X
-        case 2:
-            return normalize(float3(x, 1.0f, y)); // +Y
-        case 3:
-            return normalize(float3(x, -1.0f, -y)); // -Y
-        case 4:
-            return normalize(float3(x, -y, 1.0f)); // +Z
-        default:
-            return normalize(float3(-x, -y, -1.0f)); // -Z
-    }
-}
-
-// Ray/sphere intersection for a sphere centered at the origin
-bool intersect_sphere(
-    float3 origin,
-    float3 direction,
-    float radius,
-    out float t_near,
-    out float t_far)
-{
-    float b = dot(origin, direction);
-    float c = dot(origin, origin) - radius * radius;
-    float discriminant = b * b - c;
-
-    if (discriminant < 0.0f)
-    {
-        t_near = 0.0f;
-        t_far = 0.0f;
-        return false;
-    }
-
-    float root = sqrt(discriminant);
-
-    t_near = -b - root;
-    t_far = -b + root;
-
-    return true;
-}
 
 // Returns Rayleigh and Mie density relative to sea level
 float2 atmosphere_density(float3 position)
