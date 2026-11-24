@@ -6,6 +6,7 @@
 #include <omega/graphics/pipelines/raster_pipeline/features/environment_map_gen.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/skybox_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/dithering_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/environment_prefilter_feature.hpp>
 
 #include <omega_editor/rendering/ui_feature.hpp>
 
@@ -24,6 +25,15 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     };
 
     m_environment_map_gen = &add_feature<omega::EnvironmentMapGen>(environment_desc);
+
+    omega::EnvironmentPrefilterFeatureDesc prefilter_desc
+    {
+        m_environment_map_gen->environment_map(),
+        m_environment_map_gen->environment_map_view(), 
+        desc.graphics
+    };
+
+    m_environment_prefilter_feature = &add_feature<omega::EnvironmentPrefilterFeature>(prefilter_desc);
 
     omega::PbrOpaqueRenderFeatureDesc pbr_opaque_desc
     {

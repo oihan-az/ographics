@@ -6,6 +6,7 @@
 #include <ogfx/command_buffer.hpp>
 #include <ogfx/image.hpp>
 #include <ogfx/image_view.hpp>
+#include <ogfx/commands/barrier_commands.hpp>
 
 #include <omega/core/component/component_system.hpp>
 #include <omega/core/math/vector4.hpp>
@@ -20,6 +21,7 @@
 
 #include <filesystem>
 #include <vector>
+#include <bit>
 
 namespace omega
 {
@@ -59,8 +61,9 @@ void EnvironmentMapGen::create_resources(orendergraph::RenderGraph& rg)
     image_desc.width = environment_resolution;
     image_desc.height = environment_resolution;
     image_desc.format = ogfx::Format::RGBA16_FLOAT;
-    image_desc.usage = ogfx::ImageUsage::Storage | ogfx::ImageUsage::Sampled;
-    image_desc.mip_levels = 1;
+    image_desc.usage = ogfx::ImageUsage::Storage | ogfx::ImageUsage::Sampled | 
+                       ogfx::ImageUsage::TransferSrc |ogfx::ImageUsage::TransferDst;
+    image_desc.mip_levels = std::bit_width(environment_resolution);
     image_desc.array_layers = cubemap_face_count;
     image_desc.type = ogfx::ImageType::Cube;
     m_environment_map = rg.create_resource<ogfx::Image>(image_desc);
@@ -72,6 +75,8 @@ void EnvironmentMapGen::create_resources(orendergraph::RenderGraph& rg)
     storage_view_desc.aspect = ogfx::ImageAspect::Color;
     storage_view_desc.base_array_layer = 0;
     storage_view_desc.array_layer_count = cubemap_face_count;
+    storage_view_desc.base_mip_level = 0;
+    storage_view_desc.mip_level_count = 1;
     m_environment_map_storage_view = rg.create_resource<ogfx::ImageView>(storage_view_desc);
 
     // Cube view: other shaders sample the environment by direction
@@ -81,6 +86,8 @@ void EnvironmentMapGen::create_resources(orendergraph::RenderGraph& rg)
     cube_view_desc.aspect = ogfx::ImageAspect::Color;
     cube_view_desc.base_array_layer = 0;
     cube_view_desc.array_layer_count = cubemap_face_count;
+    cube_view_desc.base_mip_level = 0;
+    cube_view_desc.mip_level_count = image_desc.mip_levels;
     m_environment_map_view = rg.create_resource<ogfx::ImageView>(cube_view_desc);
 }
 
@@ -91,7 +98,7 @@ void EnvironmentMapGen::add_node(orendergraph::RenderGraph& rg)
         "Environment Map Generation",
         [this](orendergraph::RenderGraph& rg, orendergraph::ComputeContext::Desc& desc)
         {
-            rg.write(m_environment_map, ogfx::ImageState::Common);
+            rg.write(m_environment_map, ogfx::ImageState::Common, {}, ogfx::ImageState::ShaderRead, true);
 
             const std::filesystem::path shader_path = std::filesystem::path("shaders/") / ("environment_map/environment_map_gen.comp." OGRAPHICS_SHADER_FORMAT);
 
@@ -181,6 +188,25 @@ void EnvironmentMapGen::add_node(orendergraph::RenderGraph& rg)
             cmd.set_inline_constants(constants_info);
 
             cmd.dispatch({desc.group_count_x, desc.group_count_y, desc.group_count_z});
+
+            // Generate mipmaps
+            {
+                ogfx::Image* image = rg.get_resource(m_environment_map);
+
+                ogfx::ImageTransitionInfo source_transition{};
+                source_transition.image = image;
+                source_transition.old_state = ogfx::ImageState::Common;
+                source_transition.new_state = ogfx::ImageState::TransferDst;
+                source_transition.base_mip_level = 0;
+                source_transition.mip_level_count = image->mip_levels();
+                source_transition.base_array_layer = 0;
+                source_transition.array_layer_count = image->array_layers();  
+                cmd.transition_image(source_transition);
+
+                ogfx::GenerateMipmapsInfo mipmap_info{};
+                mipmap_info.image = rg.get_resource(m_environment_map);
+                cmd.generate_mipmaps(mipmap_info);
+            }
         });
 }
 

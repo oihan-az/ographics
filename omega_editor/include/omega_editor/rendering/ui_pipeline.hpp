@@ -20,6 +20,7 @@ class PbrOpaqueRenderFeature;
 class EnvironmentMapGen;
 class SkyboxRenderFeature;
 class DitheringFeature;
+class EnvironmentPrefilterFeature;
 struct RenderRegion;
 
 } // namespace omega
@@ -61,6 +62,7 @@ class UIPipeline : public orenderer::RenderPipeline
     omega::EnvironmentMapGen* m_environment_map_gen = nullptr;
     omega::SkyboxRenderFeature* m_skybox_feature = nullptr;
     omega::DitheringFeature* m_dithering_feature = nullptr;
+    omega::EnvironmentPrefilterFeature* m_environment_prefilter_feature = nullptr;
 };
 
 } // namespace omega_editor
