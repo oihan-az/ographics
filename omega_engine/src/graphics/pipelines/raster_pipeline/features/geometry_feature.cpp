@@ -99,11 +99,11 @@ void PbrOpaqueRenderFeature::build(orenderer::RenderFeatureContext& ctx)
     constexpr uint32_t light_type_count = 3;
 
     ogfx::DescriptorPoolDesc pool_desc;
-    pool_desc.max_sets = m_desc.graphics.max_frames_in_flight() + 1;
+    pool_desc.max_sets = m_desc.graphics.max_frames_in_flight() + 2;
     pool_desc.sizes = 
     {
         {ogfx::ResourceType::StorageBuffer, m_desc.graphics.max_frames_in_flight() * light_type_count},
-        {ogfx::ResourceType::Sampler, 1}
+        {ogfx::ResourceType::Sampler, 2}
     };
     rg.get_resource_allocator().create_pool(pool_desc);
 
@@ -233,6 +233,18 @@ void PbrOpaqueRenderFeature::create_resources(orendergraph::RenderGraph& rg)
         ogfx::SamplerDesc desc{};
         m_sampler = rg.create_resource<ogfx::Sampler>(desc);
     }
+
+    // Environment sampler
+    {
+        ogfx::SamplerDesc desc{};
+        desc.min_filter = ogfx::Filter::Linear;
+        desc.mag_filter = ogfx::Filter::Linear;
+        desc.mip_filter = ogfx::MipmapFilter::Linear;
+        desc.address_u = ogfx::AddressMode::ClampToEdge;
+        desc.address_v = ogfx::AddressMode::ClampToEdge;
+        desc.address_w = ogfx::AddressMode::ClampToEdge;
+        m_environment_sampler = rg.create_resource<ogfx::Sampler>(desc);
+    }
 }
 
 void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
@@ -244,6 +256,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
         [this](orendergraph::RenderGraph& rg, orendergraph::RasterContext::Desc& desc)
         {
             // Dependencies
+            rg.read(m_desc.environment_map, ogfx::ImageState::ShaderRead);
             rg.write(m_out_image, ogfx::ImageState::RenderTarget, {ogfx::ImageAspect::Color}, ogfx::ImageState::RenderTarget, true);
             rg.write(m_depth_image, ogfx::ImageState::DepthStencil, {ogfx::ImageAspect::Depth}, ogfx::ImageState::DepthStencil, true);
 
@@ -383,6 +396,23 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             desc.resource_set_layouts_desc.push_back(sampler_set_layout_desc);
 
+            // Environment resource set layout (set 3)
+            ogfx::ResourceSetLayoutDesc environment_layout_desc{};
+
+            ogfx::ResourceBindingDesc environment_texture_binding{};
+            environment_texture_binding.binding = 0;
+            environment_texture_binding.type = ogfx::ResourceType::SampledTexture;
+            environment_texture_binding.stages = ogfx::ShaderStageFlags::Fragment;
+
+            ogfx::ResourceBindingDesc environment_sampler_binding{};
+            environment_sampler_binding.binding = 1;
+            environment_sampler_binding.type = ogfx::ResourceType::Sampler;
+            environment_sampler_binding.stages = ogfx::ShaderStageFlags::Fragment;
+
+            environment_layout_desc.bindings = {environment_texture_binding, environment_sampler_binding};
+
+            desc.resource_set_layouts_desc.push_back(environment_layout_desc);
+
             // One resource set and one write description per frame
             for (uint32_t i = 0; i < m_desc.graphics.max_frames_in_flight(); ++i)
             {
@@ -438,6 +468,32 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
             write_desc.write_info.samplers = {resoruce_sampler_binding};
 
             desc.resource_writes_desc.push_back(write_desc);
+
+            // Environment resource set
+            orendergraph::ResourceSetDesc environment_set_desc{};
+            environment_set_desc.resource_set_layout_idx = 3;
+
+            desc.resource_sets_desc.push_back(environment_set_desc);
+
+            // Environment cubemap binding
+            orendergraph::ImageBinding environment_image_binding{};
+            environment_image_binding.binding = 0;
+            environment_image_binding.image_view = m_desc.environment_map_view;
+            environment_image_binding.image_state = ogfx::ImageState::ShaderRead;
+
+            // Environment sampler binding
+            orendergraph::SamplerBinding environment_sampler_binding_write{};
+            environment_sampler_binding_write.binding = 1;
+            environment_sampler_binding_write.sampler = m_environment_sampler;
+
+            // Resource set write
+            orendergraph::ResourceWriteDesc environment_write_desc{};
+            environment_write_desc.resource_set_idx = m_desc.graphics.max_frames_in_flight() + 1;
+
+            environment_write_desc.write_info.textures = {environment_image_binding};
+            environment_write_desc.write_info.samplers = {environment_sampler_binding_write};
+
+            desc.resource_writes_desc.push_back(environment_write_desc);
 
             // Vertex input
             desc.vertex_input = standard_vertex_layout();
@@ -771,6 +827,17 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 resource_set_info.pipeline_type = ogfx::PipelineType::Graphics;
                 resource_set_info.set_index = 2;
                 resource_set_info.resource_set = ctx.resource_sets[m_desc.graphics.max_frames_in_flight()];
+
+                cmd.bind_resource_set(resource_set_info);
+            }
+
+            // Prefiltered environment cubemap
+            {
+                ogfx::ResourceSetBindInfo resource_set_info{};
+                resource_set_info.layout = ctx.pipeline_layout;
+                resource_set_info.pipeline_type = ogfx::PipelineType::Graphics;
+                resource_set_info.set_index = 3;
+                resource_set_info.resource_set = ctx.resource_sets[m_desc.graphics.max_frames_in_flight() + 1];
 
                 cmd.bind_resource_set(resource_set_info);
             }

@@ -62,6 +62,9 @@ struct PbrOpaqueRenderFeatureDesc
     Entity camera;
     CameraType camera_type;
 
+    orendergraph::ResourceHandle<ogfx::Image> environment_map;
+    orendergraph::ResourceHandle<ogfx::ImageView> environment_map_view;
+
     ComponentSystem& components;
     EventSystem& events;
     TransformSystem& transforms;
@@ -132,6 +135,7 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
     orendergraph::ResourceHandle<ogfx::ImageView> m_depth_image_view;
 
     orendergraph::ResourceHandle<ogfx::Sampler> m_sampler;
+    orendergraph::ResourceHandle<ogfx::Sampler> m_environment_sampler;
 };
 
 } // namespace omega

@@ -39,6 +39,8 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     {
         desc.camera,
         desc.camera_type,
+        m_environment_prefilter_feature->out_image(),
+        m_environment_prefilter_feature->out_image_view(),
         desc.components,
         desc.events,
         desc.transforms,

@@ -1,5 +1,6 @@
 #include "pbr/pbr.hlsli"
 #include "pbr/specular_aa.hlsli"
+#include "pbr/ibl.hlsli"
 #include "normal_mapping/normal_mapping.hlsli"
 
 struct PSInput
@@ -42,6 +43,12 @@ Texture2D<float4> emissive_texture;
 
 [[vk::binding(0, 2)]]
 SamplerState material_sampler;
+
+[[vk::binding(0, 3)]]
+TextureCube<float4> prefiltered_environment;
+
+[[vk::binding(1, 3)]]
+SamplerState environment_sampler;
 
 struct FragmentConstants
 {
@@ -111,7 +118,6 @@ PSOutput PSMain(PSInput input)
     metallic = saturate(metallic);
     roughness = filter_specular_roughness(roughness, geometric_variance + mip_variance);
 
-    
     // Emissive
     float3 emissive = constants.emissive.rgb;
     if ((flags & HAS_EMISSIVE) != 0)
@@ -129,7 +135,7 @@ PSOutput PSMain(PSInput input)
     surface.view_direction = normalize(constants.camera_position.xyz - input.world_position);
 
     // Direct lighting
-    float3 lighting = evaluate_pbr_lighting(
+    float3 direct_lighting  = evaluate_pbr_lighting(
         surface,
         directional_lights,
         constants.directional_light_count,
@@ -139,9 +145,20 @@ PSOutput PSMain(PSInput input)
         constants.spot_light_count
     );
 
+    // Indirect specular
+    float3 indirect_specular = evaluate_specular_ibl(
+        surface.normal,
+        surface.view_direction,
+        surface.base_color,
+        surface.metallic,
+        surface.roughness,
+        prefiltered_environment,
+        environment_sampler
+    );
+    
     // Final color
     const float ambient = 0.4f;
-    output.color = float4(lighting + emissive + (ambient * base_color.rgb), base_color.a);
+    output.color = float4(direct_lighting + indirect_specular + emissive + (ambient * base_color.rgb), 1.0f);
     
     return output;
 }
