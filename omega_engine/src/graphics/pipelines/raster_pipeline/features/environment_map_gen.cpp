@@ -15,6 +15,7 @@
 #include <omega/transform/transform_system.hpp>
 #include <omega/lighting/directional_light.hpp>
 #include <omega/graphics/resources/gpu_light_data.hpp>
+#include <omega/atmosphere/atmosphere.hpp>
 
 #include <filesystem>
 #include <vector>
@@ -56,12 +57,7 @@ void EnvironmentMapGen::set_camera(Entity camera)
     m_desc.camera = camera;
 }
 
-void EnvironmentMapGen::set_sun(Entity sun)
-{
-    m_desc.sun = sun;
-}
-
-void EnvironmentMapGen::set_atmosphere(const AtmosphereSettings& atmosphere)
+void EnvironmentMapGen::set_atmosphere(Entity atmosphere)
 {
     m_desc.atmosphere = atmosphere;
 }
@@ -176,10 +172,13 @@ void EnvironmentMapGen::add_node(orendergraph::RenderGraph& rg)
             cmd.bind_resource_set(bind_info);
 
             // Get sun data
-            const DirectionalLight* sun = m_desc.components.get<DirectionalLight>(m_desc.sun);
-            if (!sun)
+            const Atmosphere* atmosphere = m_desc.components.get<Atmosphere>(m_desc.atmosphere);
+            const DirectionalLight* sun = m_desc.components.get<DirectionalLight>(m_desc.atmosphere);
+            if (!atmosphere || !sun)
                 return;
-            const GpuComponentData<DirectionalLight> sun_data = gpu_component_data(*sun, m_desc.sun, m_desc.transforms);
+
+            const GpuComponentData<DirectionalLight> sun_data =
+                gpu_component_data(*sun, m_desc.atmosphere, m_desc.transforms);
 
             // Fill constants
             AtmosphereConstants constants{};
@@ -193,15 +192,15 @@ void EnvironmentMapGen::add_node(orendergraph::RenderGraph& rg)
             if (!decompose(camera_world, scale, rotation, position, skew, perspective))
                 return;
 
-            constants.camera_position = Vector4(position.x, position.y + m_desc.atmosphere.planet_radius + m_desc.atmosphere.ground_offset, position.z, 0.0f);
+            constants.camera_position = Vector4(position.x, position.y + atmosphere->planet_radius + atmosphere->ground_offset, position.z, 0.0f);
 
-            constants.planet = Vector4(m_desc.atmosphere.planet_radius, m_desc.atmosphere.atmosphere_radius,
-                                       m_desc.atmosphere.rayleigh_scale_height, m_desc.atmosphere.mie_scale_height);
+            constants.planet = Vector4(atmosphere->planet_radius, atmosphere->atmosphere_radius,
+                                       atmosphere->rayleigh_scale_height, atmosphere->mie_scale_height);
 
-            constants.scattering = Vector4(m_desc.atmosphere.rayleigh_scattering.x, m_desc.atmosphere.rayleigh_scattering.y,
-                                           m_desc.atmosphere.rayleigh_scattering.z, m_desc.atmosphere.mie_scattering);
+            constants.scattering = Vector4(atmosphere->rayleigh_scattering.x, atmosphere->rayleigh_scattering.y,
+                                           atmosphere->rayleigh_scattering.z, atmosphere->mie_scattering);
 
-            constants.settings = Vector4(m_desc.atmosphere.mie_anisotropy, 0.0f, 0.0f, 0.0f);
+            constants.settings = Vector4(atmosphere->mie_anisotropy, 0.0f, 0.0f, 0.0f);
 
             ogfx::InlineConstantsInfo constants_info{};
             constants_info.layout = ctx.pipeline_layout;

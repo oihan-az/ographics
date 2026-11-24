@@ -16,7 +16,6 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     omega::EnvironmentMapGenDesc environment_desc
     {
         desc.camera,
-        desc.sun,
         desc.atmosphere,
         desc.components,
         desc.transforms,

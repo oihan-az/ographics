@@ -5,6 +5,7 @@
 #include <omega/lighting/directional_light.hpp>
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
+#include <omega/atmosphere/atmosphere.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.hpp>
 
 #include <omega_editor/ui/imgui_layer.hpp>
@@ -54,6 +55,9 @@ int main()
         directional_light.color = {0.9f, 0.85f, 0.8f};
         directional_light.intensity = 6.0f;
         engine.components().add(directional_light_entity, directional_light);
+
+        omega::Atmosphere atmosphere{};
+        engine.components().add(directional_light_entity, atmosphere);
     }
 
     // Create point light
@@ -87,8 +91,6 @@ int main()
         engine.components().add(spot_light_entity, spot_light);
     }
 
-    omega::AtmosphereSettings atmosphere{};
-
     // Editor
     omega_editor::ImGuiLayer imgui_layer;
     omega_editor::Editor editor(engine);
@@ -100,7 +102,6 @@ int main()
         editor.camera_viewport().camera().entity,
         editor.camera_viewport().camera().type,
         directional_light_entity,
-        atmosphere,
         imgui_layer,
         engine.components(),
         engine.events(),

@@ -1,12 +1,15 @@
-#ifndef OMEGA_ATMOSPHERE_SETTINGS_HPP
-#define OMEGA_ATMOSPHERE_SETTINGS_HPP
+#ifndef OMEGA_ATMOSPHERE_HPP
+#define OMEGA_ATMOSPHERE_HPP
 
 #include <omega/core/math/vector3.hpp>
+
+#include <omega/core/component/component_traits.hpp>
+#include <omega/lighting/directional_light.hpp>
 
 namespace omega
 {
 
-struct AtmosphereSettings
+struct Atmosphere
 {
     // Planet geometry (meters)
     float planet_radius = 6360000.0f;
@@ -27,6 +30,12 @@ struct AtmosphereSettings
     float ground_offset = 2.0f;
 };
 
+template<>
+struct ComponentTraits<Atmosphere>
+{
+    using Dependencies = TypeList<DirectionalLight>;
+};
+
 } // namespace omega
 
-#endif // OMEGA_ATMOSPHERE_SETTINGS_HPP
+#endif // OMEGA_ATMOSPHERE_HPP

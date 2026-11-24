@@ -7,8 +7,6 @@
 
 #include <omega/core/entity/entity.hpp>
 
-#include <omega/atmosphere/atmosphere_settings.hpp>
-
 namespace ogfx
 {
 class Image;
@@ -32,9 +30,7 @@ class GraphicsSystem;
 struct EnvironmentMapGenDesc
 {
     Entity camera;
-    Entity sun;
-    
-    AtmosphereSettings atmosphere{};
+    Entity atmosphere;
 
     ComponentSystem& components;
     TransformSystem& transforms;
@@ -49,8 +45,7 @@ class EnvironmentMapGen : public orenderer::IRenderFeature
     void build(orenderer::RenderFeatureContext& ctx) override;
 
     void set_camera(Entity camera);
-    void set_sun(Entity sun);
-    void set_atmosphere(const AtmosphereSettings& atmosphere);
+    void set_atmosphere(Entity atmosphere);
 
     orendergraph::ResourceHandle<ogfx::Image> environment_map() const
     {

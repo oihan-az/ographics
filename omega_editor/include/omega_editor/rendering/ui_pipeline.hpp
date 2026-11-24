@@ -6,8 +6,6 @@
 #include <omega/core/entity/entity.hpp>
 #include <omega/camera/camera_type.hpp>
 
-#include <omega/atmosphere/atmosphere_settings.hpp>
-
 namespace omega
 {
 
@@ -34,9 +32,7 @@ struct UIPipelineDesc
 {
     omega::Entity camera;
     omega::CameraType camera_type;
-    omega::Entity sun;
-
-    omega::AtmosphereSettings atmosphere{};
+    omega::Entity atmosphere;
 
     ImGuiLayer& imgui_layer;
 

@@ -10,6 +10,7 @@
 #include <omega/lighting/directional_light.hpp>
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
+#include <omega/atmosphere/atmosphere.hpp>
 
 #include <imgui.h>
 
@@ -340,6 +341,40 @@ void Editor::register_component_editors()
                 light.outer_angle = omega::radians(outer_angle);
                 changed = true;
             }
+
+            return changed;
+        }
+    );
+
+    m_component_editors.register_component<omega::Atmosphere>
+    (
+        "Atmosphere",
+        [](omega::Atmosphere& atmosphere)
+        {
+            bool changed = false;
+
+            constexpr float max_float = std::numeric_limits<float>::max();
+
+            // Planet
+            changed |= ImGui::DragFloat("Planet Radius", &atmosphere.planet_radius, 100.0f, 1.0f, max_float);
+            changed |= ImGui::DragFloat("Atmosphere Radius", &atmosphere.atmosphere_radius, 100.0f, atmosphere.planet_radius + 1.0f, max_float);
+
+            // Keep the atmosphere larger than the planet
+            if (atmosphere.atmosphere_radius <= atmosphere.planet_radius)
+            {
+                atmosphere.atmosphere_radius = atmosphere.planet_radius + 1.0f;
+                changed = true;
+            }
+
+            // Atmospheric density
+            changed |= ImGui::DragFloat("Rayleigh Scale Height", &atmosphere.rayleigh_scale_height, 10.0f, 1.0f, max_float);
+            changed |= ImGui::DragFloat("Mie Scale Height", &atmosphere.mie_scale_height, 10.0f, 1.0f, max_float);
+
+            // Scattering coefficients
+            changed |= ImGui::DragFloat3("Rayleigh Scattering", &atmosphere.rayleigh_scattering.x, 1e-7f, 0.0f, max_float, "%.8f");
+            changed |= ImGui::DragFloat("Mie Scattering", &atmosphere.mie_scattering, 1e-7f, 0.0f, max_float, "%.8f");
+            changed |= ImGui::SliderFloat("Mie Anisotropy", &atmosphere.mie_anisotropy, -0.99f, 0.99f);
+            changed |= ImGui::DragFloat("Ground Offset", &atmosphere.ground_offset, 0.1f, 0.0f, max_float);
 
             return changed;
         }
