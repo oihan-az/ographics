@@ -24,7 +24,7 @@ struct Atmosphere
     float mie_scattering = 21.0e-6f;
 
     // Mie anisotropy, typically between -1 and 1
-    float mie_anisotropy = 0.76f;
+    float mie_anisotropy = 0.97f;
 
     // Camera height offset above the surface (meters)
     float ground_offset = 2.0f;

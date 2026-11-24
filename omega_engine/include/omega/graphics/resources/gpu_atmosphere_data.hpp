@@ -38,7 +38,15 @@ gpu_component_data(const Atmosphere& atmosphere, const DirectionalLight& sun,
     // Camera
     const Matrix4& camera_world = transforms.get_world_matrix(camera_entity);
     const Vector3 camera_position = Vector3(camera_world[3]);
-    result.camera_position = Vector4(camera_position.x, camera_position.y + atmosphere.planet_radius + atmosphere.ground_offset, camera_position.z, 0.0f);
+    Vector3 atmosphere_position = camera_position + Vector3(0.0f, atmosphere.planet_radius + atmosphere.ground_offset, 0.0f);
+    const float min_radius = atmosphere.planet_radius + 1.0f;
+    const float radius = length(atmosphere_position);
+    if (radius < min_radius)
+    {
+        atmosphere_position = radius > 0.0001f ? atmosphere_position * (min_radius / radius) : Vector3(0.0f, min_radius, 0.0f);
+    }
+
+    result.camera_position = Vector4(atmosphere_position, 0.0f);
 
     // Planet
     result.planet = Vector4(atmosphere.planet_radius, atmosphere.atmosphere_radius, atmosphere.rayleigh_scale_height, atmosphere.mie_scale_height);

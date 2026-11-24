@@ -32,7 +32,7 @@ GraphicsSystem::GraphicsSystem(const std::string& application_name, uint32_t max
       {
           .width = platform.window().width(),
           .height = platform.window().height(),
-          .format = ogfx::Format::BGRA8_UNORM,
+          .format = ogfx::Format::RGBA8_UNORM,
           .present_mode = ogfx::PresentMode::Immediate,
           .image_count = 3
       }),
