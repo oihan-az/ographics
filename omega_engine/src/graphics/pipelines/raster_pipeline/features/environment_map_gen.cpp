@@ -16,6 +16,7 @@
 #include <omega/lighting/directional_light.hpp>
 #include <omega/graphics/resources/gpu_light_data.hpp>
 #include <omega/atmosphere/atmosphere.hpp>
+#include <omega/graphics/resources/gpu_atmosphere_data.hpp>
 
 #include <filesystem>
 #include <vector>
@@ -29,16 +30,6 @@ namespace
 constexpr uint32_t environment_resolution = 1024;
 constexpr uint32_t workgroup_size = 8;
 constexpr uint32_t cubemap_face_count = 6;
-
-struct AtmosphereConstants
-{
-    Vector4 camera_position;
-    Vector4 sun_direction;
-    Vector4 sun_radiance;
-    Vector4 planet;
-    Vector4 scattering;
-    Vector4 settings;
-};
 
 } // namespace
 
@@ -127,7 +118,7 @@ void EnvironmentMapGen::add_node(orendergraph::RenderGraph& rg)
             ogfx::InlineConstantRange constants_range{};
             constants_range.stages = ogfx::ShaderStageFlags::Compute;
             constants_range.offset = 0;
-            constants_range.size = sizeof(AtmosphereConstants);
+            constants_range.size = sizeof(GpuComponentData<Atmosphere>);
 
             desc.inline_constants_ranges.push_back(constants_range);
 
@@ -177,36 +168,14 @@ void EnvironmentMapGen::add_node(orendergraph::RenderGraph& rg)
             if (!atmosphere || !sun)
                 return;
 
-            const GpuComponentData<DirectionalLight> sun_data =
-                gpu_component_data(*sun, m_desc.atmosphere, m_desc.transforms);
-
-            // Fill constants
-            AtmosphereConstants constants{};
-            constants.sun_direction = -sun_data.direction;
-            constants.sun_radiance = Vector4(sun_data.color_intensity.x * sun_data.color_intensity.w,
-                                             sun_data.color_intensity.y * sun_data.color_intensity.w,
-                                             sun_data.color_intensity.z * sun_data.color_intensity.w, 0.0f);
-
-            const Matrix4 camera_world = m_desc.transforms.get_world_matrix(m_desc.camera);
-            Vector3 scale; Quaternion rotation; Vector3 position; Vector3 skew; Vector4 perspective;
-            if (!decompose(camera_world, scale, rotation, position, skew, perspective))
-                return;
-
-            constants.camera_position = Vector4(position.x, position.y + atmosphere->planet_radius + atmosphere->ground_offset, position.z, 0.0f);
-
-            constants.planet = Vector4(atmosphere->planet_radius, atmosphere->atmosphere_radius,
-                                       atmosphere->rayleigh_scale_height, atmosphere->mie_scale_height);
-
-            constants.scattering = Vector4(atmosphere->rayleigh_scattering.x, atmosphere->rayleigh_scattering.y,
-                                           atmosphere->rayleigh_scattering.z, atmosphere->mie_scattering);
-
-            constants.settings = Vector4(atmosphere->mie_anisotropy, 0.0f, 0.0f, 0.0f);
+            // Convert component data into GPU constants
+            const GpuComponentData<Atmosphere> constants = gpu_component_data(*atmosphere, *sun, m_desc.atmosphere, m_desc.camera, m_desc.transforms);
 
             ogfx::InlineConstantsInfo constants_info{};
             constants_info.layout = ctx.pipeline_layout;
             constants_info.stages = ogfx::ShaderStageFlags::Compute;
             constants_info.offset = 0;
-            constants_info.size = sizeof(AtmosphereConstants);
+            constants_info.size = sizeof(GpuComponentData<Atmosphere>);
             constants_info.data = &constants;
 
             cmd.set_inline_constants(constants_info);
