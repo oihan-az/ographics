@@ -3,23 +3,33 @@
 
 float geometry_schlick_ggx(float NdotX, float roughness)
 {
-    NdotX = saturate(NdotX);
-    roughness = clamp(roughness, 0.04f, 1.0f);
-    
     float r = roughness + 1.0f;
     float k = (r * r) / 8.0f;
 
     return NdotX / (NdotX * (1.0f - k) + k);
 }
 
-float geometry_smith(float3 N, float3 V, float3 L, float roughness)
+float geometry_schlick_ggx_ibl(float NdotX, float roughness)
 {
-    float NdotV = saturate(dot(N, V));
-    float NdotL = saturate(dot(N, L));
+    float a = roughness * roughness;
+    float k = a * 0.5f;
 
+    return NdotX / (NdotX * (1.0f - k) + k);
+}
+
+float geometry_smith(float NdotV, float NdotL, float roughness)
+{
     float ggx_v = geometry_schlick_ggx(NdotV, roughness);
     float ggx_l = geometry_schlick_ggx(NdotL, roughness);
 
+    return ggx_v * ggx_l;
+}
+
+float geometry_smith_ibl(float NdotV, float NdotL, float roughness)
+{
+    float ggx_v = geometry_schlick_ggx_ibl(NdotV, roughness);
+    float ggx_l = geometry_schlick_ggx_ibl(NdotL, roughness);
+    
     return ggx_v * ggx_l;
 }
 

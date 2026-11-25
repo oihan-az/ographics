@@ -32,6 +32,7 @@ class IRenderGraphNode
 
     bool has_executed() const { return m_executed; }
     void mark_executed() { m_executed = true; }
+    void reset_executed() { m_executed = false; }
 
     std::vector<std::unique_ptr<IResourceAccess>>& reads() { return m_reads; }
     std::vector<std::unique_ptr<IResourceAccess>>& writes() { return m_writes; }

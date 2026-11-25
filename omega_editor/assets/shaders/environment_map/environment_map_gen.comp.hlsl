@@ -18,7 +18,7 @@ struct AtmosphereConstants
 ConstantBuffer<AtmosphereConstants> constants;
 
 [[vk::binding(0, 0)]]
-RWTexture2DArray<float4> environment_map;
+RWTexture2DArray<half4> environment_map;
 
 static const float PI = 3.14159265359f;
 

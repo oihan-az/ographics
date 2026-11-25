@@ -4,10 +4,11 @@
 #include "../post_processing/dithering.hlsli"
 
 [[vk::binding(0, 0)]]
-Texture2D<float4> input_image;
+Texture2D<half4> input_image;
 
 [[vk::binding(1, 0)]]
-RWTexture2D<float4> output_image;
+[[vk::image_format("rgba8")]]
+RWTexture2D<unorm float4> output_image;
 
 [numthreads(8, 8, 1)]
 void CSMain(uint3 dispatch_id : SV_DispatchThreadID)

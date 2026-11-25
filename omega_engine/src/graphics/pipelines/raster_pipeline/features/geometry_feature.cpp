@@ -103,7 +103,8 @@ void PbrOpaqueRenderFeature::build(orenderer::RenderFeatureContext& ctx)
     pool_desc.sizes = 
     {
         {ogfx::ResourceType::StorageBuffer, m_desc.graphics.max_frames_in_flight() * light_type_count},
-        {ogfx::ResourceType::Sampler, 2}
+        {ogfx::ResourceType::Sampler, 3},
+        {ogfx::ResourceType::SampledTexture, 2}
     };
     rg.get_resource_allocator().create_pool(pool_desc);
 
@@ -245,6 +246,18 @@ void PbrOpaqueRenderFeature::create_resources(orendergraph::RenderGraph& rg)
         desc.address_w = ogfx::AddressMode::ClampToEdge;
         m_environment_sampler = rg.create_resource<ogfx::Sampler>(desc);
     }
+
+    // BRDF LUT sampler
+    {
+        ogfx::SamplerDesc desc{};
+        desc.min_filter = ogfx::Filter::Linear;
+        desc.mag_filter = ogfx::Filter::Linear;
+        desc.mip_filter = ogfx::MipmapFilter::Linear;
+        desc.address_u = ogfx::AddressMode::ClampToEdge;
+        desc.address_v = ogfx::AddressMode::ClampToEdge;
+        desc.address_w = ogfx::AddressMode::ClampToEdge;
+        m_brdf_lut_sampler = rg.create_resource<ogfx::Sampler>(desc);
+    }
 }
 
 void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
@@ -257,6 +270,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
         {
             // Dependencies
             rg.read(m_desc.environment_map, ogfx::ImageState::ShaderRead);
+            rg.read(m_desc.brdf_lut, ogfx::ImageState::ShaderRead);
             rg.write(m_out_image, ogfx::ImageState::RenderTarget, {ogfx::ImageAspect::Color}, ogfx::ImageState::RenderTarget, true);
             rg.write(m_depth_image, ogfx::ImageState::DepthStencil, {ogfx::ImageAspect::Depth}, ogfx::ImageState::DepthStencil, true);
 
@@ -397,7 +411,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
             desc.resource_set_layouts_desc.push_back(sampler_set_layout_desc);
 
             // Environment resource set layout (set 3)
-            ogfx::ResourceSetLayoutDesc environment_layout_desc{};
+            ogfx::ResourceSetLayoutDesc ibl_layout_desc{};
 
             ogfx::ResourceBindingDesc environment_texture_binding{};
             environment_texture_binding.binding = 0;
@@ -409,9 +423,20 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
             environment_sampler_binding.type = ogfx::ResourceType::Sampler;
             environment_sampler_binding.stages = ogfx::ShaderStageFlags::Fragment;
 
-            environment_layout_desc.bindings = {environment_texture_binding, environment_sampler_binding};
+            ogfx::ResourceBindingDesc brdf_lut_texture_binding{};
+            brdf_lut_texture_binding.binding = 2;
+            brdf_lut_texture_binding.type = ogfx::ResourceType::SampledTexture;
+            brdf_lut_texture_binding.stages = ogfx::ShaderStageFlags::Fragment;
 
-            desc.resource_set_layouts_desc.push_back(environment_layout_desc);
+            ogfx::ResourceBindingDesc brdf_lut_sampler_binding{};
+            brdf_lut_sampler_binding.binding = 3;
+            brdf_lut_sampler_binding.type = ogfx::ResourceType::Sampler;
+            brdf_lut_sampler_binding.stages = ogfx::ShaderStageFlags::Fragment;
+
+            ibl_layout_desc.bindings = {environment_texture_binding, environment_sampler_binding,
+                                        brdf_lut_texture_binding, brdf_lut_sampler_binding};
+
+            desc.resource_set_layouts_desc.push_back(ibl_layout_desc);
 
             // One resource set and one write description per frame
             for (uint32_t i = 0; i < m_desc.graphics.max_frames_in_flight(); ++i)
@@ -486,14 +511,25 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
             environment_sampler_binding_write.binding = 1;
             environment_sampler_binding_write.sampler = m_environment_sampler;
 
+            // BRDF LUT binding
+            orendergraph::ImageBinding brdf_lut_image_binding{};
+            brdf_lut_image_binding.binding = 2;
+            brdf_lut_image_binding.image_view = m_desc.brdf_lut_view;
+            brdf_lut_image_binding.image_state = ogfx::ImageState::ShaderRead;
+
+            // BRDF LUT sampler binding
+            orendergraph::SamplerBinding brdf_lut_sampler_binding_write{};
+            brdf_lut_sampler_binding_write.binding = 3;
+            brdf_lut_sampler_binding_write.sampler = m_brdf_lut_sampler;
+
             // Resource set write
-            orendergraph::ResourceWriteDesc environment_write_desc{};
-            environment_write_desc.resource_set_idx = m_desc.graphics.max_frames_in_flight() + 1;
+            orendergraph::ResourceWriteDesc ibl_write_desc{};
+            ibl_write_desc.resource_set_idx = m_desc.graphics.max_frames_in_flight() + 1;
 
-            environment_write_desc.write_info.textures = {environment_image_binding};
-            environment_write_desc.write_info.samplers = {environment_sampler_binding_write};
+            ibl_write_desc.write_info.textures = {environment_image_binding, brdf_lut_image_binding};
+            ibl_write_desc.write_info.samplers = {environment_sampler_binding_write, brdf_lut_sampler_binding_write};
 
-            desc.resource_writes_desc.push_back(environment_write_desc);
+            desc.resource_writes_desc.push_back(ibl_write_desc);
 
             // Vertex input
             desc.vertex_input = standard_vertex_layout();

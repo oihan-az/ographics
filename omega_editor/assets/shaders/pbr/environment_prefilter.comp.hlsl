@@ -16,10 +16,10 @@ struct PrefilterConstants
 ConstantBuffer<PrefilterConstants> constants;
 
 [[vk::binding(0, 0)]]
-TextureCube<float4> environment_map;
+TextureCube<half4> environment_map;
 
 [[vk::binding(1, 0)]]
-RWTexture2DArray<float4> prefiltered_map;
+RWTexture2DArray<half4> prefiltered_map;
 
 [[vk::binding(2, 0)]]
 SamplerState environment_sampler;

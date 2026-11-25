@@ -29,7 +29,7 @@ namespace omega
 namespace
 {
 
-constexpr uint32_t environment_resolution = 1024;
+constexpr uint32_t environment_resolution = 512;
 constexpr uint32_t workgroup_size = 8;
 constexpr uint32_t cubemap_face_count = 6;
 

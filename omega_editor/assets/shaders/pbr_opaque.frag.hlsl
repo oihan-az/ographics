@@ -50,6 +50,12 @@ TextureCube<float4> prefiltered_environment;
 [[vk::binding(1, 3)]]
 SamplerState environment_sampler;
 
+[[vk::binding(2, 3)]]
+Texture2D<half2> brdf_lut;
+
+[[vk::binding(3, 3)]]
+SamplerState brdf_lut_sampler;
+
 struct FragmentConstants
 {
     // Lighting
@@ -117,6 +123,7 @@ PSOutput PSMain(PSInput input)
     }
     metallic = saturate(metallic);
     roughness = filter_specular_roughness(roughness, geometric_variance + mip_variance);
+    roughness = clamp(roughness, 0.04f, 1.0f);
 
     // Emissive
     float3 emissive = constants.emissive.rgb;
@@ -147,13 +154,11 @@ PSOutput PSMain(PSInput input)
 
     // Indirect specular
     float3 indirect_specular = evaluate_specular_ibl(
-        surface.normal,
-        surface.view_direction,
-        surface.base_color,
-        surface.metallic,
-        surface.roughness,
+        surface,
         prefiltered_environment,
-        environment_sampler
+        environment_sampler,
+        brdf_lut,
+        brdf_lut_sampler
     );
     
     // Final color

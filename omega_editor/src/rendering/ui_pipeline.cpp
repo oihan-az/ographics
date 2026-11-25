@@ -7,6 +7,7 @@
 #include <omega/graphics/pipelines/raster_pipeline/features/skybox_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/dithering_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/environment_prefilter_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/brdf_lut_gen.hpp>
 
 #include <omega_editor/rendering/ui_feature.hpp>
 
@@ -35,12 +36,17 @@ void UIPipeline::setup(UIPipelineDesc& desc)
 
     m_environment_prefilter_feature = &add_feature<omega::EnvironmentPrefilterFeature>(prefilter_desc);
 
+    omega::BrdfLutGenDesc brdf_lut_desc{};
+    m_brdf_lut_gen = &add_feature<omega::BrdfLutGen>(brdf_lut_desc);
+
     omega::PbrOpaqueRenderFeatureDesc pbr_opaque_desc
     {
         desc.camera,
         desc.camera_type,
         m_environment_prefilter_feature->out_image(),
         m_environment_prefilter_feature->out_image_view(),
+        m_brdf_lut_gen->brdf_lut(),
+        m_brdf_lut_gen->brdf_lut_view(),
         desc.components,
         desc.events,
         desc.transforms,

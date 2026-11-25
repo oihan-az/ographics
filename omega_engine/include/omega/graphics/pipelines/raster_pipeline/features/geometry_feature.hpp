@@ -65,6 +65,9 @@ struct PbrOpaqueRenderFeatureDesc
     orendergraph::ResourceHandle<ogfx::Image> environment_map;
     orendergraph::ResourceHandle<ogfx::ImageView> environment_map_view;
 
+    orendergraph::ResourceHandle<ogfx::Image> brdf_lut;
+    orendergraph::ResourceHandle<ogfx::ImageView> brdf_lut_view;
+
     ComponentSystem& components;
     EventSystem& events;
     TransformSystem& transforms;
@@ -136,6 +139,7 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
 
     orendergraph::ResourceHandle<ogfx::Sampler> m_sampler;
     orendergraph::ResourceHandle<ogfx::Sampler> m_environment_sampler;
+    orendergraph::ResourceHandle<ogfx::Sampler> m_brdf_lut_sampler;
 };
 
 } // namespace omega
