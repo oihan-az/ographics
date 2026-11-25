@@ -1,5 +1,5 @@
 #include <omega/graphics/pipelines/raster_pipeline/raster_pipeline.hpp>
-#include <omega/graphics/pipelines/raster_pipeline/features/geometry_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/pbr_opaque_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.hpp>
 #include <omega/graphics/graphics_system.hpp>
 

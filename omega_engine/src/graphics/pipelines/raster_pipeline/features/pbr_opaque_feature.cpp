@@ -1,4 +1,4 @@
-#include <omega/graphics/pipelines/raster_pipeline/features/geometry_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/pbr_opaque_feature.hpp>
 
 #include <orenderer/render_feature_context.hpp>
 #include <orendergraph/render_graph.hpp>

@@ -43,7 +43,7 @@ target_sources(
         src/graphics/graphics_system.cpp
 
         src/graphics/pipelines/raster_pipeline/raster_pipeline.cpp
-        "src/graphics/pipelines/raster_pipeline/features/pbr_opaque_feature.cpp"
+        src/graphics/pipelines/raster_pipeline/features/pbr_opaque_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/environment_map_gen.cpp
         src/graphics/pipelines/raster_pipeline/features/skybox_feature.cpp
@@ -51,6 +51,7 @@ target_sources(
         src/graphics/pipelines/raster_pipeline/features/environment_prefilter_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/brdf_lut_gen.cpp
         src/graphics/pipelines/raster_pipeline/features/irradiance_map_gen.cpp
+        src/graphics/pipelines/raster_pipeline/features/tone_mapping_feature.cpp
 
         src/graphics/resources/gpu_dynamic_buffer.cpp
 

@@ -1,7 +1,7 @@
 #ifndef OMEGA_DITHERING_COMP_HLSL
 #define OMEGA_DITHERING_COMP_HLSL
 
-#include "../post_processing/dithering.hlsli"
+#include "dithering.hlsli"
 
 [[vk::binding(0, 0)]]
 Texture2D<half4> input_image;

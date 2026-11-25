@@ -23,6 +23,7 @@ class DitheringFeature;
 class IrradianceMapGen;
 class EnvironmentPrefilterFeature;
 class BrdfLutGen;
+class ToneMappingFeature;
 struct RenderRegion;
 
 } // namespace omega
@@ -58,7 +59,6 @@ class UIPipeline : public orenderer::RenderPipeline
     void set_viewport(const omega::RenderRegion& region);
     void set_camera(omega::Entity camera, omega::CameraType camera_type);
 
-  private:
     omega::ToSwapchain* m_to_swapchain;
     omega::PbrOpaqueRenderFeature* m_pbr_opaque_feature;
     omega::EnvironmentMapGen* m_environment_map_gen = nullptr;
@@ -67,6 +67,7 @@ class UIPipeline : public orenderer::RenderPipeline
     omega::IrradianceMapGen* m_irradiance_map_gen = nullptr;
     omega::EnvironmentPrefilterFeature* m_environment_prefilter_feature = nullptr;
     omega::BrdfLutGen* m_brdf_lut_gen = nullptr;
+    omega::ToneMappingFeature* m_tone_mapping_feature = nullptr;
 };
 
 } // namespace omega_editor

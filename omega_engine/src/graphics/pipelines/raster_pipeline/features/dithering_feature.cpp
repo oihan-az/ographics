@@ -99,7 +99,7 @@ void DitheringFeature::add_node(orendergraph::RenderGraph& rg)
             rg.write(m_out_image, ogfx::ImageState::Common, {ogfx::ImageAspect::Color});
 
             // Compute shader
-            const std::filesystem::path shader_path = std::filesystem::path("shaders/") / ("post_processing/dithering.comp." OGRAPHICS_SHADER_FORMAT);
+            const std::filesystem::path shader_path = std::filesystem::path("shaders/") / ("post_processing/dithering/dithering.comp." OGRAPHICS_SHADER_FORMAT);
 
             ogfx::ShaderDesc shader_desc{};
             shader_desc.stage = ogfx::ShaderStage::Compute;

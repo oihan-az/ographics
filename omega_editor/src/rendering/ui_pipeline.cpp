@@ -1,7 +1,7 @@
 #include <omega_editor/rendering/ui_pipeline.hpp>
 #include <omega_editor/rendering/ui_feature.hpp>
 
-#include <omega/graphics/pipelines/raster_pipeline/features/geometry_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/pbr_opaque_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/environment_map_gen.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/skybox_feature.hpp>
@@ -9,6 +9,7 @@
 #include <omega/graphics/pipelines/raster_pipeline/features/irradiance_map_gen.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/environment_prefilter_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/brdf_lut_gen.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/tone_mapping_feature.hpp>
 
 #include <omega_editor/rendering/ui_feature.hpp>
 
@@ -87,10 +88,20 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     
     m_skybox_feature = &add_feature<omega::SkyboxRenderFeature>(skybox_desc);
 
+    omega::ToneMappingFeatureDesc tone_mapping_desc
+    {
+        m_pbr_opaque_feature->out_image(), 
+        m_pbr_opaque_feature->out_image_view(), 
+        1.0f,
+        desc.graphics
+    };
+
+    m_tone_mapping_feature = &add_feature<omega::ToneMappingFeature>(tone_mapping_desc);
+
     omega::DitheringFeatureDesc dithering_desc
     {
-        m_pbr_opaque_feature->out_image(),
-        m_pbr_opaque_feature->out_image_view(),
+        m_tone_mapping_feature->out_image(),
+        m_tone_mapping_feature->out_image_view(),
         desc.graphics
     };
 
