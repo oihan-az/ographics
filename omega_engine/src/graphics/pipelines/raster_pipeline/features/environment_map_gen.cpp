@@ -172,40 +172,54 @@ void EnvironmentMapGen::add_node(orendergraph::RenderGraph& rg)
             // Get sun data
             const Atmosphere* atmosphere = m_desc.components.get<Atmosphere>(m_desc.atmosphere);
             const DirectionalLight* sun = m_desc.components.get<DirectionalLight>(m_desc.atmosphere);
-            if (!atmosphere || !sun)
-                return;
+            if (atmosphere && sun)
+            {
+                // Convert component data into GPU constants
+                const GpuComponentData<Atmosphere> constants = gpu_component_data(*atmosphere, *sun, m_desc.atmosphere, m_desc.camera, m_desc.transforms);
 
-            // Convert component data into GPU constants
-            const GpuComponentData<Atmosphere> constants = gpu_component_data(*atmosphere, *sun, m_desc.atmosphere, m_desc.camera, m_desc.transforms);
+                ogfx::InlineConstantsInfo constants_info{};
+                constants_info.layout = ctx.pipeline_layout;
+                constants_info.stages = ogfx::ShaderStageFlags::Compute;
+                constants_info.offset = 0;
+                constants_info.size = sizeof(GpuComponentData<Atmosphere>);
+                constants_info.data = &constants;
 
-            ogfx::InlineConstantsInfo constants_info{};
-            constants_info.layout = ctx.pipeline_layout;
-            constants_info.stages = ogfx::ShaderStageFlags::Compute;
-            constants_info.offset = 0;
-            constants_info.size = sizeof(GpuComponentData<Atmosphere>);
-            constants_info.data = &constants;
+                cmd.set_inline_constants(constants_info);
 
-            cmd.set_inline_constants(constants_info);
+                cmd.dispatch({desc.group_count_x, desc.group_count_y, desc.group_count_z});
 
-            cmd.dispatch({desc.group_count_x, desc.group_count_y, desc.group_count_z});
+                // Generate mipmaps
+                {
+                    ogfx::Image* image = rg.get_resource(m_environment_map);
 
-            // Generate mipmaps
+                    ogfx::ImageTransitionInfo source_transition{};
+                    source_transition.image = image;
+                    source_transition.old_state = ogfx::ImageState::Common;
+                    source_transition.new_state = ogfx::ImageState::TransferDst;
+                    source_transition.base_mip_level = 0;
+                    source_transition.mip_level_count = image->mip_levels();
+                    source_transition.base_array_layer = 0;
+                    source_transition.array_layer_count = image->array_layers();
+                    cmd.transition_image(source_transition);
+
+                    ogfx::GenerateMipmapsInfo mipmap_info{};
+                    mipmap_info.image = rg.get_resource(m_environment_map);
+                    cmd.generate_mipmaps(mipmap_info);
+                }
+            }
+            else
             {
                 ogfx::Image* image = rg.get_resource(m_environment_map);
 
                 ogfx::ImageTransitionInfo source_transition{};
                 source_transition.image = image;
                 source_transition.old_state = ogfx::ImageState::Common;
-                source_transition.new_state = ogfx::ImageState::TransferDst;
+                source_transition.new_state = ogfx::ImageState::ShaderRead;
                 source_transition.base_mip_level = 0;
                 source_transition.mip_level_count = image->mip_levels();
                 source_transition.base_array_layer = 0;
-                source_transition.array_layer_count = image->array_layers();  
+                source_transition.array_layer_count = image->array_layers();
                 cmd.transition_image(source_transition);
-
-                ogfx::GenerateMipmapsInfo mipmap_info{};
-                mipmap_info.image = rg.get_resource(m_environment_map);
-                cmd.generate_mipmaps(mipmap_info);
             }
         });
 }

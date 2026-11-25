@@ -1,6 +1,9 @@
 #ifndef OMEGA_TONE_MAPPING_COMP_HLSL
 #define OMEGA_TONE_MAPPING_COMP_HLSL
 
+#include "aces.hlsli"
+#include "../../color/srgb.hlsli"
+
 struct ToneMappingConstants
 {
     float exposure;
@@ -19,17 +22,6 @@ RWTexture2D<half4> output_image;
 [[vk::binding(2, 0)]]
 SamplerState image_sampler;
 
-float3 tonemap_aces(float3 color)
-{
-    const float a = 2.51f;
-    const float b = 0.03f;
-    const float c = 2.43f;
-    const float d = 0.59f;
-    const float e = 0.14f;
-
-    return saturate((color * (a * color + b)) / (color * (c * color + d) + e));
-}
-
 [numthreads(8, 8, 1)]
 void CSMain(uint3 dispatch_id : SV_DispatchThreadID)
 {
@@ -43,8 +35,9 @@ void CSMain(uint3 dispatch_id : SV_DispatchThreadID)
 
     float3 exposed_color = max(hdr_color.rgb, 0.0f) * constants.exposure;
     float3 mapped_color = tonemap_aces(exposed_color);
+    float3 srgb_color = linear_to_srgb(mapped_color);
 
-    output_image[dispatch_id.xy] = float4(mapped_color, hdr_color.a);
+    output_image[dispatch_id.xy] = float4(srgb_color, hdr_color.a);
 }
 
 #endif // OMEGA_TONE_MAPPING_COMP_HLSL

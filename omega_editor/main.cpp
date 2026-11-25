@@ -53,7 +53,7 @@ int main()
     
         omega::DirectionalLight directional_light;
         directional_light.color = {0.9f, 0.85f, 0.8f};
-        directional_light.intensity = 6.0f;
+        directional_light.intensity = 2.0f;
         engine.components().add(directional_light_entity, directional_light);
 
         omega::Atmosphere atmosphere{};
@@ -83,8 +83,8 @@ int main()
         engine.components().add(spot_light_entity, transform);
     
         omega::SpotLight spot_light;
-        spot_light.color = {0.2f, 0.2f, 1.0f};
-        spot_light.intensity = 8.0f;
+        spot_light.color = {0.2f, 1.0f, 0.2f};
+        spot_light.intensity = 30.0f;
         spot_light.range = 100.0f;
         spot_light.inner_angle = omega::radians(20.0f);
         spot_light.outer_angle = omega::radians(35.0f);

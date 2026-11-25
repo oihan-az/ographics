@@ -92,7 +92,7 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     {
         m_pbr_opaque_feature->out_image(), 
         m_pbr_opaque_feature->out_image_view(), 
-        1.0f,
+        4.0f,
         desc.graphics
     };
 
