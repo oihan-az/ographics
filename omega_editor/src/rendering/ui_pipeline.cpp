@@ -6,6 +6,7 @@
 #include <omega/graphics/pipelines/raster_pipeline/features/environment_map_gen.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/skybox_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/dithering_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/irradiance_map_gen.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/environment_prefilter_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/brdf_lut_gen.hpp>
 
@@ -27,6 +28,14 @@ void UIPipeline::setup(UIPipelineDesc& desc)
 
     m_environment_map_gen = &add_feature<omega::EnvironmentMapGen>(environment_desc);
 
+    omega::IrradianceMapGenDesc irradiance_map_gen_desc
+    {
+        m_environment_map_gen->environment_map(),
+        m_environment_map_gen->environment_map_view()
+    };
+
+    m_irradiance_map_gen = &add_feature<omega::IrradianceMapGen>(irradiance_map_gen_desc);
+
     omega::EnvironmentPrefilterFeatureDesc prefilter_desc
     {
         m_environment_map_gen->environment_map(),
@@ -43,6 +52,8 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     {
         desc.camera,
         desc.camera_type,
+        m_irradiance_map_gen->irradiance_map(),
+        m_irradiance_map_gen->irradiance_map_view(),
         m_environment_prefilter_feature->out_image(),
         m_environment_prefilter_feature->out_image_view(),
         m_brdf_lut_gen->brdf_lut(),

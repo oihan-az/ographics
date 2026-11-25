@@ -50,6 +50,7 @@ target_sources(
         src/graphics/pipelines/raster_pipeline/features/dithering_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/environment_prefilter_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/brdf_lut_gen.cpp
+        src/graphics/pipelines/raster_pipeline/features/irradiance_map_gen.cpp
 
         src/graphics/resources/gpu_dynamic_buffer.cpp
 

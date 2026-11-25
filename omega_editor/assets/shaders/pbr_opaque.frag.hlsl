@@ -45,7 +45,7 @@ Texture2D<float4> emissive_texture;
 SamplerState material_sampler;
 
 [[vk::binding(0, 3)]]
-TextureCube<float4> prefiltered_environment;
+TextureCube<half4> prefiltered_environment;
 
 [[vk::binding(1, 3)]]
 SamplerState environment_sampler;
@@ -55,6 +55,9 @@ Texture2D<half2> brdf_lut;
 
 [[vk::binding(3, 3)]]
 SamplerState brdf_lut_sampler;
+
+[[vk::binding(4, 3)]]
+TextureCube<half4> irradiance_map;
 
 struct FragmentConstants
 {
@@ -161,9 +164,15 @@ PSOutput PSMain(PSInput input)
         brdf_lut_sampler
     );
     
+    // Indirect diffuse
+    float3 indirect_diffuse = evaluate_diffuse_ibl(
+        surface,
+        irradiance_map,
+        environment_sampler
+    );
+    
     // Final color
-    const float ambient = 0.4f;
-    output.color = float4(direct_lighting + indirect_specular + emissive + (ambient * base_color.rgb), 1.0f);
+    output.color = float4(direct_lighting + indirect_diffuse + indirect_specular + emissive, 1.0f);
     
     return output;
 }

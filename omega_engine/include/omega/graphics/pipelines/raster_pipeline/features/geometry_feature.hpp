@@ -62,6 +62,9 @@ struct PbrOpaqueRenderFeatureDesc
     Entity camera;
     CameraType camera_type;
 
+    orendergraph::ResourceHandle<ogfx::Image> irradiance_map;
+    orendergraph::ResourceHandle<ogfx::ImageView> irradiance_map_view;
+
     orendergraph::ResourceHandle<ogfx::Image> environment_map;
     orendergraph::ResourceHandle<ogfx::ImageView> environment_map_view;
 

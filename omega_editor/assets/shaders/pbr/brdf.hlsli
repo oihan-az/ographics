@@ -5,6 +5,7 @@
 #include "fresnel.hlsli"
 #include "distribution.hlsli"
 #include "geometry.hlsli"
+#include "energy.hlsli"
 
 float3 evaluate_pbr_brdf(PbrSurface surface, float3 light_direction, float3 radiance)
 {
@@ -21,7 +22,7 @@ float3 evaluate_pbr_brdf(PbrSurface surface, float3 light_direction, float3 radi
     float VdotH = saturate(dot(V, H));
 
     // Base reflectance
-    float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), surface.base_color, surface.metallic);
+    float3 F0 = base_reflectance(surface.base_color, surface.metallic);
 
     // Cook-Torrance specular BRDF
     float NDF = distribution_ggx(NdotH, surface.roughness);
@@ -33,10 +34,7 @@ float3 evaluate_pbr_brdf(PbrSurface surface, float3 light_direction, float3 radi
 
     float3 specular = numerator / denominator;
 
-    // Energy-conserving diffuse contribution
-    float3 kS = F;
-    float3 kD = (1.0f - kS) * (1.0f - surface.metallic);
-
+    float3 kD = energy_conservation(F, surface.metallic);
     float3 diffuse = kD * surface.base_color / PBR_PI;
 
     // Outgoing reflected radiance

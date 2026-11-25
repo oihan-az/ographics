@@ -131,7 +131,7 @@ int main()
 
             editor.render();
 
-           if (editor.camera_changed())
+            if (editor.camera_changed())
                 pipeline.set_camera(editor.camera_viewport().camera().entity, editor.camera_viewport().camera().type);
 
             imgui_layer.end_frame();
