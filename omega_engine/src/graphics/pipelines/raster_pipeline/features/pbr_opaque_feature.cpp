@@ -308,8 +308,8 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             // Shaders
             const std::filesystem::path shader_dir = "shaders/";
-            const std::filesystem::path vertex_shader_path = shader_dir / ("pbr_opaque.vert." OGRAPHICS_SHADER_FORMAT);
-            const std::filesystem::path fragment_shader_path = shader_dir / ("pbr_opaque.frag." OGRAPHICS_SHADER_FORMAT);
+            const std::filesystem::path vertex_shader_path = shader_dir / ("pbr/pbr_opaque.vert." OGRAPHICS_SHADER_FORMAT);
+            const std::filesystem::path fragment_shader_path = shader_dir / ("pbr/pbr_opaque.frag." OGRAPHICS_SHADER_FORMAT);
             const std::vector<uint8_t> vertex_bytecode = load_shader(vertex_shader_path);
             const std::vector<uint8_t> fragment_bytecode = load_shader(fragment_shader_path);
 

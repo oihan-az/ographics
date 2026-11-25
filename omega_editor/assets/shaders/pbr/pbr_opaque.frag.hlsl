@@ -1,7 +1,7 @@
-#include "pbr/pbr.hlsli"
-#include "pbr/specular_aa.hlsli"
-#include "pbr/ibl.hlsli"
-#include "normal_mapping/normal_mapping.hlsli"
+#include "pbr.hlsli"
+#include "specular_aa.hlsli"
+#include "ibl.hlsli"
+#include "../normal_mapping/normal_mapping.hlsli"
 
 struct PSInput
 {
