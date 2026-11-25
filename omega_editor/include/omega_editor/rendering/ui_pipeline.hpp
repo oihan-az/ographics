@@ -23,6 +23,7 @@ class DitheringFeature;
 class IrradianceMapGen;
 class EnvironmentPrefilterFeature;
 class BrdfLutGen;
+class AutoExposureFeature;
 class ToneMappingFeature;
 struct RenderRegion;
 
@@ -67,6 +68,7 @@ class UIPipeline : public orenderer::RenderPipeline
     omega::IrradianceMapGen* m_irradiance_map_gen = nullptr;
     omega::EnvironmentPrefilterFeature* m_environment_prefilter_feature = nullptr;
     omega::BrdfLutGen* m_brdf_lut_gen = nullptr;
+    omega::AutoExposureFeature* m_auto_exposure_feature = nullptr;
     omega::ToneMappingFeature* m_tone_mapping_feature = nullptr;
 };
 

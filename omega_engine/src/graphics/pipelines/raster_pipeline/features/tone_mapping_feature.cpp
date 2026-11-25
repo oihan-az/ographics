@@ -124,6 +124,7 @@ void ToneMappingFeature::add_node(orendergraph::RenderGraph& rg)
         [this](orendergraph::RenderGraph& rg, orendergraph::ComputeContext::Desc& desc)
         {
             rg.read(m_desc.input_image, ogfx::ImageState::ShaderRead, {ogfx::ImageAspect::Color});
+            rg.read(m_desc.exposure_buffer, {ogfx::AccessFlags::ShaderRead, ogfx::PipelineStage::ComputeShader});
             rg.write(m_out_image, ogfx::ImageState::Common, {ogfx::ImageAspect::Color});
 
             const std::filesystem::path shader_path = std::filesystem::path("shaders/") / ("post_processing/tone_mapping/tone_mapping.comp." OGRAPHICS_SHADER_FORMAT);
@@ -156,8 +157,15 @@ void ToneMappingFeature::add_node(orendergraph::RenderGraph& rg)
             sampler_binding.array_count = 1;
             sampler_binding.stages = ogfx::ShaderStageFlags::Compute;
 
+            // Set 0, binding 3: exposure buffer
+            ogfx::ResourceBindingDesc exposure_binding{};
+            exposure_binding.binding = 3;
+            exposure_binding.type = ogfx::ResourceType::StorageBuffer;
+            exposure_binding.array_count = 1;
+            exposure_binding.stages = ogfx::ShaderStageFlags::Compute;
+
             ogfx::ResourceSetLayoutDesc set_layout_desc{};
-            set_layout_desc.bindings = {input_binding, output_binding, sampler_binding};
+            set_layout_desc.bindings = {input_binding, output_binding, sampler_binding, exposure_binding};
 
             desc.resource_set_layouts_desc.push_back(set_layout_desc);
 
@@ -192,10 +200,18 @@ void ToneMappingFeature::add_node(orendergraph::RenderGraph& rg)
             sampler_binding_write.binding = 2;
             sampler_binding_write.sampler = m_sampler;
 
+            // Exposure buffer
+            orendergraph::BufferBinding exposure_buffer_binding{};
+            exposure_buffer_binding.binding = 3;
+            exposure_buffer_binding.buffer = m_desc.exposure_buffer;
+            exposure_buffer_binding.offset = 0;
+            exposure_buffer_binding.range = sizeof(float);
+
             orendergraph::ResourceWriteDesc write_desc{};
             write_desc.resource_set_idx = 0;
             write_desc.write_info.textures = {input_image_binding, output_image_binding};
             write_desc.write_info.samplers = {sampler_binding_write};
+            write_desc.write_info.buffers.push_back(exposure_buffer_binding);
 
             desc.resource_writes_desc.push_back(write_desc);
 

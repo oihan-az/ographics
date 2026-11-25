@@ -9,6 +9,7 @@
 #include <omega/graphics/pipelines/raster_pipeline/features/irradiance_map_gen.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/environment_prefilter_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/brdf_lut_gen.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/auto_exposure_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/tone_mapping_feature.hpp>
 
 #include <omega_editor/rendering/ui_feature.hpp>
@@ -88,11 +89,19 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     
     m_skybox_feature = &add_feature<omega::SkyboxRenderFeature>(skybox_desc);
 
+    omega::AutoExposureFeatureDesc auto_exposure_desc
+    {
+        m_pbr_opaque_feature->out_image(), 
+        m_pbr_opaque_feature->out_image_view()
+    };
+
+    m_auto_exposure_feature = &add_feature<omega::AutoExposureFeature>(auto_exposure_desc);
+
     omega::ToneMappingFeatureDesc tone_mapping_desc
     {
         m_pbr_opaque_feature->out_image(), 
         m_pbr_opaque_feature->out_image_view(), 
-        4.0f,
+        m_auto_exposure_feature->exposure_buffer(),
         desc.graphics
     };
 

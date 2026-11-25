@@ -7,6 +7,7 @@
 #include <omega/lighting/spot_light.hpp>
 #include <omega/atmosphere/atmosphere.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/auto_exposure_feature.hpp>
 
 #include <omega_editor/ui/imgui_layer.hpp>
 #include <omega_editor/rendering/ui_pipeline.hpp>
@@ -116,10 +117,18 @@ int main()
     engine.graphics().renderer().setup<omega_editor::UIPipeline>(pipeline_desc);
     engine.graphics().renderer().compile();
 
+    using Clock = std::chrono::steady_clock;
+    auto previous_frame_time = Clock::now();
+
     while (!engine.should_close())
     {
         if (!engine.start_frame())
             continue;
+
+        const auto current_frame_time = Clock::now();
+        const float delta_time = std::chrono::duration<float>(current_frame_time - previous_frame_time).count();
+        previous_frame_time = current_frame_time;
+        pipeline.m_auto_exposure_feature->set_delta_time(delta_time);
 
         engine.update();
 

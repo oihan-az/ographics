@@ -9,6 +9,7 @@ namespace ogfx
 class Image;
 class ImageView;
 class Sampler;
+class Buffer;
 } // namespace ogfx
 
 namespace orendergraph
@@ -28,9 +29,11 @@ struct ToneMappingFeatureDesc
     orendergraph::ResourceHandle<ogfx::Image> input_image;
     orendergraph::ResourceHandle<ogfx::ImageView> input_image_view;
 
-    float exposure = 1.0f;
+    orendergraph::ResourceHandle<ogfx::Buffer> exposure_buffer;
 
     GraphicsSystem& graphics;
+
+    float exposure = 1.0f;
 };
 
 class ToneMappingFeature : public orenderer::IRenderFeature
