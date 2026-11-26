@@ -11,8 +11,14 @@
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
 #include <omega/atmosphere/atmosphere.hpp>
+#include <omega/shadows/directional_shadow.hpp>
+#include <omega/shadows/point_shadow.hpp>
+#include <omega/shadows/spot_shadow.hpp>
+#include <omega/shadows/shadow_caster.hpp>
 
 #include <imgui.h>
+
+#include <bit>
 
 namespace
 {
@@ -27,6 +33,46 @@ void draw_viewport_outline(const omega_editor::ViewportRect& rect)
     ImDrawList* draw_list = ImGui::GetForegroundDrawList();
 
     draw_list->AddRect(min, max, IM_COL32(140, 150, 170, 150), 0.0f, 0, 1.0f);
+}
+
+template <typename TShadow>
+bool edit_shadow(TShadow& shadow, uint32_t min_resolution, uint32_t max_resolution)
+{
+    bool changed = false;
+
+    min_resolution = std::bit_floor(min_resolution);
+    max_resolution = std::bit_floor(max_resolution);
+
+    if (ImGui::BeginCombo("Resolution", std::to_string(shadow.resolution).c_str()))
+    {
+        for (uint32_t resolution = min_resolution; resolution <= max_resolution; resolution *= 2)
+        {
+            const bool selected = shadow.resolution == resolution;
+
+            if (ImGui::Selectable(std::to_string(resolution).c_str(), selected))
+            {
+                shadow.resolution = resolution;
+                changed = true;
+            }
+
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+
+        ImGui::EndCombo();
+    }
+
+    const uint32_t resolution = std::bit_floor(shadow.resolution);
+    if (shadow.resolution != resolution)
+    {
+        shadow.resolution = resolution;
+        changed = true;
+    }
+
+    changed |= ImGui::DragFloat("Depth Bias", &shadow.depth_bias, 0.0001f, 0.0f, 0.1f);
+    changed |= ImGui::DragFloat("Normal Bias", &shadow.normal_bias, 0.001f, 0.0f, 1.0f);
+
+    return changed;
 }
 
 } // namespace
@@ -377,6 +423,42 @@ void Editor::register_component_editors()
             changed |= ImGui::DragFloat("Ground Offset", &atmosphere.ground_offset, 0.1f, 0.0f, max_float);
 
             return changed;
+        }
+    );
+
+    m_component_editors.register_component<omega::DirectionalShadow>
+    (
+        "Directional Shadow",
+        [](omega::DirectionalShadow& shadow)
+        {
+            return edit_shadow(shadow, 256, 4096);
+        }
+    );
+
+    m_component_editors.register_component<omega::PointShadow>
+    (
+        "Point Shadow",
+        [](omega::PointShadow& shadow)
+        {
+            return edit_shadow(shadow, 128, 2048);
+        }
+    );
+
+    m_component_editors.register_component<omega::SpotShadow>
+    (
+        "Spot Shadow",
+        [](omega::SpotShadow& shadow)
+        {
+            return edit_shadow(shadow, 128, 1024);
+        }
+    );
+
+    m_component_editors.register_component<omega::ShadowCaster>
+    (
+        "Shadow Caster",
+        [](omega::ShadowCaster& shadow)
+        {
+            return false;
         }
     );
 }
