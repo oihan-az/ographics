@@ -11,6 +11,7 @@
 #include <omega/material/materials/pbr_opaque_material.hpp>
 #include <omega/renderable/pbr_opaque_renderable.hpp>
 #include <omega/transform/transform.hpp>
+#include <omega/shadows/shadow_caster.hpp>
 #include <omega/assets/model_importer.hpp>
 
 #include <vector>
@@ -265,6 +266,12 @@ bool ModelSystem::instantiate(ModelHandle model, Entity& root)
                 renderable.material = material_handles[primitive.material];
 
                 if (!m_components.add<PbrOpaqueRenderable>(renderable_entity, renderable))
+                {
+                    rollback();
+                    return false;
+                }
+
+                if (!m_components.add<ShadowCaster>(renderable_entity, ShadowCaster{}))
                 {
                     rollback();
                     return false;

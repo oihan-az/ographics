@@ -53,6 +53,7 @@ target_sources(
         src/graphics/pipelines/raster_pipeline/features/irradiance_map_gen.cpp
         src/graphics/pipelines/raster_pipeline/features/tone_mapping_feature.cpp
         src/graphics/pipelines/raster_pipeline/features/auto_exposure_feature.cpp
+        src/graphics/pipelines/raster_pipeline/features/shadow_map_gen.cpp
 
         src/graphics/resources/gpu_dynamic_buffer.cpp
 

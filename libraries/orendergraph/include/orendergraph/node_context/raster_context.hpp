@@ -71,11 +71,18 @@ struct RasterContext : public PipelineContext
     void release_pipeline(RenderGraph& graph);
     void release_shaders(RenderGraph& graph);
 
+    uint32_t add_framebuffer(RenderGraph& graph, Desc& desc, const ogfx::FramebufferDesc& framebuffer_desc);
+    void remove_framebuffer(RenderGraph& graph, Desc& desc, uint32_t index);
+
     ogfx::Shader* vertex_shader = nullptr;
     ogfx::Shader* fragment_shader = nullptr;
     ogfx::GraphicsPipeline* pipeline = nullptr;
     ogfx::RenderPass* render_pass = nullptr;
     std::vector<ogfx::Framebuffer*> framebuffers;
+
+private:
+    ogfx::Framebuffer* acquire_framebuffer(RenderGraph& graph, const ogfx::FramebufferDesc& framebuffer_desc);
+    void release_framebuffer_slot(RenderGraph& graph, uint32_t index);
 };
 
 } // namespace orendergraph

@@ -24,9 +24,6 @@ void RenderGraph::compile()
 
     // Determine execution order
     build_execution_order();
-
-    // TODO: Validate resource initialization
-    // TODO: Cull unused nodes
 }
 
 void RenderGraph::execute(ogfx::CommandBuffer& cmd)
@@ -82,6 +79,21 @@ void RenderGraph::reset()
     m_object_cache.clear();
 }
 
+void RenderGraph::add_explicit_dependency(uint32_t from, uint32_t to)
+{
+    if (from >= m_nodes.size() || to >= m_nodes.size())
+        throw std::out_of_range("RenderGraph: Invalid node index");
+
+    if (from == to)
+        throw std::invalid_argument("RenderGraph: Node cannot depend on itself");
+
+    const auto dependency = std::make_pair(from, to);
+    if (std::find(m_explicit_dependencies.begin(), m_explicit_dependencies.end(), dependency) != m_explicit_dependencies.end())
+        return;
+
+    m_explicit_dependencies.push_back(dependency);
+}
+
 void RenderGraph::add_dependency(uint32_t from, uint32_t to)
 {
     if (from == to)
@@ -108,6 +120,10 @@ void RenderGraph::build_dependencies()
     };
 
     std::unordered_map<uint32_t, ResourceDependency> resource_dependencies;
+
+    // Add explicitly declared dependencies
+    for (const auto& [from, to] : m_explicit_dependencies)
+        add_dependency(from, to);
 
     for (uint32_t i = 0; i < m_nodes.size(); ++i)
     {

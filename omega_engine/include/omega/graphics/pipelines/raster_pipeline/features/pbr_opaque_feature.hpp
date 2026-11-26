@@ -88,6 +88,11 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
 
     void set_camera(omega::Entity camera, CameraType camera_type);
 
+    orendergraph::RenderGraphNode<orendergraph::RasterContext>* node() const
+    {
+            return m_pbr_node;
+    }
+
     const orendergraph::ResourceHandle<ogfx::Image> out_image() const { return m_out_image; }
     const orendergraph::ResourceHandle<ogfx::ImageView> out_image_view() const { return m_out_image_view; }
     orendergraph::ResourceHandle<ogfx::Image> depth_image() const { return m_depth_image; }
@@ -132,7 +137,7 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
     void create_resources(orendergraph::RenderGraph& rg);
     void add_node(orendergraph::RenderGraph& rg);
 
-    orendergraph::RenderGraphNode<orendergraph::RasterContext>* m_geometry_node = nullptr;
+    orendergraph::RenderGraphNode<orendergraph::RasterContext>* m_pbr_node = nullptr;
 
     orendergraph::ResourceHandle<ogfx::Image> m_out_image;
     orendergraph::ResourceHandle<ogfx::ImageView> m_out_image_view;

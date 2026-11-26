@@ -177,6 +177,23 @@ void RenderGraph::reset_resource_state(ResourceHandle<TResource> handle)
     }
 }
 
+template <typename TFrom, typename TTo>
+void RenderGraph::add_explicit_dependency(const RenderGraphNode<TFrom>* from, const RenderGraphNode<TTo>* to)
+{
+    auto find_index = [this](const auto* target) -> uint32_t
+    {
+        for (uint32_t i = 0; i < m_nodes.size(); ++i)
+        {
+            if (m_nodes[i].get() == target)
+                return i;
+        }
+
+        throw std::invalid_argument("RenderGraph: Node not registered");
+    };
+
+    add_explicit_dependency(find_index(from), find_index(to));
+}
+
 } // namespace orendergraph
 
 #endif // ORENDERGRAPH_RENDER_GRAPH_CORE_TPP

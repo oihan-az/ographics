@@ -11,6 +11,7 @@
 #include <omega/graphics/pipelines/raster_pipeline/features/brdf_lut_gen.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/auto_exposure_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/tone_mapping_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/shadow_map_gen.hpp>
 
 #include <omega_editor/rendering/ui_feature.hpp>
 
@@ -50,6 +51,17 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     omega::BrdfLutGenDesc brdf_lut_desc{};
     m_brdf_lut_gen = &add_feature<omega::BrdfLutGen>(brdf_lut_desc);
 
+    omega::ShadowMapGenDesc shadow_map_gen_desc
+    {
+        desc.camera,
+        desc.components,
+        desc.events,
+        desc.transforms,
+        desc.graphics
+    };
+
+    auto& shadow_map_gen = add_feature<omega::ShadowMapGen>(shadow_map_gen_desc);
+
     omega::PbrOpaqueRenderFeatureDesc pbr_opaque_desc
     {
         desc.camera,
@@ -68,6 +80,8 @@ void UIPipeline::setup(UIPipelineDesc& desc)
     };
     
     m_pbr_opaque_feature = &add_feature<omega::PbrOpaqueRenderFeature>(pbr_opaque_desc);
+
+    m_render_graph.add_explicit_dependency(shadow_map_gen.node(), m_pbr_opaque_feature->node());
 
     omega::SkyboxRenderFeatureDesc skybox_desc
     {

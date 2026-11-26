@@ -6,6 +6,9 @@
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
 #include <omega/atmosphere/atmosphere.hpp>
+#include <omega/shadows/directional_shadow.hpp>
+#include <omega/shadows/point_shadow.hpp>
+#include <omega/shadows/spot_shadow.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/to_swapchain_feature.hpp>
 #include <omega/graphics/pipelines/raster_pipeline/features/auto_exposure_feature.hpp>
 
@@ -59,6 +62,9 @@ int main()
 
         omega::Atmosphere atmosphere{};
         engine.components().add(directional_light_entity, atmosphere);
+
+        omega::DirectionalShadow shadow{};
+        engine.components().add(directional_light_entity, shadow);
     }
 
     // Create point light
@@ -73,6 +79,9 @@ int main()
         point_light.intensity = 5.0f;
         point_light.range = 8.0f;
         engine.components().add(point_light_entity, point_light);
+
+        omega::PointShadow shadow{};
+        engine.components().add(point_light_entity, shadow);
     }
 
     // Create spot light
@@ -90,6 +99,9 @@ int main()
         spot_light.inner_angle = omega::radians(20.0f);
         spot_light.outer_angle = omega::radians(35.0f);
         engine.components().add(spot_light_entity, spot_light);
+
+        omega::SpotShadow shadow{};
+        engine.components().add(spot_light_entity, shadow);
     }
 
     // Editor

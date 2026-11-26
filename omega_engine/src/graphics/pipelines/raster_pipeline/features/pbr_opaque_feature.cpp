@@ -120,8 +120,8 @@ void PbrOpaqueRenderFeature::on_swapchain_recreated(orenderer::RenderFeatureCont
     create_output_resources(ctx.render_graph());
 
     ogfx::Swapchain& swapchain = m_desc.graphics.swapchain();
-    orendergraph::RasterContext& raster_ctx = m_geometry_node->context();
-    orendergraph::RasterContext::Desc& raster_desc = m_geometry_node->descriptor();
+    orendergraph::RasterContext& raster_ctx = m_pbr_node->context();
+    orendergraph::RasterContext::Desc& raster_desc = m_pbr_node->descriptor();
 
     // Update frame buffer
     ogfx::FramebufferDesc framebuffer_desc;
@@ -262,10 +262,9 @@ void PbrOpaqueRenderFeature::create_resources(orendergraph::RenderGraph& rg)
 
 void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
 {
-    // Geometry pass
-    m_geometry_node = rg.add_node<orendergraph::RasterContext>
+    m_pbr_node = rg.add_node<orendergraph::RasterContext>
     (
-        "Geometry",
+        "PBR Opaque",
         [this](orendergraph::RenderGraph& rg, orendergraph::RasterContext::Desc& desc)
         {
             // Dependencies
@@ -593,7 +592,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
         }
     );
 
-    auto& ctx = m_geometry_node->context();
+    auto& ctx = m_pbr_node->context();
     for (FrameResources& frame : m_frame_resources)
     {
         frame.material_resource_sets = std::make_unique<ResourceSetCache<PbrMaterialHandle, PbrMaterialHash>>(rg.device(), rg.get_resource_allocator(), *ctx.resource_set_layouts[1]);
@@ -621,7 +620,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
         //frame.m_texture_resource_sets->update(m_desc.graphics.missing_texture(), write_info);
     }
 
-    m_geometry_node->set_pre_execute
+    m_pbr_node->set_pre_execute
     (
         [this](orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd,
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)
@@ -834,7 +833,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
         }
     );
 
-    m_geometry_node->set_execute
+    m_pbr_node->set_execute
     (
         [this](orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd,
             orendergraph::RenderGraphNode<orendergraph::RasterContext>& node)

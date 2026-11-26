@@ -57,6 +57,9 @@ class RenderGraph
 
     template <typename TResource> void reset_resource_state(ResourceHandle<TResource> handle);
 
+    template <typename TFrom, typename TTo>
+    void add_explicit_dependency(const RenderGraphNode<TFrom>* from, const RenderGraphNode<TTo>* to);
+
     void compile();
     void execute(ogfx::CommandBuffer& cmd);
     void reset();
@@ -76,6 +79,9 @@ class RenderGraph
 
     std::vector<std::unique_ptr<IRenderGraphNode>> m_nodes;
     IRenderGraphNode* m_active_node = nullptr;
+
+    std::vector<std::pair<uint32_t, uint32_t>> m_explicit_dependencies;
+    void add_explicit_dependency(uint32_t from, uint32_t to);
 
     struct NodeDependencies
     {

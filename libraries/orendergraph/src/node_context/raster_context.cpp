@@ -28,9 +28,13 @@ void RasterContext::create_framebuffers(RenderGraph& graph, const Desc& desc)
 
     for (const ogfx::FramebufferDesc& framebuffer_desc : desc.framebuffers_desc)
     {
-        ogfx::FramebufferDesc desc = framebuffer_desc;
-        desc.render_pass = render_pass;
-        framebuffers.push_back(graph.get_or_create_object<ogfx::Framebuffer>(desc));
+        if (framebuffer_desc.attachments.empty())
+        {
+            framebuffers.push_back(nullptr);
+            continue;
+        }
+
+        framebuffers.push_back(acquire_framebuffer(graph, framebuffer_desc));
     }
 }
 
@@ -80,11 +84,9 @@ void RasterContext::release_render_pass(RenderGraph& graph)
 
 void RasterContext::release_framebuffers(RenderGraph& graph)
 {
-    if (!framebuffers.empty())
-    {
-        for (ogfx::Framebuffer* framebuffer : framebuffers)
-            graph.release_object(framebuffer);
-    }
+    for (uint32_t i = 0; i < framebuffers.size(); ++i)
+        release_framebuffer_slot(graph, i);
+
     framebuffers.clear();
 }
 
@@ -104,6 +106,57 @@ void RasterContext::release_shaders(RenderGraph& graph)
     if (fragment_shader)
         graph.release_object(fragment_shader);
     fragment_shader = nullptr;
+}
+
+uint32_t RasterContext::add_framebuffer(RenderGraph& graph, Desc& desc, const ogfx::FramebufferDesc& framebuffer_desc)
+{
+    auto it = std::find(framebuffers.begin(), framebuffers.end(), nullptr);
+    if (it != framebuffers.end())
+    {
+        const uint32_t index = static_cast<uint32_t>(std::distance(framebuffers.begin(), it));
+        desc.framebuffers_desc[index] = framebuffer_desc;
+        framebuffers[index] = acquire_framebuffer(graph, framebuffer_desc);
+
+        return index;
+    }
+
+    const uint32_t index = static_cast<uint32_t>(framebuffers.size());
+
+    desc.framebuffers_desc.push_back(framebuffer_desc);
+    framebuffers.push_back(acquire_framebuffer(graph, framebuffer_desc));
+
+    return index;
+}
+
+void RasterContext::remove_framebuffer(RenderGraph& graph, Desc& desc, uint32_t index)
+{
+    if (index >= framebuffers.size())
+        return;
+
+    release_framebuffer_slot(graph, index);
+
+    desc.framebuffers_desc[index] = {};
+}
+
+ogfx::Framebuffer* RasterContext::acquire_framebuffer(RenderGraph& graph, const ogfx::FramebufferDesc& framebuffer_desc)
+{
+    ogfx::FramebufferDesc desc = framebuffer_desc;
+    desc.render_pass = render_pass;
+
+    return graph.get_or_create_object<ogfx::Framebuffer>(desc);
+}
+
+void RasterContext::release_framebuffer_slot(RenderGraph& graph, uint32_t index)
+{
+    if (index >= framebuffers.size())
+        return;
+
+    ogfx::Framebuffer*& framebuffer = framebuffers[index];
+    if (!framebuffer)
+        return;
+
+    graph.release_object(framebuffer);
+    framebuffer = nullptr;
 }
 
 } // namespace orendergraph

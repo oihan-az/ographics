@@ -25,6 +25,7 @@ class EnvironmentPrefilterFeature;
 class BrdfLutGen;
 class AutoExposureFeature;
 class ToneMappingFeature;
+class ShadowMapGen;
 struct RenderRegion;
 
 } // namespace omega
@@ -70,6 +71,7 @@ class UIPipeline : public orenderer::RenderPipeline
     omega::BrdfLutGen* m_brdf_lut_gen = nullptr;
     omega::AutoExposureFeature* m_auto_exposure_feature = nullptr;
     omega::ToneMappingFeature* m_tone_mapping_feature = nullptr;
+    omega::ShadowMapGen* m_shadow_map_gen = nullptr;
 };
 
 } // namespace omega_editor

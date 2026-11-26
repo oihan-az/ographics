@@ -10,6 +10,7 @@
 #include <ogfx/commands/barrier_commands.hpp>
 #include <ogfx/commands/acc_struct_commands.hpp>
 #include <ogfx/commands/ray_tracing_commands.hpp>
+#include <ogfx/viewport.hpp>
 
 #include <memory>
 
@@ -51,6 +52,9 @@ class CommandBuffer
     void draw(const DrawInfo& draw_info);
     void draw_indexed(const DrawIndexedInfo& draw_info);
     void draw_indexed_indirect(const DrawIndexedIndirectInfo& draw_info);
+
+    void set_viewport(const Viewport& viewport);
+    void set_scissor(const Scissor& scissor);
 
     void dispatch(const DispatchInfo& dispatch_info);
 

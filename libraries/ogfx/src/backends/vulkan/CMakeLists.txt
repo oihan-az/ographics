@@ -79,6 +79,7 @@ target_sources(
         commands/vk_binding_commands.cpp
         commands/vk_inline_constants_commands.cpp
         commands/vk_draw_commands.cpp
+        commands/vk_dynamic_state_commands.cpp
         commands/vk_dispatch_commands.cpp
         commands/vk_barrier_commands.cpp
         commands/vk_transfer_commands.cpp
