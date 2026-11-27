@@ -29,7 +29,9 @@ float3 evaluate_pbr_lighting(
     Texture2D<float> directional_shadow_maps[],
     Texture2D<float> spot_shadow_maps[],
     TextureCube<float> point_shadow_maps[],
-    SamplerComparisonState shadow_sampler)
+    SamplerComparisonState shadow_sampler,
+    SamplerState shadow_depth_sampler,
+    float2 screen_position)
 {
     float3 result = 0.0f;
 
@@ -45,7 +47,9 @@ float3 evaluate_pbr_lighting(
             directional_shadow_lookup,
             directional_shadow_data,
             directional_shadow_maps,
-            shadow_sampler
+            shadow_sampler,
+            shadow_depth_sampler,
+            screen_position
         );
 
         result += evaluate_pbr_light(surface, sample) * visibility;
@@ -65,7 +69,9 @@ float3 evaluate_pbr_lighting(
             point_shadow_lookup,
             point_shadow_data,
             point_shadow_maps,
-            shadow_sampler
+            shadow_sampler,
+            shadow_depth_sampler,
+            screen_position
         );
 
         result += evaluate_pbr_light(surface, sample) * visibility;
@@ -83,7 +89,9 @@ float3 evaluate_pbr_lighting(
             spot_shadow_lookup,
             spot_shadow_data,
             spot_shadow_maps,
-            shadow_sampler
+            shadow_sampler,
+            shadow_depth_sampler,
+            screen_position
         );
 
         result += evaluate_pbr_light(surface, sample) * visibility;

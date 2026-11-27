@@ -36,11 +36,41 @@ struct ShadowProjectionSettings
     float point_near_plane = 0.05f;
 };
 
+struct GpuShadowFilter
+{
+    // x = PCF radius (texels)
+    // y = light size
+    // z = maximum PCSS radius (texels)
+    // w = light-space to UV projection scale for 2D PCSS
+    Vector4 parameters{0.0f};
+
+    // x = ShadowFilterMode
+    // y = blocker sample count
+    // z = filter sample count
+    // w = unused
+    std::array<uint32_t, 4> options{};
+};
+
+inline GpuShadowFilter gpu_shadow_filter(const ShadowFilter& filter)
+{
+    GpuShadowFilter result{};
+
+    result.parameters = Vector4(std::max(filter.radius, 0.0f), std::max(filter.light_size, 0.0f),
+                                std::max(filter.max_radius, 0.0f), 0.0f);
+
+    result.options = {static_cast<uint32_t>(filter.mode), std::clamp(filter.blocker_samples, 1u, 64u),
+                      std::clamp(filter.filter_samples, 1u, 64u), 0u};
+
+    return result;
+}
+
 template<> 
 struct GpuComponentData<DirectionalShadow>
 {
     Matrix4 view_projection;
     Vector4 parameters{0.0f}; // depth bias, normal bias, unused, resolution
+    GpuShadowFilter filter{};
+    Vector4 projection_parameters{0.0f};
 };
 
 template<> 
@@ -48,6 +78,8 @@ struct GpuComponentData<SpotShadow>
 {
     Matrix4 view_projection;
     Vector4 parameters{0.0f}; // depth bias, normal bias, near plane, resolution
+    GpuShadowFilter filter{};
+    Vector4 projection_parameters{0.0f};
 };
 
 template<> 
@@ -55,6 +87,7 @@ struct GpuComponentData<PointShadow>
 {
     std::array<Matrix4, 6> view_projections;
     Vector4 parameters{0.0f}; // depth bias, normal bias, near plane, resolution
+    GpuShadowFilter filter{};
 };
 
 inline GpuComponentData<DirectionalShadow> gpu_component_data(const DirectionalShadow& shadow, Entity entity,
@@ -72,7 +105,7 @@ inline GpuComponentData<DirectionalShadow> gpu_component_data(const DirectionalS
     const Vector3 up = normalize(cross(right, direction));
 
     const float extent = settings.directional_half_extent;
-    const float texel_size = (extent * 2.0f) / static_cast<float>(shadow.resolution);
+    const float texel_size = (extent * 2.0f) / static_cast<float>(shadow.map.resolution);
     const float light_x = dot(camera_position, right);
     const float light_y = dot(camera_position, up);
     const float snapped_x = std::round(light_x / texel_size) * texel_size;
@@ -97,7 +130,10 @@ inline GpuComponentData<DirectionalShadow> gpu_component_data(const DirectionalS
 
     GpuComponentData<DirectionalShadow> result{};
     result.view_projection = projection_matrix * view;
-    result.parameters = Vector4(shadow.depth_bias, shadow.normal_bias, 0.0f, static_cast<float>(shadow.resolution));
+    result.parameters = Vector4(shadow.compare.depth_bias, shadow.compare.normal_bias, settings.directional_near_plane, static_cast<float>(shadow.map.resolution));
+    result.filter = gpu_shadow_filter(shadow.filter);
+    result.filter.parameters.w = 1.0f / (2.0f * settings.directional_half_extent);
+    result.projection_parameters = Vector4(settings.directional_near_plane, settings.directional_far_plane, 0.0f, 0.0f);
 
     return result;
 }
@@ -124,7 +160,10 @@ inline GpuComponentData<SpotShadow> gpu_component_data(const SpotShadow& shadow,
 
     GpuComponentData<SpotShadow> result{};
     result.view_projection = perspective_projection(projection) * view;
-    result.parameters = Vector4(shadow.depth_bias, shadow.normal_bias, near_plane, static_cast<float>(shadow.resolution));
+    result.parameters = Vector4(shadow.compare.depth_bias, shadow.compare.normal_bias, near_plane, static_cast<float>(shadow.map.resolution));
+    result.filter = gpu_shadow_filter(shadow.filter);
+    result.filter.parameters.w = 0.5f / std::tan(projection.field_of_view * 0.5f);
+    result.projection_parameters = Vector4(near_plane, far_plane, 0.0f, 0.0f);
 
     return result;
 }
@@ -187,7 +226,8 @@ inline GpuComponentData<PointShadow> gpu_component_data(const PointShadow& shado
         result.view_projections[face] = projection_matrix * view;
     }
 
-    result.parameters = Vector4(shadow.depth_bias, shadow.normal_bias, near_plane, static_cast<float>(shadow.resolution));
+    result.parameters = Vector4(shadow.compare.depth_bias, shadow.compare.normal_bias, near_plane, static_cast<float>(shadow.map.resolution));
+    result.filter = gpu_shadow_filter(shadow.filter);
 
     return result;
 }

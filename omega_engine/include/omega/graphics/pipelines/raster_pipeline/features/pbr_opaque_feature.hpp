@@ -241,6 +241,7 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
     orendergraph::ResourceHandle<ogfx::Sampler> m_environment_sampler;
     orendergraph::ResourceHandle<ogfx::Sampler> m_brdf_lut_sampler;
     orendergraph::ResourceHandle<ogfx::Sampler> m_shadow_sampler;
+    orendergraph::ResourceHandle<ogfx::Sampler> m_shadow_depth_sampler;
 };
 
 } // namespace omega

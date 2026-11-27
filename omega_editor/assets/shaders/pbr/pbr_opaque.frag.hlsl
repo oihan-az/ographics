@@ -83,6 +83,9 @@ StructuredBuffer<ShadowLookup> point_shadow_lookup;
 [[vk::binding(6, 4)]]
 SamplerComparisonState shadow_sampler;
 
+[[vk::binding(7, 4)]]
+SamplerState shadow_depth_sampler;
+
 // Shadow textures
 [[vk::binding(0, 5)]]
 Texture2D<float> directional_shadow_maps[];
@@ -196,7 +199,9 @@ PSOutput PSMain(PSInput input)
         directional_shadow_maps,
         spot_shadow_maps,
         point_shadow_maps,
-        shadow_sampler
+        shadow_sampler,
+        shadow_depth_sampler,
+        input.position.xy
     );
 
     // Indirect specular

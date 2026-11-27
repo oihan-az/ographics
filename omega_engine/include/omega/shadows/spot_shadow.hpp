@@ -3,6 +3,9 @@
 
 #include <omega/core/component/component_traits.hpp>
 #include <omega/lighting/spot_light.hpp> 
+#include <omega/shadows/shadow_map.hpp>
+#include <omega/shadows/shadow_compare.hpp>
+#include <omega/shadows/shadow_filter.hpp>
 
 #include <cstdint>
 
@@ -11,9 +14,9 @@ namespace omega
 
 struct SpotShadow
 {
-    uint32_t resolution = 1024;
-    float depth_bias = 0.001f;
-    float normal_bias = 0.01f;
+    ShadowMapSettings map{1024};
+    ShadowCompare compare{};
+    ShadowFilter filter{};
 };
 
 template<>

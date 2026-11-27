@@ -332,19 +332,19 @@ void ShadowMapGen::create_existing_maps(orendergraph::RenderGraph& rg)
     {
         const auto* shadow = m_desc.components.get<DirectionalShadow>(light);
         if (shadow && m_desc.components.get<DirectionalLight>(light))
-            upsert_shadow_map(rg, m_directional_maps, light, sanitize_resolution(shadow->resolution, 256, 4096), false);
+            upsert_shadow_map(rg, m_directional_maps, light, sanitize_resolution(shadow->map.resolution, 256, 4096), false);
     }
     for (Entity light : m_desc.components.entities_with<SpotShadow>())
     {
         const auto* shadow = m_desc.components.get<SpotShadow>(light);
         if (shadow && m_desc.components.get<SpotLight>(light))
-            upsert_shadow_map(rg, m_spot_maps, light, sanitize_resolution(shadow->resolution, 128, 1024), false);
+            upsert_shadow_map(rg, m_spot_maps, light, sanitize_resolution(shadow->map.resolution, 128, 1024), false);
     }
     for (Entity light : m_desc.components.entities_with<PointShadow>())
     {
         const auto* shadow = m_desc.components.get<PointShadow>(light);
         if (shadow && m_desc.components.get<PointLight>(light))
-            upsert_shadow_map(rg, m_point_maps, light, sanitize_resolution(shadow->resolution, 128, 2048), true);
+            upsert_shadow_map(rg, m_point_maps, light, sanitize_resolution(shadow->map.resolution, 128, 2048), true);
     }
 }
 
@@ -378,7 +378,7 @@ void ShadowMapGen::process_shadow_events(orendergraph::RenderGraph& rg, FrameEve
             continue;
         }
 
-        upsert_shadow_map(rg, registry, event.entity, sanitize_resolution(shadow->resolution, min_resolution, max_resolution), cubemap);
+        upsert_shadow_map(rg, registry, event.entity, sanitize_resolution(shadow->map.resolution, min_resolution, max_resolution), cubemap);
     }
 
     queue.clear(frame_index);

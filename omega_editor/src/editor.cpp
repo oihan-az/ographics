@@ -35,42 +35,95 @@ void draw_viewport_outline(const omega_editor::ViewportRect& rect)
     draw_list->AddRect(min, max, IM_COL32(140, 150, 170, 150), 0.0f, 0, 1.0f);
 }
 
-template <typename TShadow>
-bool edit_shadow(TShadow& shadow, uint32_t min_resolution, uint32_t max_resolution)
+template <typename TShadow> bool edit_shadow(TShadow& shadow, uint32_t min_resolution, uint32_t max_resolution)
 {
     bool changed = false;
 
-    min_resolution = std::bit_floor(min_resolution);
-    max_resolution = std::bit_floor(max_resolution);
-
-    if (ImGui::BeginCombo("Resolution", std::to_string(shadow.resolution).c_str()))
+    // Shadow map
+    if (ImGui::CollapsingHeader("Shadow Map", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        for (uint32_t resolution = min_resolution; resolution <= max_resolution; resolution *= 2)
-        {
-            const bool selected = shadow.resolution == resolution;
+        min_resolution = std::bit_floor(min_resolution);
+        max_resolution = std::bit_floor(max_resolution);
 
-            if (ImGui::Selectable(std::to_string(resolution).c_str(), selected))
+        if (ImGui::BeginCombo("Resolution", std::to_string(shadow.map.resolution).c_str()))
+        {
+            for (uint32_t resolution = min_resolution; resolution <= max_resolution;)
             {
-                shadow.resolution = resolution;
+                const bool selected = shadow.map.resolution == resolution;
+                if (ImGui::Selectable(std::to_string(resolution).c_str(), selected))
+                {
+                    shadow.map.resolution = resolution;
+                    changed = true;
+                }
+
+                if (selected)
+                    ImGui::SetItemDefaultFocus();
+
+                if (resolution >= max_resolution)
+                    break;
+
+                resolution *= 2;
+            }
+
+            ImGui::EndCombo();
+        }
+
+        const uint32_t resolution = std::bit_floor(shadow.map.resolution);
+        if (shadow.map.resolution != resolution)
+        {
+            shadow.map.resolution = resolution;
+            changed = true;
+        }
+    }
+
+    // Shadow comparison
+    if (ImGui::CollapsingHeader("Shadow Comparison", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        changed |= ImGui::DragFloat("Depth Bias", &shadow.compare.depth_bias, 0.0001f, 0.0f, 0.1f, "%.5f");
+        changed |= ImGui::DragFloat("Normal Bias", &shadow.compare.normal_bias, 0.001f, 0.0f, 1.0f, "%.4f");
+    }
+
+    // Shadow filtering
+    if (ImGui::CollapsingHeader("Shadow Filtering", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        auto& filter = shadow.filter;
+        const char* modes[] = {"Hard", "PCF", "PCSS"};
+        int mode = static_cast<int>(filter.mode);
+        if (ImGui::Combo("Filter Mode", &mode, modes, IM_ARRAYSIZE(modes)))
+        {
+            filter.mode = static_cast<omega::ShadowFilterMode>(mode);
+            changed = true;
+        }
+
+        if (filter.mode == omega::ShadowFilterMode::PCF || filter.mode == omega::ShadowFilterMode::PCSS)
+        {
+            changed |= ImGui::DragFloat("Filter Radius", &filter.radius, 0.1f, 0.0f, 32.0f, "%.2f texels");
+            int filter_samples = static_cast<int>(filter.filter_samples);
+            if (ImGui::SliderInt("Filter Samples", &filter_samples, 1, 64))
+            {
+                filter.filter_samples = static_cast<uint32_t>(filter_samples);
+                changed = true;
+            }
+        }
+
+        if (filter.mode == omega::ShadowFilterMode::PCSS)
+        {
+            changed |= ImGui::DragFloat("Light Size", &filter.light_size, 0.005f, 0.0f, 10.0f, "%.4f");
+            changed |= ImGui::DragFloat("Max Filter Radius", &filter.max_radius, 0.25f, 0.0f, 64.0f, "%.2f texels");
+            int blocker_samples = static_cast<int>(filter.blocker_samples);
+            if (ImGui::SliderInt("Blocker Samples", &blocker_samples, 1, 64))
+            {
+                filter.blocker_samples = static_cast<uint32_t>(blocker_samples);
                 changed = true;
             }
 
-            if (selected)
-                ImGui::SetItemDefaultFocus();
+            if (filter.max_radius < filter.radius)
+            {
+                filter.max_radius = filter.radius;
+                changed = true;
+            }
         }
-
-        ImGui::EndCombo();
     }
-
-    const uint32_t resolution = std::bit_floor(shadow.resolution);
-    if (shadow.resolution != resolution)
-    {
-        shadow.resolution = resolution;
-        changed = true;
-    }
-
-    changed |= ImGui::DragFloat("Depth Bias", &shadow.depth_bias, 0.0001f, 0.0f, 0.1f);
-    changed |= ImGui::DragFloat("Normal Bias", &shadow.normal_bias, 0.001f, 0.0f, 1.0f);
 
     return changed;
 }

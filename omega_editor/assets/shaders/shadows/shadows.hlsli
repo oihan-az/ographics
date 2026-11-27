@@ -13,7 +13,9 @@ float evaluate_directional_shadow(
     StructuredBuffer<ShadowLookup> shadow_lookup,
     StructuredBuffer<DirectionalShadow> shadow_data,
     Texture2D<float> shadow_maps[],
-    SamplerComparisonState shadow_sampler)
+    SamplerComparisonState shadow_sampler,
+    SamplerState shadow_depth_sampler,
+    float2 screen_position)
 {
     const ShadowLookup lookup = shadow_lookup[light_index];
     if (!has_shadow(lookup))
@@ -24,9 +26,11 @@ float evaluate_directional_shadow(
     return sample_directional_shadow(
         shadow_maps[NonUniformResourceIndex(lookup.texture_index)],
         shadow_sampler,
+        shadow_depth_sampler,
         shadow,
         world_position,
-        normal
+        normal,
+        screen_position
     );
 }
 
@@ -37,7 +41,9 @@ float evaluate_spot_shadow(
     StructuredBuffer<ShadowLookup> shadow_lookup,
     StructuredBuffer<SpotShadow> shadow_data,
     Texture2D<float> shadow_maps[],
-    SamplerComparisonState shadow_sampler)
+    SamplerComparisonState shadow_sampler,
+    SamplerState shadow_depth_sampler,
+    float2 screen_position)
 {
     const ShadowLookup lookup = shadow_lookup[light_index];
     if (!has_shadow(lookup))
@@ -48,9 +54,11 @@ float evaluate_spot_shadow(
     return sample_spot_shadow(
         shadow_maps[NonUniformResourceIndex(lookup.texture_index)],
         shadow_sampler,
+        shadow_depth_sampler,
         shadow,
         world_position,
-        normal
+        normal,
+        screen_position
     );
 }
 
@@ -63,7 +71,9 @@ float evaluate_point_shadow(
     StructuredBuffer<ShadowLookup> shadow_lookup,
     StructuredBuffer<PointShadow> shadow_data,
     TextureCube<float> shadow_maps[],
-    SamplerComparisonState shadow_sampler)
+    SamplerComparisonState shadow_sampler,
+    SamplerState shadow_depth_sampler,
+    float2 screen_position)
 {
     const ShadowLookup lookup = shadow_lookup[light_index];
     if (!has_shadow(lookup))
@@ -74,11 +84,13 @@ float evaluate_point_shadow(
     return sample_point_shadow(
         shadow_maps[NonUniformResourceIndex(lookup.texture_index)],
         shadow_sampler,
+        shadow_depth_sampler,
         shadow,
         light_position,
         light_range,
         world_position,
-        normal
+        normal,
+        screen_position
     );
 }
 

@@ -557,6 +557,19 @@ void PbrOpaqueRenderFeature::create_resources(orendergraph::RenderGraph& rg)
 
         m_shadow_sampler = rg.create_resource<ogfx::Sampler>(desc);
     }
+
+    // Shadow depth sampler for PCSS blocker searches.
+    {
+        ogfx::SamplerDesc desc{};
+        desc.min_filter = ogfx::Filter::Nearest;
+        desc.mag_filter = ogfx::Filter::Nearest;
+        desc.address_u = ogfx::AddressMode::ClampToEdge;
+        desc.address_v = ogfx::AddressMode::ClampToEdge;
+        desc.address_w = ogfx::AddressMode::ClampToEdge;
+        desc.compare_enable = false;
+
+        m_shadow_depth_sampler = rg.create_resource<ogfx::Sampler>(desc);
+    }
 }
 
 void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
@@ -768,6 +781,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             // Comparison sampler
             add_shadow_data_binding(6, ogfx::ResourceType::Sampler);
+            add_shadow_data_binding(7, ogfx::ResourceType::Sampler);
 
             desc.resource_set_layouts_desc.push_back(shadow_data_layout_desc);
 
@@ -933,6 +947,10 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 sampler_binding.binding = 6;
                 sampler_binding.sampler = m_shadow_sampler;
 
+                orendergraph::SamplerBinding depth_sampler_binding{};
+                depth_sampler_binding.binding = 7;
+                depth_sampler_binding.sampler = m_shadow_depth_sampler;
+
                 auto make_write = [&](const orendergraph::BufferBinding& buffer)
                 {
                     orendergraph::ResourceWriteDesc write{};
@@ -951,7 +969,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
                 orendergraph::ResourceWriteDesc shadow_write{};
                 shadow_write.resource_set_idx = shadow_data_set_index;
-                shadow_write.write_info.samplers = {sampler_binding};
+                shadow_write.write_info.samplers = {sampler_binding, depth_sampler_binding};
                 shadow_write.write_info.buffers = {directional_data,   spot_data,   point_data,
                                                    directional_lookup, spot_lookup, point_lookup};
 
