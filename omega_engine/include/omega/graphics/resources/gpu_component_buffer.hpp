@@ -39,14 +39,6 @@ template <typename T> class ComponentGpuBuffer
                        const std::vector<ComponentEvent<T>>& events,
                        TArgs&&... args);
 
-    DynamicBuffer& get_buffer();
-    const DynamicBuffer& get_buffer() const;
-
-  private:
-    ComponentSystem& m_components;
-
-    DynamicBuffer m_buffer;
-
     template <typename... TArgs>
     void upload_all(ComponentStorage<T>& storage, orendergraph::RenderGraph& rg, TArgs&&... args);
 
@@ -57,6 +49,14 @@ template <typename T> class ComponentGpuBuffer
     void process_events(ComponentStorage<T>& storage, ogfx::CommandBuffer& cmd, orendergraph::RenderGraph& rg,
                         const std::vector<ComponentEvent<T>>& events,
                         TArgs&&... args);
+
+    DynamicBuffer& get_buffer();
+    const DynamicBuffer& get_buffer() const;
+
+  private:
+    ComponentSystem& m_components;
+
+    DynamicBuffer m_buffer;
 };
 
 } // namespace omega

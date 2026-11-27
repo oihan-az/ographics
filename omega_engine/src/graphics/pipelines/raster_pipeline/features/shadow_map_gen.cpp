@@ -83,6 +83,11 @@ void ShadowMapGen::build(orenderer::RenderFeatureContext& ctx)
 {
     orendergraph::RenderGraph& rg = ctx.render_graph();
     add_node(rg);
+
+    // Persistent fallback shadow maps
+    m_fallback_2d = create_shadow_map(rg, 1, false);
+    m_fallback_cube = create_shadow_map(rg, 1, true);
+
     create_existing_maps(rg);
 }
 
@@ -111,6 +116,80 @@ ShadowMapGen::sampled_view(ShadowMapType type, Entity light) const
     const auto& maps = shadow_registry(type);
     const auto it = maps.find(light);
     return it == maps.end() ? orendergraph::ResourceHandle<ogfx::ImageView>{} : it->second.sampled_view;
+}
+
+orendergraph::ResourceHandle<ogfx::ImageView>
+ShadowMapGen::fallback_view(ShadowMapType type) const
+{
+    switch (type)
+    {
+    case ShadowMapType::Directional:
+    case ShadowMapType::Spot:
+        return m_fallback_2d.sampled_view;
+
+    case ShadowMapType::Point:
+        return m_fallback_cube.sampled_view;
+    }
+
+    throw std::runtime_error(
+        "ShadowMapGen: Invalid fallback shadow map type"
+    );
+}
+
+ShadowProjectionSettings ShadowMapGen::projection_settings() const
+{
+    return m_desc.proj_setting;
+}
+
+void ShadowMapGen::initialize_fallback_maps(orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd)
+{
+    auto& ctx = m_shadow_node->context();
+    const auto& desc = m_shadow_node->descriptor();
+
+    const auto initialize = [&](ShadowMap& map, uint32_t layer_count)
+    {
+        if (map.was_rendered)
+            return;
+
+        // Undefined to DepthStencil
+        transition_depth_image(cmd, rg.get_resource(map.image), ogfx::ImageState::Undefined, ogfx::ImageState::DepthStencil, layer_count);
+
+        // Clear every layer to depth 1.0
+        for (uint32_t framebuffer_index : map.framebuffer_indices)
+        {
+            if (framebuffer_index >= ctx.framebuffers.size())
+            {
+                throw std::runtime_error("ShadowMapGen: Invalid fallback framebuffer index");
+            }
+
+            ogfx::Framebuffer* framebuffer = ctx.framebuffers[framebuffer_index];
+
+            if (!framebuffer)
+            {
+                throw std::runtime_error("ShadowMapGen: Missing fallback framebuffer");
+            }
+
+            ogfx::RenderPassBeginInfo begin_info{};
+            begin_info.render_pass = ctx.render_pass;
+            begin_info.framebuffer = framebuffer;
+            begin_info.offset_x = 0;
+            begin_info.offset_y = 0;
+            begin_info.width = map.resolution;
+            begin_info.height = map.resolution;
+            begin_info.clear_values = desc.clear_values;
+
+            cmd.begin_render_pass(begin_info);
+            cmd.end_render_pass();
+        }
+
+        // DepthStencil to ShaderRead
+        transition_depth_image(cmd, rg.get_resource(map.image), ogfx::ImageState::DepthStencil, ogfx::ImageState::ShaderRead, layer_count);
+
+        map.was_rendered = true;
+    };
+
+    initialize(m_fallback_2d, 1);
+    initialize(m_fallback_cube, 6);
 }
 
 ShadowMapGen::ShadowMap ShadowMapGen::create_shadow_map( orendergraph::RenderGraph& rg, uint32_t resolution, bool cubemap)
@@ -178,8 +257,8 @@ ShadowMapGen::ShadowMap ShadowMapGen::create_shadow_map( orendergraph::RenderGra
 
 void ShadowMapGen::retire_shadow_map(ShadowMap&& map)
 {
-    const uint64_t delay = static_cast<uint64_t>(m_desc.graphics.max_frames_in_flight()) + 1u;
-    m_retired_maps.push_back({std::move(map), m_frame_serial + delay});
+    const uint32_t delay = m_desc.graphics.max_frames_in_flight() + 1u;
+    m_retired_maps.push_back({std::move(map), delay});
 }
 
 void ShadowMapGen::destroy_shadow_map(orendergraph::RenderGraph& rg, ShadowMap& map)
@@ -202,11 +281,19 @@ void ShadowMapGen::destroy_shadow_map(orendergraph::RenderGraph& rg, ShadowMap& 
 
 void ShadowMapGen::collect_retired_maps(orendergraph::RenderGraph& rg)
 {
-    while (!m_retired_maps.empty() &&
-           m_retired_maps.front().release_after_frame <= m_frame_serial)
+    while (!m_retired_maps.empty())
     {
-        destroy_shadow_map(rg, m_retired_maps.front().map);
-        m_retired_maps.pop_front();
+        for (auto& retired : m_retired_maps)
+        {
+            if (retired.frames_remaining > 0)
+                --retired.frames_remaining;
+        }
+
+        while (!m_retired_maps.empty() && m_retired_maps.front().frames_remaining == 0)
+        {
+            destroy_shadow_map(rg, m_retired_maps.front().map);
+            m_retired_maps.pop_front();
+        }
     }
 }
 
@@ -333,13 +420,7 @@ void ShadowMapGen::draw_shadow_casters(orendergraph::RenderGraph& rg, ogfx::Comm
 {
     Matrix4 view_projection{};
 
-    const ShadowProjectionSettings settings
-    {
-        .directional_half_extent = m_desc.directional_half_extent,
-        .directional_depth = m_desc.directional_depth,
-        .spot_near_plane = m_desc.spot_near_plane,
-        .point_near_plane = m_desc.point_near_plane
-    };
+    const ShadowProjectionSettings settings = projection_settings();
 
     switch (type)
     {
@@ -358,10 +439,10 @@ void ShadowMapGen::draw_shadow_casters(orendergraph::RenderGraph& rg, ogfx::Comm
     {
         const auto* shadow = m_desc.components.get<SpotShadow>(light);
         const auto* light_component = m_desc.components.get<SpotLight>(light);
-        if (!shadow || !light_component)
+        if (!shadow)
             return;
 
-        const auto gpu_data = gpu_component_data(*shadow, *light_component, light, m_desc.transforms, settings);
+        const auto gpu_data = gpu_component_data(*shadow, light, m_desc.components, m_desc.transforms, settings);
         view_projection = gpu_data.view_projection;
         break;
     }
@@ -369,11 +450,10 @@ void ShadowMapGen::draw_shadow_casters(orendergraph::RenderGraph& rg, ogfx::Comm
     case ShadowMapType::Point:
     {
         const auto* shadow = m_desc.components.get<PointShadow>(light);
-        const auto* light_component = m_desc.components.get<PointLight>(light);
-        if (!shadow || !light_component || face >= 6)
+        if (!shadow || face >= 6)
             return;
 
-        const auto gpu_data = gpu_component_data(*shadow, *light_component, light, m_desc.transforms, settings);
+        const auto gpu_data = gpu_component_data(*shadow, light, m_desc.components, m_desc.transforms, settings);
         view_projection = gpu_data.view_projections[face];
         break;
     }
@@ -583,9 +663,12 @@ void ShadowMapGen::add_node(orendergraph::RenderGraph& rg)
         [this](orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd,
                orendergraph::RenderGraphNode<orendergraph::RasterContext>&)
         {
-            ++m_frame_serial;
             collect_retired_maps(rg);
             process_events(rg);
+
+            // First execution only
+            initialize_fallback_maps(rg, cmd);
+
             transition_all(rg, cmd, true);
         }
     );

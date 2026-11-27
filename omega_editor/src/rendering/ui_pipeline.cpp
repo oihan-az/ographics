@@ -72,6 +72,7 @@ void UIPipeline::setup(UIPipelineDesc& desc)
         m_environment_prefilter_feature->out_image_view(),
         m_brdf_lut_gen->brdf_lut(),
         m_brdf_lut_gen->brdf_lut_view(),
+        shadow_map_gen,
         desc.components,
         desc.events,
         desc.transforms,

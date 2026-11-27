@@ -59,6 +59,36 @@ SamplerState brdf_lut_sampler;
 [[vk::binding(4, 3)]]
 TextureCube<half4> irradiance_map;
 
+[[vk::binding(0, 4)]]
+Texture2D<float> directional_shadow_maps[];
+
+[[vk::binding(1, 4)]]
+Texture2D<float> spot_shadow_maps[];
+
+[[vk::binding(2, 4)]]
+TextureCube<float> point_shadow_maps[];
+
+[[vk::binding(3, 4)]]
+StructuredBuffer<DirectionalShadow> directional_shadow_data;
+
+[[vk::binding(4, 4)]]
+StructuredBuffer<SpotShadow> spot_shadow_data;
+
+[[vk::binding(5, 4)]]
+StructuredBuffer<PointShadow> point_shadow_data;
+
+[[vk::binding(6, 4)]]
+StructuredBuffer<ShadowLookup> directional_shadow_lookup;
+
+[[vk::binding(7, 4)]]
+StructuredBuffer<ShadowLookup> spot_shadow_lookup;
+
+[[vk::binding(8, 4)]]
+StructuredBuffer<ShadowLookup> point_shadow_lookup;
+
+[[vk::binding(9, 4)]]
+SamplerComparisonState shadow_sampler;
+
 struct FragmentConstants
 {
     // Lighting
@@ -152,7 +182,17 @@ PSOutput PSMain(PSInput input)
         point_lights,
         constants.point_light_count,
         spot_lights,
-        constants.spot_light_count
+        constants.spot_light_count,
+        directional_shadow_lookup,
+        spot_shadow_lookup,
+        point_shadow_lookup,
+        directional_shadow_data,
+        spot_shadow_data,
+        point_shadow_data,
+        directional_shadow_maps,
+        spot_shadow_maps,
+        point_shadow_maps,
+        shadow_sampler
     );
 
     // Indirect specular

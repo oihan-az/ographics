@@ -147,6 +147,7 @@ function(ogfx_compile_shaders TARGET)
                 -spirv
                 -fspv-target-env=vulkan1.2
                 -fspv-extension=SPV_KHR_ray_tracing
+                -fspv-extension=SPV_EXT_descriptor_indexing
             )
 
         endif()

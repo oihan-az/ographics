@@ -77,27 +77,27 @@ void PipelineContext::update_resource_set(RenderGraph& graph, const ResourceWrit
 
     for (const auto& binding : desc.write_info.textures)
     {
-        result.textures.push_back({binding.binding, graph.get_resource(binding.image_view), binding.image_state});
+        result.textures.push_back({binding.binding, binding.array_element, graph.get_resource(binding.image_view), binding.image_state});
     }
 
     for (const auto& binding : desc.write_info.samplers)
     {
-        result.samplers.push_back({binding.binding, graph.get_resource(binding.sampler)});
+        result.samplers.push_back({binding.binding, binding.array_element, graph.get_resource(binding.sampler)});
     }
 
     for (const auto& binding : desc.write_info.buffers)
     {
-        result.buffers.push_back({binding.binding, graph.get_resource(binding.buffer), binding.offset, binding.range});
+        result.buffers.push_back({binding.binding, binding.array_element, graph.get_resource(binding.buffer), binding.offset, binding.range});
     }
 
     for (const auto& binding : desc.write_info.blases)
     {
-        result.acceleration_structures.push_back({binding.binding, graph.get_resource(binding.blas)});
+        result.acceleration_structures.push_back({binding.binding, binding.array_element, graph.get_resource(binding.blas)});
     }
 
     for (const auto& binding : desc.write_info.tlases)
     {
-        result.acceleration_structures.push_back({binding.binding, graph.get_resource(binding.tlas)});
+        result.acceleration_structures.push_back({binding.binding, binding.array_element, graph.get_resource(binding.tlas)});
     }
 
     resource_sets[desc.resource_set_idx]->write(result);

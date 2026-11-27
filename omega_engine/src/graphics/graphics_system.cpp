@@ -26,7 +26,7 @@ GraphicsSystem::GraphicsSystem(const std::string& application_name, uint32_t max
       }),
       m_surface(platform.window().create_surface(m_instance)), 
       m_physical_device(m_instance.pick_physical_device(m_instance.enumerate_physical_devices())),
-      m_device(m_physical_device, ogfx::DeviceDesc{}, &m_surface), 
+      m_device(m_physical_device, ogfx::DeviceDesc{.features = ogfx::DeviceFeature::DescriptorIndexing}, &m_surface), 
       m_swapchain(m_physical_device, m_device, m_surface,
       ogfx::SwapchainDesc
       {

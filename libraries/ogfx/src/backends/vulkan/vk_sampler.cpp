@@ -3,6 +3,7 @@
 
 #include "vk_sampler.hpp"
 #include "vk_device.hpp"
+#include "vk_compare_op.hpp"
 
 namespace ogfx
 {
@@ -166,6 +167,8 @@ Sampler::Sampler(const Device& device, const SamplerDesc& desc) : m_impl(std::ma
     OGFX_LOG("  Max LOD: " + std::to_string(desc.max_lod));
     OGFX_LOG("  Anisotropy enabled: " + std::string(desc.anisotropy_enable ? "true" : "false"));
     OGFX_LOG("  Max anisotropy: " + std::to_string(desc.max_anisotropy));
+    OGFX_LOG("  Compare enabled: " + std::string(desc.compare_enable ? "true" : "false"));
+    OGFX_LOG("  Compare operation: " + to_string_enum(desc.compare_op));
 
     VkSamplerCreateInfo sampler_info{};
     sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -183,8 +186,8 @@ Sampler::Sampler(const Device& device, const SamplerDesc& desc) : m_impl(std::ma
     sampler_info.anisotropyEnable = desc.anisotropy_enable ? VK_TRUE : VK_FALSE;
     sampler_info.maxAnisotropy = desc.max_anisotropy;
 
-    sampler_info.compareEnable = VK_FALSE;
-    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.compareEnable = desc.compare_enable ? VK_TRUE : VK_FALSE;
+    sampler_info.compareOp = to_vk_compare_op(desc.compare_op);
 
     sampler_info.minLod = desc.min_lod;
     sampler_info.maxLod = desc.max_lod;

@@ -13,11 +13,17 @@
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
 
+#include <omega/shadows/directional_shadow.hpp>
+#include <omega/shadows/point_shadow.hpp>
+#include <omega/shadows/spot_shadow.hpp>
+
 #include <omega/renderable/pbr_opaque_renderable.hpp>
 #include <omega/material/materials/pbr_opaque_material.hpp>
 #include <omega/material/material_handle.hpp>
 
 #include <omega/camera/camera_type.hpp>
+
+#include <omega/transform/transform.hpp>
 
 #include <omega/graphics/resources/gpu_dynamic_buffer.hpp>
 #include <omega/graphics/resources/gpu_component_buffer.hpp>
@@ -29,6 +35,7 @@
 
 #include <cstdint>
 #include <unordered_set>
+#include <optional>
 
 namespace ogfx
 {
@@ -53,9 +60,35 @@ class EventSystem;
 class TransformSystem;
 class CameraSystem;
 class GraphicsSystem;
+class ShadowMapGen;
 
 template <typename T> class ComponentStorage;
 template <typename Handle, typename Hash> class ResourceSetCache;
+
+struct ShadowTextureTable
+{
+    struct Entry
+    {
+        uint32_t index = 0;
+
+        orendergraph::ResourceHandle<ogfx::ImageView> view;
+    };
+
+    std::unordered_map<Entity, Entry, EntityHash> entries;
+
+    std::vector<uint32_t> free_indices;
+    uint32_t next_index = 0;
+
+    std::optional<uint32_t> find(Entity entity) const
+    {
+        const auto it = entries.find(entity);
+
+        if (it == entries.end())
+            return std::nullopt;
+
+        return it->second.index;
+    }
+};
 
 struct PbrOpaqueRenderFeatureDesc
 {
@@ -70,6 +103,8 @@ struct PbrOpaqueRenderFeatureDesc
 
     orendergraph::ResourceHandle<ogfx::Image> brdf_lut;
     orendergraph::ResourceHandle<ogfx::ImageView> brdf_lut_view;
+
+    ShadowMapGen& shadows;
 
     ComponentSystem& components;
     EventSystem& events;
@@ -109,6 +144,10 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
     FrameEventQueue<ComponentEvent<DirectionalLight>> m_directional_light_events;
     FrameEventQueue<ComponentEvent<PointLight>> m_point_light_events;
     FrameEventQueue<ComponentEvent<SpotLight>> m_spot_light_events;
+    FrameEventQueue<ComponentEvent<DirectionalShadow>> m_directional_shadow_events;
+    FrameEventQueue<ComponentEvent<PointShadow>> m_point_shadow_events;
+    FrameEventQueue<ComponentEvent<SpotShadow>> m_spot_shadow_events;
+    FrameEventQueue<ComponentEvent<Transform>> m_transform_events;
 
     struct FrameResources
     {
@@ -116,9 +155,31 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
         ComponentGpuBuffer<PointLight> point_lights;
         ComponentGpuBuffer<SpotLight> spot_lights;
 
+        ComponentGpuBuffer<DirectionalShadow> directional_shadows;
+        ComponentGpuBuffer<PointShadow> point_shadows;
+        ComponentGpuBuffer<SpotShadow> spot_shadows;
+
+        DynamicBuffer directional_shadow_lookup;
+        DynamicBuffer point_shadow_lookup;
+        DynamicBuffer spot_shadow_lookup;
+
         orendergraph::ResourceWriteDesc directional_buffer_write;
         orendergraph::ResourceWriteDesc point_buffer_write;
         orendergraph::ResourceWriteDesc spot_buffer_write;
+
+        orendergraph::ResourceWriteDesc directional_shadow_buffer_write;
+        orendergraph::ResourceWriteDesc point_shadow_buffer_write;
+        orendergraph::ResourceWriteDesc spot_shadow_buffer_write;
+
+        orendergraph::ResourceWriteDesc directional_shadow_lookup_write;
+        orendergraph::ResourceWriteDesc point_shadow_lookup_write;
+        orendergraph::ResourceWriteDesc spot_shadow_lookup_write;
+
+        uint32_t shadow_resource_set_index = UINT32_MAX;
+
+        ShadowTextureTable directional_shadow_textures;
+        ShadowTextureTable point_shadow_textures;
+        ShadowTextureTable spot_shadow_textures;
 
         std::unordered_map<Entity, PbrMaterialHandle, EntityHash> renderable_materials;
         std::unique_ptr<ResourceSetCache<PbrMaterialHandle, PbrMaterialHash>> material_resource_sets;
@@ -126,7 +187,8 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
         std::unordered_set<PbrMaterialHandle, PbrMaterialHash> pending_materials;
 
         FrameResources(ComponentSystem& components, EventSystem& events)
-            : directional_lights(components), point_lights(components), spot_lights(components)
+            : directional_lights(components), point_lights(components), spot_lights(components),
+              directional_shadows(components), point_shadows(components), spot_shadows(components)
         {}
     };
 
@@ -148,6 +210,7 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
     orendergraph::ResourceHandle<ogfx::Sampler> m_sampler;
     orendergraph::ResourceHandle<ogfx::Sampler> m_environment_sampler;
     orendergraph::ResourceHandle<ogfx::Sampler> m_brdf_lut_sampler;
+    orendergraph::ResourceHandle<ogfx::Sampler> m_shadow_sampler;
 };
 
 } // namespace omega

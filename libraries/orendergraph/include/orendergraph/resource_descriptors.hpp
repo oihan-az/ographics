@@ -19,6 +19,7 @@ namespace orendergraph
 struct ImageBinding
 {
     uint32_t binding = 0;
+    uint32_t array_element = 0;
     ResourceHandle<ogfx::ImageView> image_view;
     ogfx::ImageState image_state = ogfx::ImageState::Undefined;
 };
@@ -26,12 +27,14 @@ struct ImageBinding
 struct SamplerBinding
 {
     uint32_t binding = 0;
+    uint32_t array_element = 0;
     ResourceHandle<ogfx::Sampler> sampler;
 };
 
 struct BufferBinding
 {
     uint32_t binding = 0;
+    uint32_t array_element = 0;
     ResourceHandle<ogfx::Buffer> buffer;
     size_t offset = 0;
     size_t range = 0;
@@ -40,12 +43,14 @@ struct BufferBinding
 struct BLASBinding
 {
     uint32_t binding = 0;
+    uint32_t array_element = 0;
     ResourceHandle<ogfx::BLAS> blas;
 };
 
 struct TLASBinding
 {
     uint32_t binding = 0;
+    uint32_t array_element = 0;
     ResourceHandle<ogfx::TLAS> tlas;
 };
 
@@ -100,7 +105,7 @@ struct AccelerationStructureAABBGeometry
     uint32_t primitive_count = 1;
 };
 
-struct  AccelerationStructureInstanceDesc    
+struct AccelerationStructureInstanceDesc    
 {
     ResourceHandle<ogfx::BLAS> blas;
 

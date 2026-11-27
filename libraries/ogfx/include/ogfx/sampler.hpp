@@ -1,6 +1,8 @@
 #ifndef OGFX_SAMPLER_HPP
 #define OGFX_SAMPLER_HPP
 
+#include <ogfx/compare_op.hpp>
+
 #include <memory>
 
 namespace ogfx
@@ -56,8 +58,12 @@ struct SamplerDesc
     float mip_lod_bias = 0.0f;
     float min_lod = 0.0f;
     float max_lod = LOD_CLAMP_NONE;
+
     bool anisotropy_enable = false;
     float max_anisotropy = 8.0f;
+
+    bool compare_enable = false;
+    CompareOp compare_op = CompareOp::Always;
 };
 
 class Sampler

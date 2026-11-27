@@ -41,11 +41,12 @@ OGFX_BITMASK_ENUM(DeviceQueue, uint32_t,
 );
 
 OGFX_BITMASK_ENUM(DeviceFeature, uint32_t,
-    None                   = 0,
-    MultiDrawIndirect       = 1 << 0,
+    None                      = 0,
+    MultiDrawIndirect         = 1 << 0,
     DrawIndirectFirstInstance = 1 << 1,
-    SamplerAnisotropy       = 1 << 2,
-    RayTracing       = 1 << 3
+    SamplerAnisotropy         = 1 << 2,
+    RayTracing                = 1 << 3,
+    DescriptorIndexing        = 1 << 4
 );
 
 struct DeviceDesc

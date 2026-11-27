@@ -59,14 +59,14 @@ int main()
         directional_light.color = {0.9f, 0.85f, 0.8f};
         directional_light.intensity = 2.0f;
         engine.components().add(directional_light_entity, directional_light);
-
+    
         omega::Atmosphere atmosphere{};
         engine.components().add(directional_light_entity, atmosphere);
-
+    
         omega::DirectionalShadow shadow{};
         engine.components().add(directional_light_entity, shadow);
     }
-
+    
     // Create point light
     omega::Entity point_light_entity = engine.entities().create_entity();
     {
@@ -79,7 +79,7 @@ int main()
         point_light.intensity = 5.0f;
         point_light.range = 8.0f;
         engine.components().add(point_light_entity, point_light);
-
+    
         omega::PointShadow shadow{};
         engine.components().add(point_light_entity, shadow);
     }
@@ -99,7 +99,7 @@ int main()
         spot_light.inner_angle = omega::radians(20.0f);
         spot_light.outer_angle = omega::radians(35.0f);
         engine.components().add(spot_light_entity, spot_light);
-
+    
         omega::SpotShadow shadow{};
         engine.components().add(spot_light_entity, shadow);
     }

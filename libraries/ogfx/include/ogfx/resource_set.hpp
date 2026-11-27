@@ -21,6 +21,7 @@ class AccelerationStructure;
 struct BufferBinding
 {
     uint32_t binding = 0;
+    uint32_t array_element = 0;
     const Buffer* buffer = nullptr;
     uint64_t offset = 0;
     uint64_t size = 0;
@@ -29,6 +30,7 @@ struct BufferBinding
 struct ImageBinding
 {
     uint32_t binding = 0;
+    uint32_t array_element = 0;
     const ImageView* image_view = nullptr;
     ImageState image_state = ImageState::ShaderRead;
 };
@@ -36,12 +38,14 @@ struct ImageBinding
 struct SamplerBinding
 {
     uint32_t binding = 0;
+    uint32_t array_element = 0;
     const Sampler* sampler = nullptr;
 };
 
 struct AccelerationStructureBinding
 {
     uint32_t binding = 0;
+    uint32_t array_element = 0;
     const AccelerationStructure* acceleration_structure = nullptr;
 };
 

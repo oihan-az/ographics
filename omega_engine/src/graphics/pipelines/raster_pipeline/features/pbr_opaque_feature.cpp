@@ -1,4 +1,5 @@
 #include <omega/graphics/pipelines/raster_pipeline/features/pbr_opaque_feature.hpp>
+#include <omega/graphics/pipelines/raster_pipeline/features/shadow_map_gen.hpp>
 
 #include <orenderer/render_feature_context.hpp>
 #include <orendergraph/render_graph.hpp>
@@ -22,6 +23,7 @@
 
 #include <omega/graphics/graphics_system.hpp>
 #include <omega/graphics/resources/gpu_light_data.hpp>
+#include <omega/graphics/resources/gpu_shadow_data.hpp>
 
 #include <filesystem>
 #include <array>
@@ -72,6 +74,140 @@ constexpr uint32_t has_normal = 1u << 2;
 constexpr uint32_t has_occlusion = 1u << 3;
 constexpr uint32_t has_emissive = 1u << 4;
 
+constexpr uint32_t max_directional_shadow_maps = 4;
+constexpr uint32_t max_spot_shadow_maps = 16;
+constexpr uint32_t max_point_shadow_maps = 16;
+
+struct GpuShadowLookup
+{
+    uint32_t data_index = UINT32_MAX;
+    uint32_t texture_index = UINT32_MAX;
+};
+
+template <typename TLight, typename TShadow, typename TGetTextureIndex>
+bool update_shadow_lookup(orendergraph::RenderGraph& rg, ComponentSystem& components, DynamicBuffer& buffer, TGetTextureIndex&& get_texture_index)
+{
+    auto& lights = components.get_storage<TLight>();
+    auto& shadows = components.get_storage<TShadow>();
+
+    std::vector<GpuShadowLookup> lookups(std::max<size_t>(lights.size(), 1));
+    for (uint32_t i = 0; i < lights.size(); ++i)
+    {
+        const Entity entity = lights.entity_at(i);
+
+        if (!components.get<TShadow>(entity))
+            continue;
+
+        const auto texture_index = get_texture_index(entity);
+        if (!texture_index.has_value())
+            continue;
+
+        lookups[i].data_index = shadows.get_index(entity);
+        lookups[i].texture_index = *texture_index;
+    }
+
+    const uint64_t required_size = lookups.size() * sizeof(GpuShadowLookup);
+    const uint64_t previous_capacity = buffer.get_capacity();
+
+    if (!buffer.ensure_capacity(rg, required_size))
+        throw std::runtime_error("Failed to resize shadow lookup buffer");
+
+    ogfx::BufferWriteInfo write_info{};
+    write_info.data = lookups.data();
+    write_info.size = required_size;
+    write_info.offset = 0;
+
+    rg.get_resource(buffer.get_handle())->write(write_info);
+
+    return buffer.get_capacity() != previous_capacity;
+}
+
+template <typename TShadow>
+bool sync_shadow_textures(orendergraph::RenderGraph& rg, orendergraph::RasterContext& context, ShadowMapGen& shadows,
+                          const std::vector<ComponentEvent<TShadow>>& events,
+                          omega::ShadowTextureTable& table, ShadowMapType type, uint32_t binding,
+                          uint32_t capacity, uint32_t resource_set_index)
+{
+    bool lookup_changed = false;
+
+    for (const auto& event : events)
+    {
+        auto view = event.type == ComponentEventType::Removed ? orendergraph::ResourceHandle<ogfx::ImageView>{}
+                                                              : shadows.sampled_view(type, event.entity);
+
+        const auto fallback_view = shadows.fallback_view(type);
+        if (!fallback_view.is_valid())
+        {
+            throw std::runtime_error("Shadow fallback image view is invalid");
+        }
+
+        auto it = table.entries.find(event.entity);
+        omega::ShadowTextureTable::Entry entry{};
+
+        // Shadow removed, or no active sampled image
+        if (!view.is_valid())
+        {
+            if (it != table.entries.end())
+            {
+                entry = it->second;
+                table.free_indices.push_back(it->second.index);
+                table.entries.erase(it);
+                lookup_changed = true;
+            }
+
+            view = fallback_view;
+        }
+        // Allocate a descriptor slot only when first needed
+        else if (it == table.entries.end())
+        {
+            uint32_t index = 0;
+            if (!table.free_indices.empty())
+            {
+                index = table.free_indices.back();
+                table.free_indices.pop_back();
+            }
+            else
+            {
+                if (table.next_index >= capacity)
+                    throw std::runtime_error("Shadow descriptor capacity exceeded");
+
+                index = table.next_index++;
+            }
+
+            it = table.entries.emplace(event.entity, omega::ShadowTextureTable::Entry{index, {}}).first;
+            entry = it->second;
+
+            lookup_changed = true;
+        }
+        else
+        {
+            entry = it->second;
+        }
+
+        // No descriptor update necessary
+        if (entry.view == view)
+            continue;
+
+        orendergraph::ImageBinding image_binding{};
+        image_binding.binding = binding;
+        image_binding.array_element = entry.index;
+        image_binding.image_view = view;
+        image_binding.image_state = ogfx::ImageState::ShaderRead;
+
+        orendergraph::ResourceWriteDesc write{};
+        write.resource_set_idx = resource_set_index;
+        write.write_info.textures = {image_binding};
+
+        context.update_resource_set(rg, write);
+
+        // Removed entries no longer exist in the table
+        if (view != fallback_view)
+            it->second.view = view;
+    }
+
+    return lookup_changed;
+}
+
 } // namespace
 
 PbrOpaqueRenderFeature::PbrOpaqueRenderFeature(const PbrOpaqueRenderFeatureDesc& desc)
@@ -79,7 +215,11 @@ PbrOpaqueRenderFeature::PbrOpaqueRenderFeature(const PbrOpaqueRenderFeatureDesc&
       m_renderable_events(m_desc.graphics.max_frames_in_flight()), 
       m_directional_light_events(m_desc.graphics.max_frames_in_flight()),
       m_point_light_events(m_desc.graphics.max_frames_in_flight()),
-      m_spot_light_events(m_desc.graphics.max_frames_in_flight())
+      m_spot_light_events(m_desc.graphics.max_frames_in_flight()),
+      m_directional_shadow_events(m_desc.graphics.max_frames_in_flight()),
+      m_point_shadow_events(m_desc.graphics.max_frames_in_flight()),
+      m_spot_shadow_events(m_desc.graphics.max_frames_in_flight()),
+      m_transform_events(m_desc.graphics.max_frames_in_flight())
 {}
 
 void PbrOpaqueRenderFeature::build(orenderer::RenderFeatureContext& ctx)
@@ -91,9 +231,37 @@ void PbrOpaqueRenderFeature::build(orenderer::RenderFeatureContext& ctx)
     {
         m_frame_resources.emplace_back(m_desc.components, m_desc.events);
 
-        m_frame_resources[i].directional_lights.create(rg);
-        m_frame_resources[i].point_lights.create(rg);
-        m_frame_resources[i].spot_lights.create(rg);
+        FrameResources& frame = m_frame_resources[i];
+
+        frame.directional_lights.create(rg);
+        frame.point_lights.create(rg);
+        frame.spot_lights.create(rg);
+        frame.directional_shadows.create(rg);
+        frame.point_shadows.create(rg);
+        frame.spot_shadows.create(rg);
+        frame.directional_shadows.create(rg);
+        frame.point_shadows.create(rg);
+        frame.spot_shadows.create(rg);
+
+        ogfx::BufferDesc lookup_desc{};
+        lookup_desc.size = sizeof(GpuShadowLookup);
+        lookup_desc.usage = ogfx::BufferUsage::Storage;
+        lookup_desc.memory_properties = ogfx::MemoryProperty::HostVisible | ogfx::MemoryProperty::HostCoherent;
+
+        if (!frame.directional_shadow_lookup.create(rg, lookup_desc) ||
+            !frame.point_shadow_lookup.create(rg, lookup_desc) || !frame.spot_shadow_lookup.create(rg, lookup_desc))
+        {
+            throw std::runtime_error("Failed to create shadow lookup buffers");
+        }
+
+        const GpuShadowLookup invalid_lookup{};
+        for (DynamicBuffer* buffer : {&frame.directional_shadow_lookup, &frame.point_shadow_lookup, &frame.spot_shadow_lookup})
+        {
+            ogfx::BufferWriteInfo write{};
+            write.data = &invalid_lookup;
+            write.size = sizeof(invalid_lookup);
+            rg.get_resource(buffer->get_handle())->write(write);
+        }
     }
 
     constexpr uint32_t light_type_count = 3;
@@ -257,6 +425,20 @@ void PbrOpaqueRenderFeature::create_resources(orendergraph::RenderGraph& rg)
         desc.address_v = ogfx::AddressMode::ClampToEdge;
         desc.address_w = ogfx::AddressMode::ClampToEdge;
         m_brdf_lut_sampler = rg.create_resource<ogfx::Sampler>(desc);
+    }
+
+    // Shadow comparison sampler
+    {
+        ogfx::SamplerDesc desc{};
+        desc.min_filter = ogfx::Filter::Linear;
+        desc.mag_filter = ogfx::Filter::Linear;
+        desc.address_u = ogfx::AddressMode::ClampToEdge;
+        desc.address_v = ogfx::AddressMode::ClampToEdge;
+        desc.address_w = ogfx::AddressMode::ClampToEdge;
+        desc.compare_enable = true;
+        desc.compare_op = ogfx::CompareOp::LessOrEqual;
+
+        m_shadow_sampler = rg.create_resource<ogfx::Sampler>(desc);
     }
 }
 
@@ -444,6 +626,40 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             desc.resource_set_layouts_desc.push_back(ibl_layout_desc);
 
+            // Shadows
+            ogfx::ResourceSetLayoutDesc shadow_layout_desc{};
+
+            auto add_shadow_binding = [&](uint32_t binding, ogfx::ResourceType type, uint32_t count = 1)
+            {
+                ogfx::ResourceBindingDesc resource{};
+                resource.binding = binding;
+                resource.type = type;
+                resource.array_count = count;
+                resource.stages = ogfx::ShaderStageFlags::Fragment;
+
+                shadow_layout_desc.bindings.push_back(resource);
+            };
+
+            // Texture arrays
+            add_shadow_binding(0, ogfx::ResourceType::SampledTexture, max_directional_shadow_maps);
+            add_shadow_binding(1, ogfx::ResourceType::SampledTexture, max_spot_shadow_maps);
+            add_shadow_binding(2, ogfx::ResourceType::SampledTexture, max_point_shadow_maps);
+
+            // Shadow component data
+            add_shadow_binding(3, ogfx::ResourceType::StorageBuffer); // Directional
+            add_shadow_binding(4, ogfx::ResourceType::StorageBuffer); // Spot
+            add_shadow_binding(5, ogfx::ResourceType::StorageBuffer); // Point
+
+            // Light-to-shadow lookups
+            add_shadow_binding(6, ogfx::ResourceType::StorageBuffer); // Directional
+            add_shadow_binding(7, ogfx::ResourceType::StorageBuffer); // Spot
+            add_shadow_binding(8, ogfx::ResourceType::StorageBuffer); // Point
+
+            // Comparison sampler
+            add_shadow_binding(9, ogfx::ResourceType::Sampler);
+
+            desc.resource_set_layouts_desc.push_back(shadow_layout_desc);
+
             // One resource set and one write description per frame
             for (uint32_t i = 0; i < m_desc.graphics.max_frames_in_flight(); ++i)
             {
@@ -542,6 +758,65 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
             ibl_write_desc.write_info.samplers = {environment_sampler_binding_write, brdf_lut_sampler_binding_write};
 
             desc.resource_writes_desc.push_back(ibl_write_desc);
+
+            // One resource set and one write description per frame
+            for (uint32_t i = 0; i < m_desc.graphics.max_frames_in_flight(); ++i)
+            {
+                FrameResources& frame = m_frame_resources[i];
+
+                orendergraph::ResourceSetDesc shadow_set_desc{};
+                shadow_set_desc.resource_set_layout_idx = 4;
+
+                frame.shadow_resource_set_index = static_cast<uint32_t>(desc.resource_sets_desc.size());
+                desc.resource_sets_desc.push_back(shadow_set_desc);
+
+                auto make_buffer_binding = [](uint32_t binding, const DynamicBuffer& buffer)
+                {
+                    orendergraph::BufferBinding result{};
+                    result.binding = binding;
+                    result.buffer = buffer.get_handle();
+                    result.offset = 0;
+                    result.range = buffer.get_capacity();
+
+                    return result;
+                };
+
+                auto directional_data = make_buffer_binding(3, frame.directional_shadows.get_buffer());
+                auto spot_data = make_buffer_binding(4, frame.spot_shadows.get_buffer());
+                auto point_data = make_buffer_binding(5, frame.point_shadows.get_buffer());
+                auto directional_lookup = make_buffer_binding(6, frame.directional_shadow_lookup);
+                auto spot_lookup = make_buffer_binding(7, frame.spot_shadow_lookup);
+                auto point_lookup = make_buffer_binding(8, frame.point_shadow_lookup);
+
+                orendergraph::SamplerBinding sampler_binding{};
+                sampler_binding.binding = 9;
+                sampler_binding.sampler = m_shadow_sampler;
+
+                auto make_write = [&](const orendergraph::BufferBinding& buffer)
+                {
+                    orendergraph::ResourceWriteDesc write{};
+                    write.resource_set_idx = frame.shadow_resource_set_index;
+                    write.write_info.buffers = {buffer};
+                    return write;
+                };
+
+                frame.directional_shadow_buffer_write = make_write(directional_data);
+                frame.spot_shadow_buffer_write = make_write(spot_data);
+                frame.point_shadow_buffer_write = make_write(point_data);
+
+                frame.directional_shadow_lookup_write = make_write(directional_lookup);
+                frame.spot_shadow_lookup_write = make_write(spot_lookup);
+                frame.point_shadow_lookup_write = make_write(point_lookup);
+
+                // Initial descriptor writes.
+                orendergraph::ResourceWriteDesc shadow_write{};
+                shadow_write.resource_set_idx = frame.shadow_resource_set_index;
+                shadow_write.write_info.samplers = {sampler_binding};
+                shadow_write.write_info.buffers = {directional_data,   spot_data,   point_data,
+                                                   directional_lookup, spot_lookup, point_lookup};
+
+                desc.resource_writes_desc.push_back(shadow_write);
+            }
 
             // Vertex input
             desc.vertex_input = standard_vertex_layout();
@@ -661,6 +936,113 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 m_directional_light_events.clear(frame_index);
                 m_point_light_events.clear(frame_index);
                 m_spot_light_events.clear(frame_index);
+            }
+
+            // Update shadow buffers
+            {
+                const ShadowProjectionSettings& settings = m_desc.shadows.projection_settings();
+
+                // Update directional light when camera moves
+                {
+                    m_transform_events.capture(m_desc.events);
+
+                    const auto& transform_events = m_transform_events.get_events(frame_index);
+
+                    const bool camera_moved = std::any_of(
+                        transform_events.begin(), transform_events.end(), [this](const ComponentEvent<Transform>& event)
+                        { return event.entity == m_desc.camera && event.type == ComponentEventType::Modified; });
+
+                    if (camera_moved)
+                    {
+                        auto& storage = m_desc.components.get_storage<DirectionalShadow>();
+                        const std::vector<Entity> entities = m_desc.components.entities_with<DirectionalShadow>();
+                        for (Entity entity : entities)
+                        {
+                            frame.directional_shadows.write_component(storage, entity, rg, m_desc.transforms,
+                                                                      m_desc.camera, settings);
+                        }
+                    }
+
+                    m_transform_events.clear(frame_index);
+                }
+
+                m_directional_shadow_events.capture(m_desc.events);
+                m_point_shadow_events.capture(m_desc.events);
+                m_spot_shadow_events.capture(m_desc.events);
+
+                auto directional_shadow_events = m_directional_shadow_events.get_events(frame_index);
+                auto point_shadow_events = m_point_shadow_events.get_events(frame_index);
+                auto spot_shadow_events = m_spot_shadow_events.get_events(frame_index);
+
+                if (frame.directional_shadows.process_frame(cmd, rg, directional_shadow_events,
+                                                            m_desc.transforms, m_desc.camera, settings))
+                {
+                    frame.directional_shadow_buffer_write.write_info.buffers[0].range = frame.directional_shadows.get_buffer().get_capacity();
+                    node.context().update_resource_set(rg, frame.directional_shadow_buffer_write);
+                }
+
+                if (frame.point_shadows.process_frame(cmd, rg, point_shadow_events, 
+                                                     m_desc.components, m_desc.transforms, settings))
+                {
+                    frame.point_shadow_buffer_write.write_info.buffers[0].range = frame.point_shadows.get_buffer().get_capacity();
+                    node.context().update_resource_set(rg, frame.point_shadow_buffer_write);
+                }
+
+                if (frame.spot_shadows.process_frame(cmd, rg, spot_shadow_events,
+                                                     m_desc.components, m_desc.transforms, settings))
+                {
+                    frame.spot_shadow_buffer_write.write_info.buffers[0].range = frame.spot_shadows.get_buffer().get_capacity();
+                    node.context().update_resource_set(rg, frame.spot_shadow_buffer_write);
+                }
+
+                const bool directional_slots_changed = sync_shadow_textures(rg, node.context(), m_desc.shadows,
+                                                       directional_shadow_events, 
+                                                       frame.directional_shadow_textures, ShadowMapType::Directional, 0,
+                                                       max_directional_shadow_maps, frame.shadow_resource_set_index);
+
+                const bool spot_slots_changed = sync_shadow_textures(rg, node.context(), m_desc.shadows,
+                                                spot_shadow_events, 
+                                                frame.spot_shadow_textures, ShadowMapType::Spot, 1,
+                                                max_spot_shadow_maps, frame.shadow_resource_set_index);
+
+                const bool point_slots_changed = sync_shadow_textures(rg, node.context(), m_desc.shadows,
+                                                 point_shadow_events, 
+                                                 frame.point_shadow_textures, ShadowMapType::Point, 2,
+                                                 max_point_shadow_maps, frame.shadow_resource_set_index);
+
+                if (directional_slots_changed)
+                {
+                    const bool resized = update_shadow_lookup<DirectionalLight, DirectionalShadow>(rg, m_desc.components, frame.directional_shadow_lookup, [&](Entity entity) { return frame.directional_shadow_textures.find(entity); });
+                    if (resized)
+                    {
+                        frame.directional_shadow_lookup_write.write_info.buffers[0].range = frame.directional_shadow_lookup.get_capacity();
+                        node.context().update_resource_set(rg, frame.directional_shadow_lookup_write);
+                    }
+                }
+
+                if (spot_slots_changed)
+                {
+                    const bool resized = update_shadow_lookup<SpotLight, SpotShadow>( rg, m_desc.components, frame.spot_shadow_lookup, [&](Entity entity) { return frame.spot_shadow_textures.find(entity); });
+                    if (resized)
+                    {
+                        frame.spot_shadow_lookup_write.write_info.buffers[0].range = frame.spot_shadow_lookup.get_capacity();
+                        node.context().update_resource_set(rg, frame.spot_shadow_lookup_write);
+                    }
+                }
+
+                if (point_slots_changed)
+                {
+                    const bool resized = update_shadow_lookup<PointLight, PointShadow>(rg, m_desc.components, frame.point_shadow_lookup,[&](Entity entity) { return frame.point_shadow_textures.find(entity); });
+                    if (resized)
+                    {
+                        frame.point_shadow_lookup_write.write_info.buffers[0].range = frame.point_shadow_lookup.get_capacity();
+                        node.context().update_resource_set(rg, frame.point_shadow_lookup_write);
+                    }
+                }
+
+                m_directional_shadow_events.clear(frame_index);
+                m_point_shadow_events.clear(frame_index);
+                m_spot_shadow_events.clear(frame_index);
             }
 
             // Update texture resource sets
@@ -857,7 +1239,7 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
 
             cmd.set_inline_constants(lighting_constants_info);
 
-            // Resource sets
+            // Light resources
             {
                 ogfx::ResourceSetBindInfo resource_set_info{};
                 resource_set_info.layout = ctx.pipeline_layout;
@@ -868,13 +1250,24 @@ void PbrOpaqueRenderFeature::add_node(orendergraph::RenderGraph& rg)
                 cmd.bind_resource_set(resource_set_info);
             }
 
-            // Resource sets
+            // Environment resources
             {
                 ogfx::ResourceSetBindInfo resource_set_info{};
                 resource_set_info.layout = ctx.pipeline_layout;
                 resource_set_info.pipeline_type = ogfx::PipelineType::Graphics;
                 resource_set_info.set_index = 2;
                 resource_set_info.resource_set = ctx.resource_sets[m_desc.graphics.max_frames_in_flight()];
+
+                cmd.bind_resource_set(resource_set_info);
+            }
+
+            // Shadow resources
+            {
+                ogfx::ResourceSetBindInfo resource_set_info{};
+                resource_set_info.layout = ctx.pipeline_layout;
+                resource_set_info.pipeline_type = ogfx::PipelineType::Graphics;
+                resource_set_info.set_index = 4;
+                resource_set_info.resource_set = ctx.resource_sets[frame.shadow_resource_set_index];
 
                 cmd.bind_resource_set(resource_set_info);
             }

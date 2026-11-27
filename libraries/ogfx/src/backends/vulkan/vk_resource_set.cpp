@@ -75,7 +75,7 @@ void ResourceSet::write(const ResourceSetWriteInfo& info)
                                    .pNext = nullptr,
                                    .dstSet = m_impl->m_descriptor_set,
                                    .dstBinding = binding.binding,
-                                   .dstArrayElement = 0,
+                                   .dstArrayElement = binding.array_element,
                                    .descriptorCount = 1,
                                    .descriptorType = descriptor_type,
                                    .pImageInfo = nullptr,
@@ -102,7 +102,7 @@ void ResourceSet::write(const ResourceSetWriteInfo& info)
                           .pNext = nullptr,
                           .dstSet = m_impl->m_descriptor_set,
                           .dstBinding = binding.binding,
-                          .dstArrayElement = 0,
+                          .dstArrayElement = binding.array_element,
                           .descriptorCount = 1,
                           .descriptorType = descriptor_type,
                           .pImageInfo = &texture_infos.back(),
@@ -126,7 +126,7 @@ void ResourceSet::write(const ResourceSetWriteInfo& info)
                           .pNext = nullptr,
                           .dstSet = m_impl->m_descriptor_set,
                           .dstBinding = binding.binding,
-                          .dstArrayElement = 0,
+                          .dstArrayElement = binding.array_element,
                           .descriptorCount = 1,
                           .descriptorType = descriptor_type,
                           .pImageInfo = &sampler_infos.back(),
@@ -154,7 +154,7 @@ void ResourceSet::write(const ResourceSetWriteInfo& info)
         write.pNext = &as_infos.back();
         write.dstSet = m_impl->m_descriptor_set;
         write.dstBinding = binding.binding;
-        write.dstArrayElement = 0;
+        write.dstArrayElement = binding.array_element;
         write.descriptorCount = 1;
         write.descriptorType = descriptor_type;
         write.pImageInfo = nullptr;

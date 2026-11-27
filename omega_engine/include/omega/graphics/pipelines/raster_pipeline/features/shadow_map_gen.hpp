@@ -17,6 +17,8 @@
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
 
+#include <omega/graphics/resources/gpu_shadow_data.hpp>
+
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -61,15 +63,7 @@ struct ShadowMapGenDesc
     TransformSystem& transforms;
     GraphicsSystem& graphics;
 
-    float directional_half_extent = 50.0f;
-    float directional_depth = 200.0f;
-
-    float spot_near_plane = 0.05f;
-    float spot_far_plane = 100.0f;
-    float spot_fov_degrees = 90.0f;
-
-    float point_near_plane = 0.05f;
-    float point_far_plane = 100.0f;
+    ShadowProjectionSettings proj_setting{};
 };
 
 class ShadowMapGen : public orenderer::IRenderFeature
@@ -87,6 +81,9 @@ public:
 
     orendergraph::ResourceHandle<ogfx::Image> image(ShadowMapType type, Entity light) const;
     orendergraph::ResourceHandle<ogfx::ImageView> sampled_view(ShadowMapType type, Entity light) const;
+    orendergraph::ResourceHandle<ogfx::ImageView> fallback_view(ShadowMapType type) const;
+
+    ShadowProjectionSettings projection_settings() const;
 
 private:
     struct ShadowMap
@@ -105,7 +102,7 @@ private:
     struct RetiredShadowMap
     {
         ShadowMap map;
-        uint64_t release_after_frame = 0;
+        uint32_t frames_remaining = 0;
     };
 
     ShadowMapGenDesc m_desc;
@@ -118,7 +115,11 @@ private:
     ShadowRegistry m_spot_maps;
     ShadowRegistry m_point_maps;
     std::deque<RetiredShadowMap> m_retired_maps;
-    uint64_t m_frame_serial = 0;
+
+    ShadowMap m_fallback_2d;
+    ShadowMap m_fallback_cube;
+
+    void initialize_fallback_maps(orendergraph::RenderGraph& rg, ogfx::CommandBuffer& cmd);
 
     orendergraph::RenderGraphNode<orendergraph::RasterContext>* m_shadow_node = nullptr;
 

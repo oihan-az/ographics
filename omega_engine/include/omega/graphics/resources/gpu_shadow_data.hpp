@@ -15,6 +15,9 @@
 #include <omega/lighting/point_light.hpp>
 #include <omega/lighting/spot_light.hpp>
 
+#include <omega/core/component/component_system.hpp>
+#include <omega/transform/transform_system.hpp>
+
 #include <array>
 #include <cstdint>
 
@@ -26,7 +29,8 @@ class TransformSystem;
 struct ShadowProjectionSettings
 {
     float directional_half_extent = 50.0f;
-    float directional_depth = 200.0f;
+    float directional_near_plane = 0.05f;
+    float directional_far_plane = 1000.0f;
 
     float spot_near_plane = 0.05f;
     float point_near_plane = 0.05f;
@@ -36,18 +40,21 @@ template<>
 struct GpuComponentData<DirectionalShadow>
 {
     Matrix4 view_projection;
+    Vector4 parameters{0.0f}; // depth bias, normal bias, unused, resolution
 };
 
 template<> 
 struct GpuComponentData<SpotShadow>
 {
     Matrix4 view_projection;
+    Vector4 parameters{0.0f}; // depth bias, normal bias, near plane, resolution
 };
 
 template<> 
 struct GpuComponentData<PointShadow>
 {
     std::array<Matrix4, 6> view_projections;
+    Vector4 parameters{0.0f}; // depth bias, normal bias, near plane, resolution
 };
 
 inline GpuComponentData<DirectionalShadow> gpu_component_data(const DirectionalShadow& shadow, Entity entity,
@@ -60,59 +67,81 @@ inline GpuComponentData<DirectionalShadow> gpu_component_data(const DirectionalS
 
     const Vector3 direction = normalize(Vector3(world * Vector4(0.0f, 0.0f, -1.0f, 0.0f)));
 
-    // Position the shadow camera behind the scene region centered on the active camera
-    Matrix4 shadow_world = world;
-    shadow_world[3] = Vector4(camera_position - direction * settings.directional_depth, 1.0f);
-    const Matrix4 view = inverse(shadow_world);
+    const Vector3 up_hint = normalize(Vector3(world[1]));
+    const Vector3 right = normalize(cross(direction, up_hint));
+    const Vector3 up = normalize(cross(right, direction));
 
     const float extent = settings.directional_half_extent;
+    const float texel_size = (extent * 2.0f) / static_cast<float>(shadow.resolution);
+    const float light_x = dot(camera_position, right);
+    const float light_y = dot(camera_position, up);
+    const float snapped_x = std::round(light_x / texel_size) * texel_size;
+    const float snapped_y = std::round(light_y / texel_size) * texel_size;
+    const Vector3 snapped_camera_position = camera_position + right * (snapped_x - light_x) + up * (snapped_y - light_y);
+
+    // Position the shadow camera behind the scene region centered on the active camera
+    Matrix4 shadow_world = world;
+    const float depth_center = (settings.directional_near_plane + settings.directional_far_plane) * 0.5f;
+    shadow_world[3] = Vector4(snapped_camera_position - direction * depth_center, 1.0f);
+    const Matrix4 view = inverse(shadow_world);
+
     OrthogonalProjection projection{};
     projection.left = -extent;
     projection.right = extent;
     projection.bottom = -extent;
     projection.top = extent;
-    projection.near_plane = 0.1f;
-    projection.far_plane = settings.directional_depth * 2.0f;
+    projection.near_plane = settings.directional_near_plane;
+    projection.far_plane = settings.directional_far_plane;
+
+    Matrix4 projection_matrix = orthogonal_projection(projection);
 
     GpuComponentData<DirectionalShadow> result{};
-    result.view_projection = orthogonal_projection(projection) * view;
+    result.view_projection = projection_matrix * view;
+    result.parameters = Vector4(shadow.depth_bias, shadow.normal_bias, 0.0f, static_cast<float>(shadow.resolution));
 
     return result;
 }
 
 // Spot shadow
-inline GpuComponentData<SpotShadow> gpu_component_data(const SpotShadow& shadow, const SpotLight& light, Entity entity,
-                                                       TransformSystem& transforms,
+inline GpuComponentData<SpotShadow> gpu_component_data(const SpotShadow& shadow, Entity entity,
+                                                       ComponentSystem& components, TransformSystem& transforms,
                                                        const ShadowProjectionSettings& settings)
 {
+    const SpotLight* light = components.get<SpotLight>(entity);
+    assert(light);
+
     const Matrix4& world = transforms.get_world_matrix(entity);
     const Matrix4 view = inverse(world);
 
     const float near_plane = std::max(settings.spot_near_plane, 0.001f);
-    const float far_plane = std::max(light.range, near_plane + 0.01f);
+    const float far_plane = std::max(light->range, near_plane + 0.01f);
 
     PerspectiveProjection projection{};
-    projection.field_of_view = light.outer_angle;
+    projection.field_of_view = light->outer_angle;
     projection.aspect_ratio = 1.0f;
     projection.near_plane = near_plane;
     projection.far_plane = far_plane;
 
     GpuComponentData<SpotShadow> result{};
     result.view_projection = perspective_projection(projection) * view;
+    result.parameters = Vector4(shadow.depth_bias, shadow.normal_bias, near_plane, static_cast<float>(shadow.resolution));
 
     return result;
 }
 
 // Point shadow
-inline GpuComponentData<PointShadow> gpu_component_data(const PointShadow& shadow, const PointLight& light,
-                                                        Entity entity, TransformSystem& transforms,
+inline GpuComponentData<PointShadow> gpu_component_data(const PointShadow& shadow, Entity entity,
+                                                        ComponentSystem& components, TransformSystem& transforms,
                                                         const ShadowProjectionSettings& settings)
 {
+    const PointLight* light = components.get<PointLight>(entity);
+    assert(light);
+
     const Matrix4& world = transforms.get_world_matrix(entity);
     const Vector3 position = Vector3(world[3]);
 
     const float near_plane = std::max(settings.point_near_plane, 0.001f);
-    const float far_plane = std::max(light.range, near_plane + 0.01f);
+    const float far_plane = std::max(light->range, near_plane + 0.01f);
 
     PerspectiveProjection projection{};
     projection.field_of_view = radians(90.0f);
@@ -120,7 +149,11 @@ inline GpuComponentData<PointShadow> gpu_component_data(const PointShadow& shado
     projection.near_plane = near_plane;
     projection.far_plane = far_plane;
 
-    const Matrix4 projection_matrix = perspective_projection(projection);
+    Matrix4 projection_matrix = perspective_projection(projection);
+#if OMEGA_PROJECTION_FLIP_Y
+    // Cubemap face views already use the required orientation
+    projection_matrix[1][1] *= -1.0f;
+#endif
 
     constexpr std::array<Vector3, 6> directions = 
     {
@@ -153,6 +186,8 @@ inline GpuComponentData<PointShadow> gpu_component_data(const PointShadow& shado
 
         result.view_projections[face] = projection_matrix * view;
     }
+
+    result.parameters = Vector4(shadow.depth_bias, shadow.normal_bias, near_plane, static_cast<float>(shadow.resolution));
 
     return result;
 }
