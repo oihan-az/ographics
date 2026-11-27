@@ -12,12 +12,19 @@ namespace ogfx
 
 class Device;
 
+OGFX_BITMASK_ENUM(ResourceBindingFlags, uint32_t,
+    None                    = 0,
+    PartiallyBound          = 1u << 0,
+    VariableDescriptorCount = 1u << 1
+);
+
 struct ResourceBindingDesc
 {
     uint32_t binding = 0;
     ResourceType type = ResourceType::Undefined;
     uint32_t array_count = 1;
     ShaderStageFlags stages = ShaderStageFlags::None;
+    ResourceBindingFlags flags = ResourceBindingFlags::None;
 };
 
 struct ResourceSetLayoutDesc

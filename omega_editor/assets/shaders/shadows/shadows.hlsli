@@ -70,7 +70,7 @@ float evaluate_point_shadow(
         return 1.0f;
 
     const PointShadow shadow = shadow_data[lookup.data_index];
-
+    
     return sample_point_shadow(
         shadow_maps[NonUniformResourceIndex(lookup.texture_index)],
         shadow_sampler,

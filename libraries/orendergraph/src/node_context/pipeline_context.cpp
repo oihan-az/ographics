@@ -45,6 +45,7 @@ void PipelineContext::create_resource_sets(RenderGraph& graph, const Desc& desc)
     {
         ogfx::ResourceSetDesc set_desc;
         set_desc.layout = resource_set_layouts[resource_set_desc.resource_set_layout_idx];
+        set_desc.variable_descriptor_count = resource_set_desc.variable_descriptor_count;
 
         ogfx::ResourceSet* resource_set = graph.create_object<ogfx::ResourceSet>(set_desc);
         resource_set->allocate(graph.get_resource_allocator());
@@ -69,6 +70,27 @@ void PipelineContext::release_resource_sets(RenderGraph& graph)
     for (const ogfx::ResourceSet* resource_set : resource_sets)
         graph.release_object(resource_set);
     resource_sets.clear();
+}
+
+void PipelineContext::replace_resource_set(RenderGraph& graph, const ResourceSetDesc& desc, uint32_t resource_set_index)
+{
+    // Create a new set using the existing layout
+    ogfx::ResourceSetDesc set_desc{};
+    set_desc.layout = resource_set_layouts[desc.resource_set_layout_idx];
+    set_desc.variable_descriptor_count = desc.variable_descriptor_count;
+
+    ogfx::ResourceSet* new_set = graph.create_object<ogfx::ResourceSet>(set_desc);
+    new_set->allocate(graph.get_resource_allocator());
+
+    // Replace only the resource set at the requested index
+    ogfx::ResourceSet* old_set = resource_sets[resource_set_index];
+    resource_sets[resource_set_index] = new_set;
+
+    if (old_set)
+    {
+        old_set->free(graph.get_resource_allocator());
+        graph.release_object(old_set);
+    }
 }
 
 void PipelineContext::update_resource_set(RenderGraph& graph, const ResourceWriteDesc& desc)

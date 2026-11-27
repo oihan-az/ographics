@@ -146,8 +146,37 @@ void ResourceAllocator::allocate(ResourceSet& resource_set)
 
     const ResourceSetLayout& layout = *resource_set.m_desc.layout;
 
+    bool has_variable_binding = false;
+    uint32_t variable_descriptor_count = 0;
+    for (const ResourceBindingDesc& binding : layout.m_desc.bindings)
+    {
+        if (!has_flag(binding.flags, ResourceBindingFlags::VariableDescriptorCount))
+            continue;
+
+        if (has_variable_binding)
+            throw std::runtime_error("Resource set layout has multiple variable descriptor count bindings");
+
+        has_variable_binding = true;
+
+        // Zero means use the full layout capacity
+        variable_descriptor_count = resource_set.m_desc.variable_descriptor_count == 0
+                                    ? binding.array_count
+                                    : resource_set.m_desc.variable_descriptor_count;
+
+        if (variable_descriptor_count > binding.array_count)
+            throw std::runtime_error("Variable descriptor count exceeds the layout maximum");
+    }
+
+    if (!has_variable_binding && resource_set.m_desc.variable_descriptor_count != 0)
+        throw std::runtime_error("Variable descriptor count specified for a fixed-size resource set");
+
     OGFX_LOG("Allocating resource set:");
     OGFX_LOG("  Descriptor pool count: " + std::to_string(m_impl->m_descriptor_pools.size()));
+
+    if (has_variable_binding)
+    {
+        OGFX_LOG("  Variable descriptor count: " + std::to_string(variable_descriptor_count));
+    }
 
     auto try_allocate = [&]() -> bool
     {
@@ -155,11 +184,22 @@ void ResourceAllocator::allocate(ResourceSet& resource_set)
         {
             OGFX_LOG("Trying descriptor pool index " + std::to_string(i));
 
-            const VkDescriptorSetAllocateInfo allocate_info{.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                                                            .pNext = nullptr,
-                                                            .descriptorPool = pool,
-                                                            .descriptorSetCount = 1,
-                                                            .pSetLayouts = &layout.m_impl->m_descriptor_set_layout};
+            // Used only when the layout has a variable-sized binding
+            VkDescriptorSetVariableDescriptorCountAllocateInfo count_info{};
+            count_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+            count_info.descriptorSetCount = 1;
+            count_info.pDescriptorCounts = &variable_descriptor_count;
+
+            VkDescriptorSetAllocateInfo allocate_info{};
+            allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocate_info.descriptorPool = pool;
+            allocate_info.descriptorSetCount = 1;
+            allocate_info.pSetLayouts = &layout.m_impl->m_descriptor_set_layout;
+
+            if (has_variable_binding)
+            {
+                allocate_info.pNext = &count_info;
+            }
 
             VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
             if (vkAllocateDescriptorSets(m_impl->m_device, &allocate_info, &descriptor_set) != VK_SUCCESS)
@@ -191,14 +231,21 @@ void ResourceAllocator::allocate(ResourceSet& resource_set)
 
     // Create a pool sized for this layout and the configured number of sets
     DescriptorPoolDesc pool_desc;
-    pool_desc.max_sets = m_max_sets_per_pool;
+    pool_desc.max_sets = has_variable_binding ? 1u : m_max_sets_per_pool;
 
     DescriptorPoolSizes required_sizes;
     for (const ResourceBindingDesc& binding : layout.m_desc.bindings)
     {
         const VkDescriptorType type = to_vk_descriptor_type(binding.type);
 
-        const uint64_t descriptor_count = static_cast<uint64_t>(binding.array_count) * pool_desc.max_sets;
+        uint32_t count = binding.array_count;
+
+        if (has_flag(binding.flags, ResourceBindingFlags::VariableDescriptorCount))
+        {
+            count = variable_descriptor_count;
+        }
+
+        const uint64_t descriptor_count = static_cast<uint64_t>(count) * pool_desc.max_sets;
 
         if (descriptor_count > std::numeric_limits<uint32_t>::max() ||
             !required_sizes.add(type, static_cast<uint32_t>(descriptor_count)))

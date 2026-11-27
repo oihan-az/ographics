@@ -66,6 +66,7 @@ struct ResourceSetWriteInfo
 struct ResourceSetDesc
 {
     uint32_t resource_set_layout_idx = 0;
+    uint32_t variable_descriptor_count = 0;
 };
 
 struct ResourceWriteDesc

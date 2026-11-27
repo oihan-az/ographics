@@ -15,14 +15,9 @@ namespace ogfx
 void check_device_features_support(VkPhysicalDevice physical_device, ogfx::DeviceFeature features)
 {
     const bool request_multi_draw_indirect = ogfx::has_flag(features, ogfx::DeviceFeature::MultiDrawIndirect);
-
-    const bool request_draw_indirect_first_instance =
-        ogfx::has_flag(features, ogfx::DeviceFeature::DrawIndirectFirstInstance);
-
+    const bool request_draw_indirect_first_instance = ogfx::has_flag(features, ogfx::DeviceFeature::DrawIndirectFirstInstance);
     const bool request_sampler_anisotropy = ogfx::has_flag(features, ogfx::DeviceFeature::SamplerAnisotropy);
-
     const bool request_ray_tracing = ogfx::has_flag(features, ogfx::DeviceFeature::RayTracing);
-
     const bool request_descriptor_indexing = ogfx::has_flag(features, ogfx::DeviceFeature::DescriptorIndexing);
 
     // Vulkan 1.0 features
@@ -80,19 +75,16 @@ void check_device_features_support(VkPhysicalDevice physical_device, ogfx::Devic
     if (request_descriptor_indexing)
     {
         if (!supported12.runtimeDescriptorArray)
-        {
             throw std::runtime_error("Runtime descriptor arrays are not supported.");
-        }
 
         if (!supported12.shaderSampledImageArrayNonUniformIndexing)
-        {
             throw std::runtime_error("Non-uniform sampled image array indexing is not supported.");
-        }
 
         if (!supported12.descriptorBindingPartiallyBound)
-        {
             throw std::runtime_error("Partially bound descriptor arrays are not supported.");
-        }
+
+        if (!supported12.descriptorBindingVariableDescriptorCount)
+            throw std::runtime_error("Variable descriptor counts are not supported.");
     }
 
     // Ray tracing
@@ -126,6 +118,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
     OGFX_LOG("Creating Vulkan logical device");
 
     VkPhysicalDevice vk_physical_device = physical_device.m_impl->m_physical_device;
+    m_impl->m_physical_device = vk_physical_device;
 
     ogfx::QueueFamilyIndices indices = physical_device.m_impl->FindQueueFamilies(surface);
     std::set<uint32_t> uniqueQueueFamilies;
@@ -224,6 +217,7 @@ Device::Device(const PhysicalDevice& physical_device, const DeviceDesc& desc, co
         enabled12.runtimeDescriptorArray = VK_TRUE;
         enabled12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
         enabled12.descriptorBindingPartiallyBound = VK_TRUE;
+        enabled12.descriptorBindingVariableDescriptorCount = VK_TRUE;
     }
 
     if (request_ray_tracing)
@@ -399,6 +393,19 @@ void Device::wait_idle()
     }
 
     OGFX_LOG("Vulkan device is idle");
+}
+
+ResourceLimits Device::resource_limits() const
+{
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(m_impl->m_physical_device, &properties);
+
+    ResourceLimits limits;
+    limits.max_bound_resource_sets = properties.limits.maxBoundDescriptorSets;
+    limits.max_per_stage_sampled_images = properties.limits.maxPerStageDescriptorSampledImages;
+    limits.max_resource_set_sampled_images = properties.limits.maxDescriptorSetSampledImages;
+
+    return limits;
 }
 
 } // namespace ogfx

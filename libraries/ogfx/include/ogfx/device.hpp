@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <array>
+#include <cstdint>
 
 namespace ogfx
 {
@@ -17,6 +18,13 @@ class VulkanAccess;
 
 class PhysicalDevice;
 class Surface;
+
+struct ResourceLimits
+{
+    uint32_t max_bound_resource_sets = 0;
+    uint32_t max_per_stage_sampled_images = 0;
+    uint32_t max_resource_set_sampled_images = 0;
+};
 
 enum class QueueType
 {
@@ -69,6 +77,8 @@ class Device
     Device& operator=(Device&&) noexcept;
 
     void wait_idle();
+
+    ResourceLimits resource_limits() const;
 
     [[nodiscard]] Queue& queue(QueueType type)
     {

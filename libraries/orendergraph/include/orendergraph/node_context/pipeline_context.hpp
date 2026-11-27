@@ -40,6 +40,7 @@ struct PipelineContext
     void release_pipeline_layout(RenderGraph& graph);
     void release_resource_sets(RenderGraph& graph);
 
+    void replace_resource_set(RenderGraph& graph, const ResourceSetDesc& desc, uint32_t resource_set_index);
     void update_resource_set(RenderGraph& graph, const ResourceWriteDesc& desc);
 
     ogfx::PipelineLayout* pipeline_layout = nullptr;

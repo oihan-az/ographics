@@ -59,35 +59,39 @@ SamplerState brdf_lut_sampler;
 [[vk::binding(4, 3)]]
 TextureCube<half4> irradiance_map;
 
+// Shadow component data
 [[vk::binding(0, 4)]]
-Texture2D<float> directional_shadow_maps[];
-
-[[vk::binding(1, 4)]]
-Texture2D<float> spot_shadow_maps[];
-
-[[vk::binding(2, 4)]]
-TextureCube<float> point_shadow_maps[];
-
-[[vk::binding(3, 4)]]
 StructuredBuffer<DirectionalShadow> directional_shadow_data;
 
-[[vk::binding(4, 4)]]
+[[vk::binding(1, 4)]]
 StructuredBuffer<SpotShadow> spot_shadow_data;
 
-[[vk::binding(5, 4)]]
+[[vk::binding(2, 4)]]
 StructuredBuffer<PointShadow> point_shadow_data;
 
-[[vk::binding(6, 4)]]
+// Light-to-shadow lookups
+[[vk::binding(3, 4)]]
 StructuredBuffer<ShadowLookup> directional_shadow_lookup;
 
-[[vk::binding(7, 4)]]
+[[vk::binding(4, 4)]]
 StructuredBuffer<ShadowLookup> spot_shadow_lookup;
 
-[[vk::binding(8, 4)]]
+[[vk::binding(5, 4)]]
 StructuredBuffer<ShadowLookup> point_shadow_lookup;
 
-[[vk::binding(9, 4)]]
+// Comparison sampler
+[[vk::binding(6, 4)]]
 SamplerComparisonState shadow_sampler;
+
+// Shadow textures
+[[vk::binding(0, 5)]]
+Texture2D<float> directional_shadow_maps[];
+
+[[vk::binding(0, 6)]]
+Texture2D<float> spot_shadow_maps[];
+
+[[vk::binding(0, 7)]]
+TextureCube<float> point_shadow_maps[];
 
 struct FragmentConstants
 {

@@ -13,6 +13,7 @@ class Surface;
 struct Device::Impl
 {
     VkDevice m_device = VK_NULL_HANDLE;
+    VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
 };
 
 } // namespace ogfx

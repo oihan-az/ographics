@@ -60,6 +60,7 @@ struct ResourceSetWriteInfo
 struct ResourceSetDesc
 {
     const ResourceSetLayout* layout = nullptr;
+    uint32_t variable_descriptor_count = 0;
 };
 
 class ResourceSet

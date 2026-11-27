@@ -70,7 +70,6 @@ struct ShadowTextureTable
     struct Entry
     {
         uint32_t index = 0;
-
         orendergraph::ResourceHandle<ogfx::ImageView> view;
     };
 
@@ -78,6 +77,23 @@ struct ShadowTextureTable
 
     std::vector<uint32_t> free_indices;
     uint32_t next_index = 0;
+
+    std::unordered_set<Entity, EntityHash> pending;
+
+    std::optional<uint32_t> allocate_slot(uint32_t maximum)
+    {
+        if (!free_indices.empty())
+        {
+            const uint32_t index = free_indices.back();
+            free_indices.pop_back();
+            return index;
+        }
+
+        if (next_index >= maximum)
+            return std::nullopt;
+
+        return next_index++;
+    }
 
     std::optional<uint32_t> find(Entity entity) const
     {
@@ -88,6 +104,12 @@ struct ShadowTextureTable
 
         return it->second.index;
     }
+};
+
+struct ShadowResourceArray
+{
+    uint32_t capacity = 1;
+    uint32_t resource_set_index = std::numeric_limits<uint32_t>::max();
 };
 
 struct PbrOpaqueRenderFeatureDesc
@@ -125,7 +147,7 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
 
     orendergraph::RenderGraphNode<orendergraph::RasterContext>* node() const
     {
-            return m_pbr_node;
+        return m_pbr_node;
     }
 
     const orendergraph::ResourceHandle<ogfx::Image> out_image() const { return m_out_image; }
@@ -175,7 +197,11 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
         orendergraph::ResourceWriteDesc point_shadow_lookup_write;
         orendergraph::ResourceWriteDesc spot_shadow_lookup_write;
 
-        uint32_t shadow_resource_set_index = UINT32_MAX;
+        uint32_t shadow_data_resource_set_index = std::numeric_limits<uint32_t>::max();
+
+        ShadowResourceArray directional_shadow_resources;
+        ShadowResourceArray spot_shadow_resources;
+        ShadowResourceArray point_shadow_resources;
 
         ShadowTextureTable directional_shadow_textures;
         ShadowTextureTable point_shadow_textures;
@@ -191,6 +217,10 @@ class PbrOpaqueRenderFeature : public orenderer::IRenderFeature
               directional_shadows(components), point_shadows(components), spot_shadows(components)
         {}
     };
+
+    uint32_t m_max_directional_shadow_descriptors = 0;
+    uint32_t m_max_spot_shadow_descriptors = 0;
+    uint32_t m_max_point_shadow_descriptors = 0;
 
     std::vector<FrameResources> m_frame_resources;
     std::unordered_map<TextureHandle, TextureViewHandle, TextureHandleHash> m_texture_views;
